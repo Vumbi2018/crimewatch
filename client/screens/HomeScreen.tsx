@@ -15,7 +15,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
-const policeCarImage = require("@assets/generated_images/police_car_at_dusk.png");
+const policeCarImage = require("../../assets/images/generated/police_car_at_dusk.png");
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
