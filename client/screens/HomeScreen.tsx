@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Pressable,
   ImageBackground,
+  Image,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +17,7 @@ import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const policeCarImage = require("../../assets/images/generated/police_car.png");
+const policeEmblem = require("../../assets/images/generated/police_emblem.png");
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -50,9 +52,11 @@ export default function HomeScreen() {
             style={styles.header}
           >
             <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Feather name="shield" size={48} color="#FFF" />
-              </View>
+              <Image 
+                source={policeEmblem} 
+                style={styles.emblemImage}
+                resizeMode="contain"
+              />
             </View>
             <ThemedText style={styles.title}>Crimestoppers</ThemedText>
           </Animated.View>
@@ -131,15 +135,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: Spacing.lg,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.light.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+  emblemImage: {
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: 42,
