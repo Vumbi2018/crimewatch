@@ -1,6 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
+import HomeScreen from "@/screens/HomeScreen";
 import EvidenceDetailScreen from "@/screens/EvidenceDetailScreen";
 import MapViewScreen from "@/screens/MapViewScreen";
 import ReportSubmissionScreen from "@/screens/ReportSubmissionScreen";
@@ -8,7 +9,8 @@ import SettingsScreen from "@/screens/SettingsScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
-  Main: undefined;
+  Home: undefined;
+  MainTabs: undefined;
   EvidenceDetail: { evidenceId: string };
   MapView: { latitude: number; longitude: number; address?: string };
   ReportSubmission: { evidenceId: string };
@@ -23,7 +25,12 @@ export default function RootStackNavigator() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
-        name="Main"
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MainTabs"
         component={MainTabNavigator}
         options={{ headerShown: false }}
       />
