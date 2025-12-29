@@ -1,25 +1,39 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "Crimestoppers",
+    "slug": "crimestoppers",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "crimestoppers",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.crimestoppers.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Crimestoppers needs camera access to capture photo and video evidence of incidents.",
+        "NSMicrophoneUsageDescription": "Crimestoppers needs microphone access to record audio with video evidence.",
+        "NSLocationWhenInUseUsageDescription": "Crimestoppers needs your location to tag evidence with precise coordinates.",
+        "NSPhotoLibraryUsageDescription": "Crimestoppers needs photo library access to save captured evidence."
+      }
     },
     "android": {
+      "package": "com.crimestoppers.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1E3A8A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "single",
@@ -32,13 +46,35 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#1E3A8A",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0F172A"
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Crimestoppers needs camera access to capture photo and video evidence of incidents.",
+          "microphonePermission": "Crimestoppers needs microphone access to record audio with video evidence.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Crimestoppers needs your location to tag evidence with precise coordinates."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Crimestoppers needs photo library access to save captured evidence.",
+          "savePhotosPermission": "Crimestoppers needs permission to save evidence photos to your device.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "reactCompiler": true
