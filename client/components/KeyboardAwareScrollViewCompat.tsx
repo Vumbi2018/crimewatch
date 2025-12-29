@@ -1,37 +1,29 @@
-import { Platform, ScrollView, ScrollViewProps } from "react-native";
-import {
-  KeyboardAwareScrollView,
-  KeyboardAwareScrollViewProps,
-} from "react-native-keyboard-controller";
+import { ScrollView, ScrollViewProps, KeyboardAvoidingView, Platform, View } from "react-native";
 
-type Props = KeyboardAwareScrollViewProps & ScrollViewProps;
+type Props = ScrollViewProps & {
+  children?: React.ReactNode;
+};
 
-/**
- * KeyboardAwareScrollView that falls back to ScrollView on web.
- * Use this for any screen containing text inputs.
- */
 export function KeyboardAwareScrollViewCompat({
   children,
   keyboardShouldPersistTaps = "handled",
+  style,
+  contentContainerStyle,
   ...props
 }: Props) {
-  if (Platform.OS === "web") {
-    return (
+  return (
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
       <ScrollView
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        style={style}
+        contentContainerStyle={contentContainerStyle}
         {...props}
       >
         {children}
       </ScrollView>
-    );
-  }
-
-  return (
-    <KeyboardAwareScrollView
-      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
-      {...props}
-    >
-      {children}
-    </KeyboardAwareScrollView>
+    </KeyboardAvoidingView>
   );
 }
