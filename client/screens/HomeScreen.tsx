@@ -55,7 +55,6 @@ export default function HomeScreen() {
               </View>
             </View>
             <ThemedText style={styles.title}>Crimestoppers</ThemedText>
-            <ThemedText style={styles.subtitle}>PNG</ThemedText>
           </Animated.View>
 
           <Animated.View 
