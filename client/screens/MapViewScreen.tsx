@@ -9,11 +9,21 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 
 type RouteType = RouteProp<RootStackParamList, "MapView">;
 
@@ -44,6 +54,67 @@ export default function MapViewScreen() {
       console.error("Error opening maps:", error);
     }
   };
+
+  const renderWebFallback = () => (
+    <View style={[styles.webFallback, { backgroundColor: theme.background }]}>
+      <View style={[styles.webFallbackContent, { backgroundColor: theme.cardBackground }]}>
+        <View style={styles.mapIconContainer}>
+          <Feather name="map" size={64} color={Colors.light.primary} />
+        </View>
+        <ThemedText type="h3" style={styles.webFallbackTitle}>
+          Map View
+        </ThemedText>
+        <ThemedText style={[styles.webFallbackText, { color: theme.textSecondary }]}>
+          Interactive maps are available on mobile devices.
+        </ThemedText>
+        <ThemedText style={[styles.webFallbackText, { color: theme.textSecondary }]}>
+          Open the location in your browser's maps:
+        </ThemedText>
+        <Pressable
+          style={[styles.webOpenButton, { backgroundColor: Colors.light.primary }]}
+          onPress={openInMaps}
+        >
+          <Feather name="external-link" size={20} color="#FFF" />
+          <ThemedText style={styles.webOpenButtonText}>
+            Open in Google Maps
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.container}>
+        {renderWebFallback()}
+        <View
+          style={[
+            styles.addressCard,
+            {
+              bottom: insets.bottom + Spacing.lg,
+              backgroundColor: theme.cardBackground,
+            },
+            Shadows.medium,
+          ]}
+        >
+          <View style={styles.addressContent}>
+            <View style={styles.addressHeader}>
+              <Feather name="map-pin" size={20} color={Colors.light.primary} />
+              <ThemedText type="h4" style={styles.addressTitle}>
+                Evidence Location
+              </ThemedText>
+            </View>
+            {address ? (
+              <ThemedText style={styles.addressText}>{address}</ThemedText>
+            ) : null}
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>
+              {latitude.toFixed(6)}, {longitude.toFixed(6)}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -121,6 +192,49 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  webFallback: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl,
+  },
+  webFallbackContent: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    alignItems: "center",
+    maxWidth: 400,
+  },
+  mapIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(30, 58, 138, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  webFallbackTitle: {
+    marginBottom: Spacing.sm,
+    textAlign: "center",
+  },
+  webFallbackText: {
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  webOpenButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
+  },
+  webOpenButtonText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 16,
   },
   markerContainer: {
     alignItems: "center",
