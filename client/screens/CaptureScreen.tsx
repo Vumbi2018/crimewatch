@@ -32,7 +32,7 @@ import { Evidence, saveEvidence, generateEvidenceId, getAllEvidence } from "@/li
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type CaptureMode = "photo" | "video";
+type CaptureMode = "picture" | "video";
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
@@ -46,7 +46,7 @@ export default function CaptureScreen() {
   
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState<"off" | "on">("off");
-  const [mode, setMode] = useState<CaptureMode>("photo");
+  const [mode, setMode] = useState<CaptureMode>("picture");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [lastCapturedUri, setLastCapturedUri] = useState<string | null>(null);
@@ -150,7 +150,7 @@ export default function CaptureScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      if (mode === "photo") {
+      if (mode === "picture") {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           skipProcessing: false,
@@ -161,7 +161,7 @@ export default function CaptureScreen() {
           
           const evidence: Evidence = {
             id: generateEvidenceId(),
-            type: "photo",
+            type: "picture",
             uri: photo.uri,
             timestamp: Date.now(),
             latitude: locationData.latitude,
@@ -343,14 +343,14 @@ export default function CaptureScreen() {
             <Pressable
               style={[
                 styles.modeButton,
-                mode === "photo" && styles.modeButtonActive,
+                mode === "picture" && styles.modeButtonActive,
               ]}
-              onPress={() => setMode("photo")}
+              onPress={() => setMode("picture")}
             >
               <ThemedText
                 style={[
                   styles.modeButtonText,
-                  mode === "photo" && styles.modeButtonTextActive,
+                  mode === "picture" && styles.modeButtonTextActive,
                 ]}
               >
                 Photo
@@ -410,7 +410,7 @@ export default function CaptureScreen() {
                 mode === "video" && isRecording && pulseStyle,
               ]}
             >
-              {isCapturing && mode === "photo" ? (
+              {isCapturing && mode === "picture" ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : mode === "video" && isRecording ? (
                 <View style={styles.stopIcon} />
