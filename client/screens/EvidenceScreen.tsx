@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
@@ -142,8 +142,8 @@ export default function EvidenceScreen() {
           contentFit="cover"
         />
         <View style={styles.typeBadge}>
-          <Ionicons
-            name={item.type === "photo" ? "image-outline" : "videocam-outline"}
+          <Feather
+            name={item.type === "photo" ? "image" : "video"}
             size={12}
             color="#FFF"
           />
@@ -160,7 +160,7 @@ export default function EvidenceScreen() {
         </View>
         {item.address ? (
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+            <Feather name="map-pin" size={12} color={theme.textSecondary} />
             <ThemedText
               type="caption"
               numberOfLines={1}
@@ -198,7 +198,7 @@ export default function EvidenceScreen() {
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="folder-outline" size={64} color={theme.textSecondary} />
+      <Feather name="folder" size={64} color={theme.textSecondary} />
       <ThemedText type="h4" style={styles.emptyTitle}>
         No Evidence Captured
       </ThemedText>
@@ -215,7 +215,7 @@ export default function EvidenceScreen() {
         <View
           style={[styles.searchContainer, { backgroundColor: theme.backgroundSecondary }]}
         >
-          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <Feather name="search" size={18} color={theme.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
             placeholder="Search by tag, location, date..."
@@ -225,7 +225,7 @@ export default function EvidenceScreen() {
           />
           {searchQuery ? (
             <Pressable onPress={() => handleSearch("")}>
-              <Ionicons name="close-outline" size={18} color={theme.textSecondary} />
+              <Feather name="x" size={18} color={theme.textSecondary} />
             </Pressable>
           ) : null}
         </View>

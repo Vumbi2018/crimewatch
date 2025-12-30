@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -28,10 +28,10 @@ import {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const AVATAR_TYPES = [
-  { type: "shield" as const, icon: "shield-outline", color: Colors.light.primary },
-  { type: "star" as const, icon: "star-outline", color: "#F59E0B" },
-  { type: "checkmark" as const, icon: "checkmark-circle-outline", color: Colors.light.success },
-  { type: "eye" as const, icon: "eye-outline", color: "#64748B" },
+  { type: "shield" as const, icon: "shield", color: Colors.light.primary },
+  { type: "star" as const, icon: "star", color: "#F59E0B" },
+  { type: "checkmark" as const, icon: "check-circle", color: Colors.light.success },
+  { type: "eye" as const, icon: "eye", color: "#64748B" },
 ];
 
 export default function ProfileScreen() {
@@ -123,7 +123,7 @@ export default function ProfileScreen() {
           style={[styles.settingsButton, { backgroundColor: theme.backgroundSecondary }]}
           onPress={() => navigation.navigate("Settings")}
         >
-          <Ionicons name="settings-outline" size={20} color={theme.text} />
+          <Feather name="settings" size={20} color={theme.text} />
         </Pressable>
       </View>
 
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
                     Haptics.selectionAsync();
                   }}
                 >
-                  <Ionicons name={avatar.icon as any} size={24} color={avatar.color} />
+                  <Feather name={avatar.icon as any} size={24} color={avatar.color} />
                 </Pressable>
               ))}
             </View>
@@ -201,7 +201,7 @@ export default function ProfileScreen() {
                   { backgroundColor: avatarConfig.color + "20" },
                 ]}
               >
-                <Ionicons
+                <Feather
                   name={avatarConfig.icon as any}
                   size={32}
                   color={avatarConfig.color}
@@ -219,7 +219,7 @@ export default function ProfileScreen() {
                 style={[styles.editButton, { backgroundColor: theme.backgroundSecondary }]}
                 onPress={() => setIsEditing(true)}
               >
-                <Ionicons name="create-outline" size={16} color={theme.text} />
+                <Feather name="edit-2" size={16} color={theme.text} />
               </Pressable>
             </View>
 
@@ -265,8 +265,8 @@ export default function ProfileScreen() {
               onPress={() => navigation.navigate("EvidenceDetail", { evidenceId: item.id })}
             >
               <View style={styles.submissionContent}>
-                <Ionicons
-                  name={item.type === "photo" ? "image-outline" : "videocam-outline"}
+                <Feather
+                  name={item.type === "photo" ? "image" : "video"}
                   size={18}
                   color={theme.textSecondary}
                 />
@@ -285,8 +285,8 @@ export default function ProfileScreen() {
                   { backgroundColor: getStatusColor(item.submissionStatus) + "20" },
                 ]}
               >
-                <Ionicons
-                  name="checkmark-circle-outline"
+                <Feather
+                  name="check-circle"
                   size={14}
                   color={getStatusColor(item.submissionStatus)}
                 />
@@ -296,7 +296,7 @@ export default function ProfileScreen() {
         </View>
       ) : (
         <View style={[styles.emptySubmissions, { backgroundColor: theme.cardBackground }]}>
-          <Ionicons name="file-tray-outline" size={40} color={theme.textSecondary} />
+          <Feather name="inbox" size={40} color={theme.textSecondary} />
           <ThemedText style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
             No submissions yet
           </ThemedText>

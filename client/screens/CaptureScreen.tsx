@@ -11,10 +11,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
+import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -32,7 +32,7 @@ import { Evidence, saveEvidence, generateEvidenceId, getAllEvidence } from "@/li
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type CaptureMode = "picture" | "video";
+type CaptureMode = "photo" | "video";
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
@@ -41,12 +41,11 @@ export default function CaptureScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const [locationPermission, requestLocationPermission] = Location.useForegroundPermissions();
   
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState<"off" | "on">("off");
-  const [mode, setMode] = useState<CaptureMode>("picture");
+  const [mode, setMode] = useState<CaptureMode>("photo");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [lastCapturedUri, setLastCapturedUri] = useState<string | null>(null);
@@ -150,7 +149,7 @@ export default function CaptureScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      if (mode === "picture") {
+      if (mode === "photo") {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           skipProcessing: false,
@@ -161,7 +160,7 @@ export default function CaptureScreen() {
           
           const evidence: Evidence = {
             id: generateEvidenceId(),
-            type: "picture",
+            type: "photo",
             uri: photo.uri,
             timestamp: Date.now(),
             latitude: locationData.latitude,
@@ -183,21 +182,6 @@ export default function CaptureScreen() {
           cameraRef.current.stopRecording();
           setIsRecording(false);
         } else {
-          if (!micPermission?.granted) {
-            const result = await requestMicPermission();
-            if (!result.granted) {
-              Alert.alert(
-                "Microphone Required",
-                "Please enable microphone access to record video with audio.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  Platform.OS !== "web" ? { text: "Settings", onPress: openSettings } : null,
-                ].filter(Boolean) as any
-              );
-              setIsCapturing(false);
-              return;
-            }
-          }
           setIsRecording(true);
           const video = await cameraRef.current.recordAsync({
             maxDuration: 60,
@@ -274,7 +258,7 @@ export default function CaptureScreen() {
         ]}
       >
         <View style={styles.permissionContent}>
-          <Ionicons name="camera-outline" size={64} color={theme.textSecondary} />
+          <Feather name="camera-off" size={64} color={theme.textSecondary} />
           <ThemedText type="h3" style={styles.permissionTitle}>
             Camera Access Required
           </ThemedText>
@@ -318,8 +302,8 @@ export default function CaptureScreen() {
               style={[styles.controlButton, Shadows.small]}
               onPress={toggleFlash}
             >
-              <Ionicons
-                name={flash === "on" ? "flash-outline" : "flash-off-outline"}
+              <Feather
+                name={flash === "on" ? "zap" : "zap-off"}
                 size={24}
                 color="#FFF"
               />
@@ -335,7 +319,7 @@ export default function CaptureScreen() {
             ) : null}
 
             <Pressable style={[styles.controlButton, Shadows.small]} onPress={toggleFacing}>
-              <Ionicons name="sync-outline" size={24} color="#FFF" />
+              <Feather name="refresh-cw" size={24} color="#FFF" />
             </Pressable>
           </View>
 
@@ -343,14 +327,14 @@ export default function CaptureScreen() {
             <Pressable
               style={[
                 styles.modeButton,
-                mode === "picture" && styles.modeButtonActive,
+                mode === "photo" && styles.modeButtonActive,
               ]}
-              onPress={() => setMode("picture")}
+              onPress={() => setMode("photo")}
             >
               <ThemedText
                 style={[
                   styles.modeButtonText,
-                  mode === "picture" && styles.modeButtonTextActive,
+                  mode === "photo" && styles.modeButtonTextActive,
                 ]}
               >
                 Photo
@@ -393,7 +377,7 @@ export default function CaptureScreen() {
               />
             ) : (
               <View style={styles.emptyThumbnail}>
-                <Ionicons name="image-outline" size={24} color="#FFF" />
+                <Feather name="image" size={24} color="#FFF" />
               </View>
             )}
           </Pressable>
@@ -410,7 +394,7 @@ export default function CaptureScreen() {
                 mode === "video" && isRecording && pulseStyle,
               ]}
             >
-              {isCapturing && mode === "picture" ? (
+              {isCapturing && mode === "photo" ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : mode === "video" && isRecording ? (
                 <View style={styles.stopIcon} />
@@ -426,6 +410,7 @@ export default function CaptureScreen() {
             style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
             onPress={requestLocationPermission}
           >
+            <Feather name="map-pin" size={16} color="#FFF" />
             <ThemedText style={styles.locationWarningText}>
               Enable location
             </ThemedText>

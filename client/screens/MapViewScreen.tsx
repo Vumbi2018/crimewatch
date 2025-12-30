@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, RouteProp } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
@@ -49,7 +49,7 @@ export default function MapViewScreen() {
       <View style={styles.content}>
         <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
           <View style={styles.mapIconContainer}>
-            <Ionicons name="location-outline" size={64} color={Colors.light.primary} />
+            <Feather name="map-pin" size={64} color={Colors.light.primary} />
           </View>
           <ThemedText type="h3" style={styles.title}>
             Evidence Location
@@ -66,7 +66,7 @@ export default function MapViewScreen() {
           </ThemedText>
 
           <View style={styles.accuracyRow}>
-            <Ionicons name="locate-outline" size={16} color={Colors.light.success} />
+            <Feather name="target" size={16} color={Colors.light.success} />
             <ThemedText type="small" style={{ color: Colors.light.success }}>
               GPS Location Recorded
             </ThemedText>
@@ -76,7 +76,7 @@ export default function MapViewScreen() {
             style={[styles.openButton, { backgroundColor: Colors.light.primary }]}
             onPress={openInMaps}
           >
-            <Ionicons name="navigate-outline" size={20} color="#FFF" />
+            <Feather name="navigation" size={20} color="#FFF" />
             <ThemedText style={styles.openButtonText}>
               Open in Maps App
             </ThemedText>

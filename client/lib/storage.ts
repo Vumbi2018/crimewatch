@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface Evidence {
   id: string;
-  type: "picture" | "video";
+  type: "photo" | "video";
   uri: string;
   timestamp: number;
   latitude: number | null;

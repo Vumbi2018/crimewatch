@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
@@ -162,8 +162,8 @@ export default function ReportSubmissionScreen() {
           />
           <View style={styles.evidenceInfo}>
             <View style={styles.typeBadge}>
-              <Ionicons
-                name={evidence.type === "photo" ? "image-outline" : "videocam-outline"}
+              <Feather
+                name={evidence.type === "photo" ? "image" : "video"}
                 size={14}
                 color="#FFF"
               />
@@ -181,7 +181,7 @@ export default function ReportSubmissionScreen() {
             ) : null}
             {evidence.address ? (
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+                <Feather name="map-pin" size={12} color={theme.textSecondary} />
                 <ThemedText type="caption" style={{ color: theme.textSecondary }} numberOfLines={1}>
                   {evidence.address}
                 </ThemedText>
@@ -199,14 +199,14 @@ export default function ReportSubmissionScreen() {
             onPress={() => setShowAgencyPicker(!showAgencyPicker)}
           >
             <View style={styles.agencyButtonContent}>
-              <Ionicons name="shield-outline" size={18} color={theme.textSecondary} />
+              <Feather name="shield" size={18} color={theme.textSecondary} />
               <ThemedText
                 style={selectedAgency ? {} : { color: theme.textSecondary }}
               >
                 {selectedAgency || "Select agency"}
               </ThemedText>
             </View>
-            <Ionicons
+            <Feather
               name={showAgencyPicker ? "chevron-up" : "chevron-down"}
               size={20}
               color={theme.textSecondary}
@@ -239,7 +239,7 @@ export default function ReportSubmissionScreen() {
                     {agency}
                   </ThemedText>
                   {selectedAgency === agency ? (
-                    <Ionicons name="checkmark" size={18} color={theme.primary} />
+                    <Feather name="check" size={18} color={theme.primary} />
                   ) : null}
                 </Pressable>
               ))}
@@ -289,7 +289,7 @@ export default function ReportSubmissionScreen() {
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchContent}>
-              <Ionicons name="person-remove-outline" size={20} color={theme.textSecondary} />
+              <Feather name="user-x" size={20} color={theme.textSecondary} />
               <View style={styles.switchTextContainer}>
                 <ThemedText style={styles.switchLabel}>Submit Anonymously</ThemedText>
                 <ThemedText type="caption" style={{ color: theme.textSecondary }}>
@@ -315,7 +315,7 @@ export default function ReportSubmissionScreen() {
           <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.switchRow}>
               <View style={styles.switchContent}>
-                <Ionicons name="call-outline" size={20} color={theme.textSecondary} />
+                <Feather name="phone" size={20} color={theme.textSecondary} />
                 <View style={styles.switchTextContainer}>
                   <ThemedText style={styles.switchLabel}>Allow Authorities to Contact Me</ThemedText>
                   <ThemedText type="caption" style={{ color: theme.textSecondary }}>
@@ -357,7 +357,7 @@ export default function ReportSubmissionScreen() {
         ) : null}
 
         <View style={styles.disclaimer}>
-          <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
+          <Feather name="info" size={16} color={theme.textSecondary} />
           <ThemedText type="caption" style={{ color: theme.textSecondary, flex: 1 }}>
             By submitting this report, you confirm that the information and evidence provided is accurate to the best of your knowledge. False reports may be subject to legal action.
           </ThemedText>
