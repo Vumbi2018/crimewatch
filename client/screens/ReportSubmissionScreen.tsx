@@ -33,6 +33,7 @@ type RouteType = RouteProp<RootStackParamList, "ReportSubmission">;
 
 const AGENCIES = [
   "Boroko Police Station",
+  "Local Police Station",
   "Crime Stoppers Anonymous Tip Line",
 ];
 
