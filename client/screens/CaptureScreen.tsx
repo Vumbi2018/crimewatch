@@ -294,7 +294,6 @@ export default function CaptureScreen() {
         style={styles.camera}
         facing={facing}
         flash={flash}
-        mode={mode}
       >
         <View style={[styles.overlay, { paddingTop: insets.top + Spacing.lg }]}>
           <View style={styles.topControls}>
