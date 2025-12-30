@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
@@ -85,20 +85,20 @@ export default function HomeScreen() {
               onPress={handleGetStarted}
             >
               <ThemedText style={styles.getStartedText}>Get Started</ThemedText>
-              <Feather name="arrow-right" size={20} color="#FFF" />
+              <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </Pressable>
 
             <View style={styles.featuresRow}>
               <View style={styles.featureItem}>
-                <Feather name="camera" size={20} color="rgba(255,255,255,0.8)" />
+                <Ionicons name="camera-outline" size={20} color="rgba(255,255,255,0.8)" />
                 <ThemedText style={styles.featureText}>Capture</ThemedText>
               </View>
               <View style={styles.featureItem}>
-                <Feather name="map-pin" size={20} color="rgba(255,255,255,0.8)" />
+                <Ionicons name="location-outline" size={20} color="rgba(255,255,255,0.8)" />
                 <ThemedText style={styles.featureText}>Location</ThemedText>
               </View>
               <View style={styles.featureItem}>
-                <Feather name="lock" size={20} color="rgba(255,255,255,0.8)" />
+                <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.8)" />
                 <ThemedText style={styles.featureText}>Secure</ThemedText>
               </View>
             </View>

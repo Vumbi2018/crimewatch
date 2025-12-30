@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -49,7 +49,7 @@ function SettingsItem({
       onPress={onPress}
     >
       <View style={styles.settingsItemContent}>
-        <Feather
+        <Ionicons
           name={icon as any}
           size={20}
           color={destructive ? Colors.light.accent : theme.textSecondary}
@@ -70,7 +70,7 @@ function SettingsItem({
           </ThemedText>
         ) : null}
         {showChevron ? (
-          <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         ) : null}
       </View>
     </Pressable>
@@ -167,19 +167,19 @@ export default function SettingsScreen() {
         </ThemedText>
         <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
           <SettingsItem
-            icon="camera"
+            icon="camera-outline"
             label="Camera Access"
             onPress={handleOpenSettings}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="map-pin"
+            icon="location-outline"
             label="Location Access"
             onPress={handleOpenSettings}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="bell"
+            icon="notifications-outline"
             label="Notifications"
             onPress={handleOpenSettings}
           />
@@ -192,19 +192,19 @@ export default function SettingsScreen() {
         </ThemedText>
         <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
           <SettingsItem
-            icon="shield"
+            icon="shield-outline"
             label="Privacy Policy"
             onPress={handlePrivacyPolicy}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="file-text"
+            icon="document-text-outline"
             label="Terms of Service"
             onPress={handleTermsOfService}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="trash-2"
+            icon="trash-outline"
             label="Clear All Data"
             onPress={handleClearData}
             destructive
@@ -219,19 +219,19 @@ export default function SettingsScreen() {
         </ThemedText>
         <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
           <SettingsItem
-            icon="help-circle"
+            icon="help-circle-outline"
             label="Help & FAQ"
             onPress={handleContact}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="mail"
+            icon="mail-outline"
             label="Contact Support"
             onPress={handleContact}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsItem
-            icon="info"
+            icon="information-circle-outline"
             label="About"
             value="v1.0.0"
             onPress={handleAbout}

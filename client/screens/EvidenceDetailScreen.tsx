@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
@@ -142,7 +142,7 @@ export default function EvidenceDetailScreen() {
     navigation.setOptions({
       headerRight: () => (
         <Pressable onPress={handleDelete} style={{ marginRight: Spacing.sm }}>
-          <Feather name="trash-2" size={22} color={Colors.light.accent} />
+          <Ionicons name="trash-outline" size={22} color={Colors.light.accent} />
         </Pressable>
       ),
     });
@@ -181,7 +181,7 @@ export default function EvidenceDetailScreen() {
           />
           {evidence.type === "video" ? (
             <View style={styles.playOverlay}>
-              <Feather name="play-circle" size={48} color="#FFF" />
+              <Ionicons name="play-circle-outline" size={48} color="#FFF" />
             </View>
           ) : null}
         </View>
@@ -191,7 +191,7 @@ export default function EvidenceDetailScreen() {
             Captured
           </ThemedText>
           <View style={styles.metadataRow}>
-            <Feather name="clock" size={16} color={theme.textSecondary} />
+            <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
             <ThemedText style={styles.metadataText}>
               {formatDateTime(evidence.timestamp)}
             </ThemedText>
@@ -208,15 +208,15 @@ export default function EvidenceDetailScreen() {
                 })
               }
             >
-              <Feather name="map-pin" size={16} color={theme.primary} />
+              <Ionicons name="location-outline" size={16} color={theme.primary} />
               <ThemedText style={[styles.metadataText, { color: theme.primary }]}>
                 {evidence.address || `${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}`}
               </ThemedText>
-              <Feather name="chevron-right" size={16} color={theme.textSecondary} />
+              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
             </Pressable>
           ) : (
             <View style={styles.metadataRow}>
-              <Feather name="map-pin" size={16} color={theme.textSecondary} />
+              <Ionicons name="location-outline" size={16} color={theme.textSecondary} />
               <ThemedText style={[styles.metadataText, { color: theme.textSecondary }]}>
                 Location not available
               </ThemedText>
@@ -237,7 +237,7 @@ export default function EvidenceDetailScreen() {
             >
               {incidentType || "Select incident type"}
             </ThemedText>
-            <Feather
+            <Ionicons
               name={showIncidentPicker ? "chevron-up" : "chevron-down"}
               size={20}
               color={theme.textSecondary}
@@ -270,7 +270,7 @@ export default function EvidenceDetailScreen() {
                     {type}
                   </ThemedText>
                   {incidentType === type ? (
-                    <Feather name="check" size={18} color={theme.primary} />
+                    <Ionicons name="checkmark" size={18} color={theme.primary} />
                   ) : null}
                 </Pressable>
               ))}
@@ -323,7 +323,7 @@ export default function EvidenceDetailScreen() {
               style={[styles.addTagButton, { backgroundColor: theme.primary }]}
               onPress={handleAddTag}
             >
-              <Feather name="plus" size={20} color="#FFF" />
+              <Ionicons name="add" size={20} color="#FFF" />
             </Pressable>
           </View>
           {tags.length > 0 ? (
@@ -335,7 +335,7 @@ export default function EvidenceDetailScreen() {
                   onPress={() => handleRemoveTag(tag)}
                 >
                   <ThemedText type="small">{tag}</ThemedText>
-                  <Feather name="x" size={14} color={theme.textSecondary} />
+                  <Ionicons name="close-outline" size={14} color={theme.textSecondary} />
                 </Pressable>
               ))}
             </View>
@@ -346,7 +346,7 @@ export default function EvidenceDetailScreen() {
           style={styles.saveButton}
           onPress={handleSave}
         >
-          <Feather name="save" size={18} color={theme.primary} />
+          <Ionicons name="save-outline" size={18} color={theme.primary} />
           <ThemedText style={{ color: theme.primary, fontWeight: "600" }}>
             Save Changes
           </ThemedText>

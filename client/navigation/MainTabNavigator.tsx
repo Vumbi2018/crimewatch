@@ -1,6 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
@@ -52,7 +52,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Evidence",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="folder" size={size} color={color} />
+            <Ionicons name="folder-outline" size={size} color={color} />
           ),
         }}
       />
@@ -72,7 +72,7 @@ export default function MainTabNavigator() {
                 },
               ]}
             >
-              <Feather name="camera" size={size} color="#FFFFFF" />
+              <Ionicons name="camera-outline" size={size} color="#FFFFFF" />
             </View>
           ),
         }}
@@ -83,7 +83,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="user" size={size} color={color} />
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />

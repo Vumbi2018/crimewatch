@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -274,7 +274,7 @@ export default function CaptureScreen() {
         ]}
       >
         <View style={styles.permissionContent}>
-          <Feather name="camera-off" size={64} color={theme.textSecondary} />
+          <Ionicons name="camera-outline" size={64} color={theme.textSecondary} />
           <ThemedText type="h3" style={styles.permissionTitle}>
             Camera Access Required
           </ThemedText>
@@ -318,8 +318,8 @@ export default function CaptureScreen() {
               style={[styles.controlButton, Shadows.small]}
               onPress={toggleFlash}
             >
-              <Feather
-                name={flash === "on" ? "zap" : "zap-off"}
+              <Ionicons
+                name={flash === "on" ? "flash-outline" : "flash-off-outline"}
                 size={24}
                 color="#FFF"
               />
@@ -335,7 +335,7 @@ export default function CaptureScreen() {
             ) : null}
 
             <Pressable style={[styles.controlButton, Shadows.small]} onPress={toggleFacing}>
-              <Feather name="refresh-cw" size={24} color="#FFF" />
+              <Ionicons name="sync-outline" size={24} color="#FFF" />
             </Pressable>
           </View>
 
@@ -393,7 +393,7 @@ export default function CaptureScreen() {
               />
             ) : (
               <View style={styles.emptyThumbnail}>
-                <Feather name="image" size={24} color="#FFF" />
+                <Ionicons name="image-outline" size={24} color="#FFF" />
               </View>
             )}
           </Pressable>
@@ -426,7 +426,7 @@ export default function CaptureScreen() {
             style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
             onPress={requestLocationPermission}
           >
-            <Feather name="map-pin" size={16} color="#FFF" />
+            <Ionicons name="location-outline" size={16} color="#FFF" />
             <ThemedText style={styles.locationWarningText}>
               Enable location
             </ThemedText>
