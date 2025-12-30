@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginTop: Spacing.xxl,
+    marginTop: Spacing["2xl"],
   },
   logoContainer: {
     marginBottom: Spacing.lg,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     backgroundColor: Colors.light.primary,
     paddingVertical: Spacing.md + 4,
-    paddingHorizontal: Spacing.xxl,
+    paddingHorizontal: Spacing["2xl"],
     borderRadius: BorderRadius.lg,
     width: "100%",
     maxWidth: 320,
