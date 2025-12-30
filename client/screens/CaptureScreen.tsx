@@ -426,7 +426,6 @@ export default function CaptureScreen() {
             style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
             onPress={requestLocationPermission}
           >
-            <Ionicons name="location-outline" size={16} color="#FFF" />
             <ThemedText style={styles.locationWarningText}>
               Enable location
             </ThemedText>
