@@ -22,7 +22,9 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        await Font.loadAsync(Feather.font);
+        const fontPromise = Font.loadAsync(Feather.font);
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
+        await Promise.race([fontPromise, timeoutPromise]);
       } catch (e) {
         console.warn("Font loading error:", e);
       } finally {
