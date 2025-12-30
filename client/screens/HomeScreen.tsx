@@ -10,7 +10,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
@@ -85,23 +84,7 @@ export default function HomeScreen() {
               onPress={handleGetStarted}
             >
               <ThemedText style={styles.getStartedText}>Get Started</ThemedText>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </Pressable>
-
-            <View style={styles.featuresRow}>
-              <View style={styles.featureItem}>
-                <Ionicons name="camera-outline" size={20} color="rgba(255,255,255,0.8)" />
-                <ThemedText style={styles.featureText}>Capture</ThemedText>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="location-outline" size={20} color="rgba(255,255,255,0.8)" />
-                <ThemedText style={styles.featureText}>Location</ThemedText>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.8)" />
-                <ThemedText style={styles.featureText}>Secure</ThemedText>
-              </View>
-            </View>
           </Animated.View>
         </View>
       </ImageBackground>
@@ -192,20 +175,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#FFF",
-  },
-  featuresRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: Spacing.xl,
-    marginTop: Spacing.xl,
-  },
-  featureItem: {
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  featureText: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
-    fontWeight: "500",
   },
 });
