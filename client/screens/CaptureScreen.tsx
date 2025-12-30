@@ -367,7 +367,7 @@ export default function CaptureScreen() {
         >
           <Pressable
             style={styles.galleryThumbnail}
-            onPress={() => navigation.navigate("Main", { screen: "EvidenceTab" } as any)}
+            onPress={() => navigation.navigate("MainTabs", { screen: "EvidenceTab" } as any)}
           >
             {lastCapturedUri ? (
               <Image
