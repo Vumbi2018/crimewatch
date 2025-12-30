@@ -32,10 +32,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, "ReportSubmission">;
 
 const AGENCIES = [
-  "Local Police Department",
-  "County Sheriff's Office",
-  "State Police",
-  "FBI Field Office",
+  "Boroko Police Station",
   "Crime Stoppers Anonymous Tip Line",
 ];
 
