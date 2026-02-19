@@ -54,3 +54,8 @@ task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
 ensurePreviewReachable = "/status"
+
+[userenv]
+
+[userenv.production]
+SHARED_DATABASE_URL = "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
