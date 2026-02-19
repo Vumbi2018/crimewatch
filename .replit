@@ -58,4 +58,6 @@ ensurePreviewReachable = "/status"
 [userenv]
 
 [userenv.production]
-SHARED_DATABASE_URL = "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
+
+[userenv.shared]
+EXPO_PUBLIC_DOMAIN = "citizen-witness--lanframeit.replit.app"
