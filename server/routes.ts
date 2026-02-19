@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
-import * as fs from "fs";
-import * as path from "path";
+import { adminHtml } from "./admin-html";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/reports", async (req, res) => {
@@ -50,12 +49,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/admin", (_req, res) => {
-    const adminPath = path.resolve(process.cwd(), "server", "templates", "admin.html");
-    if (fs.existsSync(adminPath)) {
-      res.sendFile(adminPath);
-    } else {
-      res.status(404).send("Admin portal not found");
-    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.status(200).send(adminHtml);
   });
 
   const httpServer = createServer(app);
