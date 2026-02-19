@@ -3,10 +3,34 @@ import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
 import { adminHtml } from "./admin-html";
 
+const PRODUCTION_DOMAIN = "citizen-witness--lanframeit.replit.app";
+
+async function forwardToProduction(reportData: any) {
+  try {
+    const isProduction = process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.NODE_ENV === "production";
+    if (isProduction) return;
+
+    const prodUrl = `https://${PRODUCTION_DOMAIN}/api/reports`;
+    const response = await fetch(prodUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reportData),
+    });
+    if (response.ok) {
+      console.log("Report forwarded to production successfully");
+    } else {
+      console.error("Failed to forward report to production:", response.status);
+    }
+  } catch (err) {
+    console.error("Error forwarding report to production:", err);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/reports", async (req, res) => {
     try {
       const report = await storage.createEvidenceReport(req.body);
+      forwardToProduction(req.body);
       res.status(201).json(report);
     } catch (error) {
       console.error("Error creating report:", error);
