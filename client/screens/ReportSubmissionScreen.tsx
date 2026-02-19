@@ -20,6 +20,7 @@ import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { apiRequest } from "@/lib/query-client";
 import {
   Evidence,
   getEvidenceById,
@@ -96,12 +97,26 @@ export default function ReportSubmissionScreen() {
     setIsSubmitting(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
       if (evidence) {
-        await updateEvidenceSubmissionStatus(evidence.id, "sent");
-        
         const profile = await getUserProfile();
+
+        await apiRequest("POST", "/api/reports", {
+          evidenceType: evidence.type,
+          incidentType: evidence.incidentType || null,
+          description: evidence.description || null,
+          latitude: evidence.latitude ? String(evidence.latitude) : null,
+          longitude: evidence.longitude ? String(evidence.longitude) : null,
+          address: evidence.address || null,
+          tags: evidence.tags || [],
+          agency: selectedAgency,
+          priority,
+          isAnonymous: isAnonymous ? 1 : 0,
+          contactPhone: allowContact ? contactPhone || null : null,
+          contactEmail: allowContact ? contactEmail || null : null,
+          reporterName: isAnonymous ? null : profile.displayName,
+        });
+
+        await updateEvidenceSubmissionStatus(evidence.id, "sent");
         await saveUserProfile({
           totalSubmissions: profile.totalSubmissions + 1,
         });
