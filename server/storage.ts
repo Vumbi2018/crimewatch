@@ -1,38 +1,50 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type User, type InsertUser, type EvidenceReport, type InsertEvidenceReport, evidenceReports } from "@shared/schema";
 import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { desc, eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createEvidenceReport(report: InsertEvidenceReport): Promise<EvidenceReport>;
+  getAllEvidenceReports(): Promise<EvidenceReport[]>;
+  getEvidenceReportById(id: string): Promise<EvidenceReport | undefined>;
+  updateEvidenceReportStatus(id: string, status: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    return undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const user: User = { ...insertUser, id };
-    this.users.set(id, user);
     return user;
+  }
+
+  async createEvidenceReport(report: InsertEvidenceReport): Promise<EvidenceReport> {
+    const [created] = await db.insert(evidenceReports).values(report).returning();
+    return created;
+  }
+
+  async getAllEvidenceReports(): Promise<EvidenceReport[]> {
+    return db.select().from(evidenceReports).orderBy(desc(evidenceReports.submittedAt));
+  }
+
+  async getEvidenceReportById(id: string): Promise<EvidenceReport | undefined> {
+    const [report] = await db.select().from(evidenceReports).where(eq(evidenceReports.id, id));
+    return report;
+  }
+
+  async updateEvidenceReportStatus(id: string, status: string): Promise<void> {
+    await db.update(evidenceReports).set({ status }).where(eq(evidenceReports.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
