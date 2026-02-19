@@ -31,14 +31,17 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express
 - **Server Entry**: `server/index.ts` handles CORS, body parsing, and static file serving
-- **Routes**: Registered in `server/routes.ts` (currently minimal, prefixed with `/api`)
-- **Storage Interface**: `server/storage.ts` defines an `IStorage` interface with in-memory implementation (ready for database migration)
+- **Routes**: `server/routes.ts` with API endpoints for evidence report CRUD (`/api/reports`)
+- **Storage**: `server/storage.ts` with `DatabaseStorage` class using Drizzle ORM and PostgreSQL
+- **Database Connection**: `server/db.ts` using drizzle-orm/neon-serverless
+- **Admin Portal**: Served at `/admin` - web-based dashboard for viewing and managing submitted evidence reports
 
 ### Data Storage
 - **Database Schema**: Drizzle ORM with PostgreSQL configuration
-- **Current Tables**: `users` table with id, username, password fields
+- **Tables**: `users` (id, username, password), `evidence_reports` (id, evidenceType, incidentType, description, latitude, longitude, address, tags, agency, priority, isAnonymous, contactPhone, contactEmail, reporterName, status, submittedAt)
 - **Schema Location**: `shared/schema.ts` with Zod validation via drizzle-zod
 - **Client-side**: AsyncStorage for offline evidence storage with structured Evidence and UserProfile types
+- **Submission Flow**: Mobile app submits reports via POST `/api/reports`, admin views via GET `/api/reports`
 
 ### Path Aliases
 - `@/` maps to `./client/`
