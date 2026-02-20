@@ -64,7 +64,7 @@ export default function HomeScreen() {
             style={styles.taglineContainer}
           >
             <ThemedText style={styles.tagline}>
-              Report crimes safely and anonymously
+              Report crime and suspicious activities
             </ThemedText>
             <ThemedText style={styles.taglineSecondary}>
               Capture evidence, protect your community
