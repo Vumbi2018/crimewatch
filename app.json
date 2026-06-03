@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Crimestoppers PNG",
+    "name": "Crime Prevention PNG",
     "slug": "crimestoppers",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,10 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.crimestoppers.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Crimestoppers needs camera access to capture photo and video evidence of incidents.",
-        "NSMicrophoneUsageDescription": "Crimestoppers needs microphone access to record audio with video evidence.",
-        "NSLocationWhenInUseUsageDescription": "Crimestoppers needs your location to tag evidence with precise coordinates.",
-        "NSPhotoLibraryUsageDescription": "Crimestoppers needs photo library access to save captured evidence."
+        "NSCameraUsageDescription": "Crime Prevention PNG needs camera access to capture photo and video evidence of incidents.",
+        "NSMicrophoneUsageDescription": "Crime Prevention PNG needs microphone access to record audio with video evidence.",
+        "NSLocationWhenInUseUsageDescription": "Crime Prevention PNG needs your location to tag evidence with precise coordinates.",
+        "NSPhotoLibraryUsageDescription": "Crime Prevention PNG needs photo library access to save captured evidence."
       }
     },
     "android": {
@@ -56,22 +56,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Crimestoppers needs camera access to capture photo and video evidence of incidents.",
-          "microphonePermission": "Crimestoppers needs microphone access to record audio with video evidence.",
+          "cameraPermission": "Crime Prevention PNG needs camera access to capture photo and video evidence of incidents.",
+          "microphonePermission": "Crime Prevention PNG needs microphone access to record audio with video evidence.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Crimestoppers needs your location to tag evidence with precise coordinates."
+          "locationWhenInUsePermission": "Crime Prevention PNG needs your location to tag evidence with precise coordinates."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Crimestoppers needs photo library access to save captured evidence.",
-          "savePhotosPermission": "Crimestoppers needs permission to save evidence photos to your device.",
+          "photosPermission": "Crime Prevention PNG needs photo library access to save captured evidence.",
+          "savePhotosPermission": "Crime Prevention PNG needs permission to save evidence photos to your device.",
           "isAccessMediaLocationEnabled": true
         }
       ]

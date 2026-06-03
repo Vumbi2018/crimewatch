@@ -279,7 +279,7 @@ export default function CaptureScreen() {
             Camera Access Required
           </ThemedText>
           <ThemedText style={styles.permissionText}>
-            Crimestoppers needs camera access to capture photo and video evidence of incidents.
+            Crime Prevention PNG needs camera access to capture photo and video evidence of incidents.
           </ThemedText>
           {permission.status === "denied" && !permission.canAskAgain ? (
             Platform.OS !== "web" ? (

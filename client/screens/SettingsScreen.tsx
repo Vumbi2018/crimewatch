@@ -123,7 +123,7 @@ export default function SettingsScreen() {
   const handlePrivacyPolicy = () => {
     Alert.alert(
       "Privacy Policy",
-      "Crimestoppers is committed to protecting your privacy. All evidence is stored locally on your device and only shared with authorities when you explicitly choose to submit a report.\n\nWe do not collect, store, or share your personal information without your consent.",
+      "Crime Prevention PNG is committed to protecting your privacy. All evidence is stored locally on your device and only shared with authorities when you explicitly choose to submit a report.\n\nWe do not collect, store, or share your personal information without your consent.",
       [{ text: "OK" }]
     );
   };
@@ -131,15 +131,15 @@ export default function SettingsScreen() {
   const handleTermsOfService = () => {
     Alert.alert(
       "Terms of Service",
-      "By using Crimestoppers, you agree to:\n\n1. Only submit accurate and truthful information\n2. Not use this app for false or malicious reports\n3. Comply with all applicable laws\n4. Accept responsibility for the content you submit\n\nFalse reports may be subject to legal action.",
+      "By using Crime Prevention PNG, you agree to:\n\n1. Only submit accurate and truthful information\n2. Not use this app for false or malicious reports\n3. Comply with all applicable laws\n4. Accept responsibility for the content you submit\n\nFalse reports may be subject to legal action.",
       [{ text: "OK" }]
     );
   };
 
   const handleAbout = () => {
     Alert.alert(
-      "About Crimestoppers",
-      "Version 1.0.0\n\nCrimestoppers empowers citizens to safely and securely report crime-related incidents to local authorities.\n\nBuilt with privacy and security as core priorities.",
+      "About Crime Prevention PNG",
+      "Version 1.0.0\n\nCrime Prevention PNG empowers citizens to safely and securely report crime-related incidents to local authorities.\n\nBuilt with privacy and security as core priorities.",
       [{ text: "OK" }]
     );
   };
@@ -241,7 +241,7 @@ export default function SettingsScreen() {
 
       <View style={styles.footer}>
         <ThemedText type="caption" style={{ color: theme.textSecondary, textAlign: "center" }}>
-          Crimestoppers v1.0.0
+          Crime Prevention PNG v1.0.0
         </ThemedText>
         <ThemedText type="caption" style={{ color: theme.textSecondary, textAlign: "center" }}>
           Your reports help keep our communities safe.

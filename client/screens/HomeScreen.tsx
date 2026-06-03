@@ -56,7 +56,7 @@ export default function HomeScreen() {
                 resizeMode="contain"
               />
             </View>
-            <ThemedText style={styles.title}>Crimestoppers</ThemedText>
+            <ThemedText style={styles.title}>Crime Prevention PNG</ThemedText>
           </Animated.View>
 
           <Animated.View 
