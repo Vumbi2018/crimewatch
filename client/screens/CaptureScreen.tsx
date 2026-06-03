@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
+import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -32,7 +33,9 @@ import { Evidence, saveEvidence, generateEvidenceId, getAllEvidence } from "@/li
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type CaptureMode = "photo" | "video";
+type CaptureMode = "photo" | "video" | "audio";
+
+const WAVEFORM_BARS = 7;
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
@@ -43,7 +46,7 @@ export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const [locationPermission, requestLocationPermission] = Location.useForegroundPermissions();
-  
+
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState<"off" | "on">("off");
   const [mode, setMode] = useState<CaptureMode>("photo");
@@ -51,13 +54,40 @@ export default function CaptureScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [lastCapturedUri, setLastCapturedUri] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [audioPermissionGranted, setAudioPermissionGranted] = useState(false);
+
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const pulseScale = useSharedValue(1);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const waveBar0 = useSharedValue(0.3);
+  const waveBar1 = useSharedValue(0.3);
+  const waveBar2 = useSharedValue(0.3);
+  const waveBar3 = useSharedValue(0.3);
+  const waveBar4 = useSharedValue(0.3);
+  const waveBar5 = useSharedValue(0.3);
+  const waveBar6 = useSharedValue(0.3);
+  const waveBars = [waveBar0, waveBar1, waveBar2, waveBar3, waveBar4, waveBar5, waveBar6];
+
+  const waveBar0Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar0.value }] }));
+  const waveBar1Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar1.value }] }));
+  const waveBar2Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar2.value }] }));
+  const waveBar3Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar3.value }] }));
+  const waveBar4Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar4.value }] }));
+  const waveBar5Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar5.value }] }));
+  const waveBar6Style = useAnimatedStyle(() => ({ transform: [{ scaleY: waveBar6.value }] }));
+  const waveBarStyles = [waveBar0Style, waveBar1Style, waveBar2Style, waveBar3Style, waveBar4Style, waveBar5Style, waveBar6Style];
+
   useEffect(() => {
+    checkAudioPermission();
     loadLastEvidence();
   }, []);
+
+  const checkAudioPermission = async () => {
+    const status = await AudioModule.getRecordingPermissionsAsync();
+    setAudioPermissionGranted(status.granted);
+  };
 
   const loadLastEvidence = async () => {
     const evidence = await getAllEvidence();
@@ -68,17 +98,28 @@ export default function CaptureScreen() {
 
   useEffect(() => {
     if (isRecording) {
-      pulseScale.value = withRepeat(
-        withTiming(1.15, { duration: 500 }),
-        -1,
-        true
-      );
+      pulseScale.value = withRepeat(withTiming(1.15, { duration: 500 }), -1, true);
+
+      const durations = [600, 350, 800, 450, 700, 500, 650];
+      const heights = [0.9, 0.5, 1.0, 0.6, 0.85, 0.45, 0.75];
+      waveBars.forEach((bar, i) => {
+        bar.value = withRepeat(
+          withTiming(heights[i], { duration: durations[i] }),
+          -1,
+          true
+        );
+      });
+
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
     } else {
       cancelAnimation(pulseScale);
       pulseScale.value = withSpring(1);
+      waveBars.forEach((bar) => {
+        cancelAnimation(bar);
+        bar.value = withTiming(0.3, { duration: 300 });
+      });
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
@@ -116,7 +157,7 @@ export default function CaptureScreen() {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      
+
       let address = null;
       try {
         const [geocode] = await Location.reverseGeocodeAsync({
@@ -143,8 +184,92 @@ export default function CaptureScreen() {
     }
   };
 
+  const requestAudioPermission = async (): Promise<boolean> => {
+    try {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      setAudioPermissionGranted(status.granted);
+      return status.granted;
+    } catch (error) {
+      console.error("Error requesting audio permission:", error);
+      return false;
+    }
+  };
+
+  const handleStartAudioRecording = async () => {
+    if (!audioPermissionGranted) {
+      const granted = await requestAudioPermission();
+      if (!granted) {
+        Alert.alert(
+          "Microphone Required",
+          "Please enable microphone access to record audio.",
+          [
+            { text: "Cancel", style: "cancel" },
+            Platform.OS !== "web"
+              ? { text: "Settings", onPress: openSettings }
+              : null,
+          ].filter(Boolean) as any
+        );
+        return;
+      }
+    }
+
+    try {
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      setIsRecording(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      console.error("Error starting audio recording:", error);
+      Alert.alert("Error", "Failed to start audio recording. Please try again.");
+    }
+  };
+
+  const handleStopAudioRecording = async () => {
+    try {
+      await audioRecorder.stop();
+      setIsRecording(false);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const uri = audioRecorder.uri;
+      if (uri) {
+        const locationData = await getCurrentLocation();
+        const evidence: Evidence = {
+          id: generateEvidenceId(),
+          type: "audio",
+          uri,
+          timestamp: Date.now(),
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+          address: locationData.address,
+          incidentType: null,
+          description: null,
+          tags: [],
+          submissionStatus: "draft",
+          submittedAt: null,
+        };
+        await saveEvidence(evidence);
+        setLastCapturedUri(uri);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error("Error stopping audio recording:", error);
+      setIsRecording(false);
+    }
+  };
+
   const handleCapture = async () => {
-    if (!cameraRef.current || isCapturing) return;
+    if (isCapturing) return;
+
+    if (mode === "audio") {
+      if (isRecording) {
+        await handleStopAudioRecording();
+      } else {
+        await handleStartAudioRecording();
+      }
+      return;
+    }
+
+    if (!cameraRef.current) return;
 
     setIsCapturing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -158,7 +283,7 @@ export default function CaptureScreen() {
 
         if (photo?.uri) {
           const locationData = await getCurrentLocation();
-          
+
           const evidence: Evidence = {
             id: generateEvidenceId(),
             type: "photo",
@@ -205,7 +330,7 @@ export default function CaptureScreen() {
 
           if (video?.uri) {
             const locationData = await getCurrentLocation();
-            
+
             const evidence: Evidence = {
               id: generateEvidenceId(),
               type: "video",
@@ -303,6 +428,118 @@ export default function CaptureScreen() {
     );
   }
 
+  const ModeSelector = () => (
+    <View style={styles.modeSelector}>
+      {(["photo", "video", "audio"] as CaptureMode[]).map((m) => (
+        <Pressable
+          key={m}
+          style={[styles.modeButton, mode === m && styles.modeButtonActive]}
+          onPress={() => {
+            if (isRecording) return;
+            setMode(m);
+          }}
+        >
+          <ThemedText
+            style={[
+              styles.modeButtonText,
+              mode === m && styles.modeButtonTextActive,
+            ]}
+          >
+            {m.charAt(0).toUpperCase() + m.slice(1)}
+          </ThemedText>
+        </Pressable>
+      ))}
+    </View>
+  );
+
+  if (mode === "audio") {
+    return (
+      <View style={[styles.container, { backgroundColor: "#0a0a0f" }]}>
+        <View style={[styles.audioOverlay, { paddingTop: insets.top + Spacing.lg }]}>
+          <View style={styles.topControls}>
+            <View style={styles.controlButton} />
+            {isRecording ? (
+              <View style={styles.recordingTimer}>
+                <View style={styles.recordingDot} />
+                <ThemedText style={styles.recordingText}>
+                  {formatDuration(recordingDuration)}
+                </ThemedText>
+              </View>
+            ) : null}
+            <View style={styles.controlButton} />
+          </View>
+
+          <ModeSelector />
+        </View>
+
+        <View style={styles.audioCenter}>
+          <View style={styles.waveformContainer}>
+            {waveBarStyles.map((animStyle, i) => (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.waveBar,
+                  animStyle,
+                  isRecording && { backgroundColor: Colors.light.accent },
+                ]}
+              />
+            ))}
+          </View>
+
+          {!isRecording ? (
+            <View style={styles.audioIdleIcon}>
+              <Feather name="mic" size={48} color="rgba(255,255,255,0.25)" />
+              <ThemedText style={styles.audioIdleText}>
+                Tap record to capture audio
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 100 }]}>
+          <Pressable
+            style={styles.galleryThumbnail}
+            onPress={() => navigation.navigate("MainTabs", { screen: "EvidenceTab" } as any)}
+          >
+            <View style={styles.emptyThumbnail}>
+              <Feather name="list" size={24} color="#FFF" />
+            </View>
+          </Pressable>
+
+          <Pressable style={styles.captureButtonOuter} onPress={handleCapture}>
+            <Animated.View
+              style={[
+                styles.captureButtonInner,
+                isRecording && styles.captureButtonRecording,
+                isRecording && pulseStyle,
+              ]}
+            >
+              {isRecording ? (
+                <View style={styles.stopIcon} />
+              ) : (
+                <Feather name="mic" size={28} color="#111" />
+              )}
+            </Animated.View>
+          </Pressable>
+
+          <View style={styles.placeholderButton} />
+        </View>
+
+        {!locationPermission?.granted ? (
+          <Pressable
+            style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
+            onPress={requestLocationPermission}
+          >
+            <Feather name="map-pin" size={16} color="#FFF" />
+            <ThemedText style={styles.locationWarningText}>
+              Enable location
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: "#000" }]}>
       <CameraView
@@ -338,40 +575,7 @@ export default function CaptureScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.modeSelector}>
-            <Pressable
-              style={[
-                styles.modeButton,
-                mode === "photo" && styles.modeButtonActive,
-              ]}
-              onPress={() => setMode("photo")}
-            >
-              <ThemedText
-                style={[
-                  styles.modeButtonText,
-                  mode === "photo" && styles.modeButtonTextActive,
-                ]}
-              >
-                Photo
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.modeButton,
-                mode === "video" && styles.modeButtonActive,
-              ]}
-              onPress={() => setMode("video")}
-            >
-              <ThemedText
-                style={[
-                  styles.modeButtonText,
-                  mode === "video" && styles.modeButtonTextActive,
-                ]}
-              >
-                Video
-              </ThemedText>
-            </Pressable>
-          </View>
+          <ModeSelector />
         </View>
 
         <View
@@ -479,6 +683,14 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: Spacing.lg,
   },
+  audioOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.lg,
+    zIndex: 10,
+  },
   topControls: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -520,7 +732,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modeButton: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
   },
@@ -533,6 +745,32 @@ const styles = StyleSheet.create({
   },
   modeButtonTextActive: {
     color: "#FFF",
+  },
+  audioCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  waveformContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 80,
+  },
+  waveBar: {
+    width: 5,
+    height: 80,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  audioIdleIcon: {
+    alignItems: "center",
+    marginTop: Spacing["2xl"],
+    gap: Spacing.md,
+  },
+  audioIdleText: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 14,
   },
   bottomControls: {
     position: "absolute",

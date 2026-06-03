@@ -136,14 +136,28 @@ export default function EvidenceScreen() {
       onLongPress={() => handleDelete(item.id)}
     >
       <View style={styles.thumbnailContainer}>
-        <Image
-          source={{ uri: item.uri }}
-          style={styles.thumbnail}
-          contentFit="cover"
-        />
+        {item.type === "audio" ? (
+          <View style={[styles.thumbnail, styles.audioThumbnail]}>
+            <Feather name="mic" size={32} color="rgba(255,255,255,0.6)" />
+            <View style={styles.audioWaveRow}>
+              {[0.4, 0.8, 0.5, 1, 0.6, 0.9, 0.45].map((h, i) => (
+                <View
+                  key={i}
+                  style={[styles.audioWaveBar, { height: 24 * h }]}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <Image
+            source={{ uri: item.uri }}
+            style={styles.thumbnail}
+            contentFit="cover"
+          />
+        )}
         <View style={styles.typeBadge}>
           <Feather
-            name={item.type === "photo" ? "image" : "video"}
+            name={item.type === "photo" ? "image" : item.type === "video" ? "video" : "mic"}
             size={12}
             color="#FFF"
           />
@@ -342,6 +356,22 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  audioThumbnail: {
+    backgroundColor: "#1a1a2e",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+  },
+  audioWaveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  audioWaveBar: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
   emptyState: {
     flex: 1,
