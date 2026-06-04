@@ -395,9 +395,10 @@ export const adminHtml = `<!DOCTYPE html>
           : (r.address || '-');
         const reporter = r.isAnonymous ? '<span style="color:#94a3b8;font-style:italic">Anonymous</span>' : (r.reporterName || '-');
 
+        const hasFile = r.fileUrl ? '<span title="Evidence file attached" style="color:#3b82f6;margin-left:4px">&#9679;</span>' : '';
         return '<tr onclick="showDetail(\\'' + r.id + '\\')" style="cursor:pointer">'
           + '<td style="white-space:nowrap">' + date + '</td>'
-          + '<td>' + typeBadge + '</td>'
+          + '<td>' + typeBadge + hasFile + '</td>'
           + '<td>' + (r.incidentType || '-') + '</td>'
           + '<td class="description-cell">' + (r.description || '-') + '</td>'
           + '<td>' + location + '</td>'
@@ -427,6 +428,31 @@ export const adminHtml = `<!DOCTYPE html>
       }
     }
 
+    function buildMediaViewer(r) {
+      if (!r.fileUrl) return '';
+      const url = r.fileUrl.startsWith('http') ? r.fileUrl : window.location.origin + r.fileUrl;
+      if (r.evidenceType === 'photo') {
+        return '<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;background:#0a0f1a;text-align:center">'
+          + '<img src="' + url + '" style="max-width:100%;max-height:420px;object-fit:contain;display:block;margin:0 auto" />'
+          + '<div style="padding:8px;display:flex;justify-content:flex-end">'
+          + '<a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a>'
+          + '</div></div>';
+      } else if (r.evidenceType === 'video') {
+        return '<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;background:#0a0f1a">'
+          + '<video controls style="width:100%;max-height:420px;display:block"><source src="' + url + '"></video>'
+          + '<div style="padding:8px;display:flex;justify-content:flex-end">'
+          + '<a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a>'
+          + '</div></div>';
+      } else if (r.evidenceType === 'audio') {
+        return '<div style="margin-bottom:20px;padding:20px;border-radius:10px;background:#0a0f1a;display:flex;flex-direction:column;gap:12px;align-items:center">'
+          + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>'
+          + '<audio controls style="width:100%"><source src="' + url + '"></audio>'
+          + '<a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a>'
+          + '</div>';
+      }
+      return '';
+    }
+
     function showDetail(id) {
       const r = allReports.find(function(report) { return report.id === id; });
       if (!r) return;
@@ -438,6 +464,7 @@ export const adminHtml = `<!DOCTYPE html>
 
       document.getElementById('detailContent').innerHTML = ''
         + '<h3>Report Details <button class="detail-close" onclick="closeDetail()">&times;</button></h3>'
+        + buildMediaViewer(r)
         + '<div class="detail-row"><div class="detail-label">Report ID</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + r.id + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Submitted</div><div class="detail-value">' + date + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Evidence Type</div><div class="detail-value"><span class="badge badge-' + r.evidenceType + '">' + r.evidenceType + '</span></div></div>'

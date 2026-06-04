@@ -20,7 +20,7 @@ import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import {
   Evidence,
   getEvidenceById,
@@ -83,6 +83,30 @@ export default function ReportSubmissionScreen() {
     });
   };
 
+  const uploadEvidenceFile = async (evidence: Evidence): Promise<string | null> => {
+    try {
+      const ext = evidence.type === "photo" ? ".jpg" : evidence.type === "video" ? ".mp4" : ".m4a";
+      const mimeType = evidence.type === "photo" ? "image/jpeg" : evidence.type === "video" ? "video/mp4" : "audio/m4a";
+      const filename = `evidence_${Date.now()}${ext}`;
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: evidence.uri,
+        name: filename,
+        type: mimeType,
+      } as any);
+
+      const uploadUrl = new URL("/api/upload", getApiUrl()).toString();
+      const res = await fetch(uploadUrl, { method: "POST", body: formData });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.fileUrl || null;
+    } catch (err) {
+      console.error("File upload failed:", err);
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedAgency) {
       Alert.alert("Required", "Please select an agency to submit to.");
@@ -100,6 +124,8 @@ export default function ReportSubmissionScreen() {
       if (evidence) {
         const profile = await getUserProfile();
 
+        const fileUrl = await uploadEvidenceFile(evidence);
+
         await apiRequest("POST", "/api/reports", {
           evidenceType: evidence.type,
           incidentType: evidence.incidentType || null,
@@ -114,6 +140,7 @@ export default function ReportSubmissionScreen() {
           contactPhone: allowContact ? contactPhone || null : null,
           contactEmail: allowContact ? contactEmail || null : null,
           reporterName: isAnonymous ? null : profile.displayName,
+          fileUrl: fileUrl || null,
         });
 
         await updateEvidenceSubmissionStatus(evidence.id, "sent");
@@ -168,15 +195,21 @@ export default function ReportSubmissionScreen() {
         scrollIndicatorInsets={{ bottom: insets.bottom }}
       >
         <View style={[styles.evidenceCard, { backgroundColor: theme.cardBackground }, Shadows.small]}>
-          <Image
-            source={{ uri: evidence.uri }}
-            style={styles.evidenceThumbnail}
-            contentFit="cover"
-          />
+          {evidence.type === "audio" ? (
+            <View style={[styles.evidenceThumbnail, styles.audioThumbnail]}>
+              <Feather name="mic" size={36} color="rgba(255,255,255,0.5)" />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: evidence.uri }}
+              style={styles.evidenceThumbnail}
+              contentFit="cover"
+            />
+          )}
           <View style={styles.evidenceInfo}>
             <View style={styles.typeBadge}>
               <Feather
-                name={evidence.type === "photo" ? "image" : "video"}
+                name={evidence.type === "photo" ? "image" : evidence.type === "video" ? "video" : "mic"}
                 size={14}
                 color="#FFF"
               />
@@ -408,6 +441,11 @@ const styles = StyleSheet.create({
   evidenceThumbnail: {
     width: 100,
     height: 100,
+  },
+  audioThumbnail: {
+    backgroundColor: "#1a1a2e",
+    alignItems: "center",
+    justifyContent: "center",
   },
   evidenceInfo: {
     flex: 1,

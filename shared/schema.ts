@@ -29,6 +29,7 @@ export const evidenceReports = pgTable("evidence_reports", {
   contactEmail: text("contact_email"),
   reporterName: text("reporter_name"),
   status: text("status").notNull().default("pending"),
+  fileUrl: text("file_url"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
