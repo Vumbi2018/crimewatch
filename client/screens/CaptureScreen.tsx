@@ -55,6 +55,11 @@ export default function CaptureScreen() {
   const [lastCapturedUri, setLastCapturedUri] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [audioPermissionGranted, setAudioPermissionGranted] = useState(false);
+  const [cachedLocation, setCachedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    address: string | null;
+  } | null>(null);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -82,7 +87,14 @@ export default function CaptureScreen() {
   useEffect(() => {
     checkAudioPermission();
     loadLastEvidence();
+    requestLocationPermission();
   }, []);
+
+  useEffect(() => {
+    if (locationPermission?.granted) {
+      prefetchLocation();
+    }
+  }, [locationPermission?.granted]);
 
   const checkAudioPermission = async () => {
     const status = await AudioModule.getRecordingPermissionsAsync();
@@ -144,20 +156,15 @@ export default function CaptureScreen() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getCurrentLocation = async (): Promise<{
+  const fetchLocationData = async (): Promise<{
     latitude: number | null;
     longitude: number | null;
     address: string | null;
   }> => {
-    if (!locationPermission?.granted) {
-      return { latitude: null, longitude: null, address: null };
-    }
-
     try {
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Balanced,
       });
-
       let address = null;
       try {
         const [geocode] = await Location.reverseGeocodeAsync({
@@ -169,10 +176,9 @@ export default function CaptureScreen() {
             .filter(Boolean)
             .join(", ");
         }
-      } catch (error) {
-        console.log("Geocoding failed:", error);
+      } catch {
+        // geocoding optional
       }
-
       return {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -182,6 +188,31 @@ export default function CaptureScreen() {
       console.error("Error getting location:", error);
       return { latitude: null, longitude: null, address: null };
     }
+  };
+
+  const prefetchLocation = async () => {
+    const data = await fetchLocationData();
+    if (data.latitude !== null && data.longitude !== null) {
+      setCachedLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        address: data.address,
+      });
+    }
+  };
+
+  const getCurrentLocation = async (): Promise<{
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+  }> => {
+    if (!locationPermission?.granted) {
+      return { latitude: null, longitude: null, address: null };
+    }
+    if (cachedLocation) {
+      return cachedLocation;
+    }
+    return fetchLocationData();
   };
 
   const requestAudioPermission = async (): Promise<boolean> => {
@@ -524,18 +555,6 @@ export default function CaptureScreen() {
 
           <View style={styles.placeholderButton} />
         </View>
-
-        {!locationPermission?.granted ? (
-          <Pressable
-            style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
-            onPress={requestLocationPermission}
-          >
-            <Feather name="map-pin" size={16} color="#FFF" />
-            <ThemedText style={styles.locationWarningText}>
-              Enable location
-            </ThemedText>
-          </Pressable>
-        ) : null}
       </View>
     );
   }
@@ -623,18 +642,6 @@ export default function CaptureScreen() {
 
           <View style={styles.placeholderButton} />
         </View>
-
-        {!locationPermission?.granted ? (
-          <Pressable
-            style={[styles.locationWarning, { bottom: insets.bottom + 180 }]}
-            onPress={requestLocationPermission}
-          >
-            <Feather name="map-pin" size={16} color="#FFF" />
-            <ThemedText style={styles.locationWarningText}>
-              Enable location
-            </ThemedText>
-          </Pressable>
-        ) : null}
       </CameraView>
     </View>
   );
