@@ -46,14 +46,11 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run server:dev"
+args = "(ls static-build/android/manifest.json > /dev/null 2>&1 || npm run expo:static:build) && npm run server:dev"
 waitForPort = 5000
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run expo:dev"
-waitForPort = 8081
-ensurePreviewReachable = "/status"
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [userenv]
 
