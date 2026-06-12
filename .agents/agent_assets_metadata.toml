@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "4gCKwBxWgrODBhaOauBhX"
+uri = "file://attached_assets/Crime_Prevention_PNG.pptx"
+type = "slides"
+title = "Crime Prevention PNG — Slide Deck"
