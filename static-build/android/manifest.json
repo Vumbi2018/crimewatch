@@ -1,11 +1,11 @@
 {
-  "id": "52477826-bb85-4ef1-adab-85c85a337f56",
-  "createdAt": "2026-06-12T01:44:39.198Z",
+  "id": "c17d299e-110e-4f0d-b285-7fc03e590a4e",
+  "createdAt": "2026-06-12T02:36:38.311Z",
   "runtimeVersion": "exposdk:54.0.0",
   "launchAsset": {
-    "key": "bundle-1781228679198-889",
+    "key": "bundle-1781231798311-604",
     "contentType": "application/javascript",
-    "url": "https://770a06a6-9633-49c1-84c3-2538a134376a-00-2o35nud36eoda.riker.replit.dev/1781228679198-889/_expo/static/js/android/bundle.js"
+    "url": "https://770a06a6-9633-49c1-84c3-2538a134376a-00-2o35nud36eoda.riker.replit.dev/1781231798311-604/_expo/static/js/android/bundle.js"
   },
   "assets": [],
   "metadata": {},
@@ -153,6 +153,6 @@
       },
       "mainModuleName": "client/index"
     },
-    "scopeKey": "@anonymous/crimestoppers-43f3a388-bf78-415b-9e58-7cc030b00b13"
+    "scopeKey": "@anonymous/crimestoppers-2c524bbf-c556-4758-a99a-577d1c7a85bc"
   }
 }
