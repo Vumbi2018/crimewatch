@@ -6,3 +6,9 @@ id = "4gCKwBxWgrODBhaOauBhX"
 uri = "file://attached_assets/Crime_Prevention_PNG.pptx"
 type = "slides"
 title = "Crime Prevention PNG — Slide Deck"
+
+[[outputs]]
+id = "nmBS63_QPKLrGP1zycyYh"
+uri = "file://attached_assets/generated_videos/crime_prevention_png_promo.mp4"
+type = "video"
+title = "Crime Prevention PNG — Promo Video"
