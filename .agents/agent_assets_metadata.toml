@@ -18,3 +18,21 @@ id = "W964fZkVe3QVL3zL8BHwd"
 uri = "file://attached_assets/generated_videos/crime_prevention_png_promo_web.mp4"
 type = "video"
 title = "Crime Prevention PNG — Promo Video (720p)"
+
+[[outputs]]
+id = "YwQLRhROBqSYhuXyAEb0K"
+uri = "file://attached_assets/generated_audio/narration.mp3"
+type = "audio"
+title = "crime_prevention_png_narration"
+
+[[outputs]]
+id = "WGQf5qIrfcW7RxjJ9C0XZ"
+uri = "file://attached_assets/generated_audio/background_music.mp3"
+type = "audio"
+title = "promo_background_music"
+
+[[outputs]]
+id = "sH-XA8IjVMoJI7VHG5fSs"
+uri = "file://attached_assets/generated_videos/crime_prevention_png_extended_promo_web.mp4"
+type = "video"
+title = "Crime Prevention PNG — Extended Promo Video (with narration & music)"
