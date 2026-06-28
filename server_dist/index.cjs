@@ -2523,8 +2523,16 @@ async function findNearestDbPoliceStation(latitude, longitude) {
     return adminStore.nearestStation(latitude, longitude);
   }
 }
-function isProductionServer() {
-  return !!(process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.NODE_ENV === "production");
+function isProductionServer(req) {
+  if (process.env.NODE_ENV === "production") return true;
+  if (process.env.REPLIT_INTERNAL_APP_DOMAIN) return true;
+  if (req) {
+    const host = req.get("host");
+    if (host && (host.includes(PRODUCTION_DOMAIN) || host.includes("lamtoninvestments.com"))) {
+      return true;
+    }
+  }
+  return false;
 }
 async function fetchProductionReports() {
   try {
@@ -2700,13 +2708,16 @@ async function registerRoutes(app2) {
     res.redirect("/admin");
   });
   app2.get("/uploads/:filename", (req, res) => {
+    if (isProductionServer(req)) {
+      return res.status(404).send("File not found on production server");
+    }
     res.redirect(302, `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`);
   });
   app2.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    const isProduction = isProductionServer();
+    const isProduction = isProductionServer(req);
     if (!isProduction) {
       const prodFileUrl = await forwardFileToProduction(
         req.file.path,
