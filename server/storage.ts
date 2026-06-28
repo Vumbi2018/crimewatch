@@ -120,7 +120,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPoliceCommand(command: InsertPoliceCommand): Promise<PoliceCommand> {
-    const [created] = await db.insert(policeCommands).values(command).returning();
+    const [created] = await db
+      .insert(policeCommands)
+      .values(command)
+      .onConflictDoUpdate({
+        target: policeCommands.code,
+        set: command,
+      })
+      .returning();
     return created;
   }
 
@@ -131,7 +138,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProvince(province: InsertProvince): Promise<Province> {
-    const [created] = await db.insert(provinces).values(province).returning();
+    const [created] = await db
+      .insert(provinces)
+      .values(province)
+      .onConflictDoUpdate({
+        target: provinces.code,
+        set: province,
+      })
+      .returning();
     return created;
   }
 
@@ -142,7 +156,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDistrict(district: InsertDistrict): Promise<District> {
-    const [created] = await db.insert(districts).values(district).returning();
+    const [created] = await db
+      .insert(districts)
+      .values(district)
+      .onConflictDoUpdate({
+        target: districts.code,
+        set: district,
+      })
+      .returning();
     return created;
   }
 
@@ -156,6 +177,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPoliceStation(station: InsertPoliceStation): Promise<PoliceStation> {
+    if (station.code) {
+      const [existing] = await db.select().from(policeStations).where(eq(policeStations.code, station.code));
+      if (existing) {
+        const [updated] = await db
+          .update(policeStations)
+          .set(station)
+          .where(eq(policeStations.id, existing.id))
+          .returning();
+        return updated;
+      }
+    }
+
     const [created] = await db.insert(policeStations).values(station).returning();
     return created;
   }
@@ -165,7 +198,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAdminUser(user: InsertAdminUser): Promise<AdminUser> {
-    const [created] = await db.insert(adminUsers).values(user).returning();
+    const [created] = await db
+      .insert(adminUsers)
+      .values(user)
+      .onConflictDoUpdate({
+        target: adminUsers.username,
+        set: user,
+      })
+      .returning();
     return created;
   }
 
