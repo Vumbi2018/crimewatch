@@ -106,8 +106,13 @@ export default function SettingsScreen() {
             setIsClearing(true);
             try {
               await clearAllData();
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert("Data Cleared", "All data has been deleted from this device.");
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+              Alert.alert(
+                "Data Cleared",
+                "All data has been deleted from this device.",
+              );
               navigation.goBack();
             } catch (error) {
               Alert.alert("Error", "Failed to clear data. Please try again.");
@@ -116,7 +121,7 @@ export default function SettingsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -124,7 +129,7 @@ export default function SettingsScreen() {
     Alert.alert(
       "Privacy Policy",
       "Crime Prevention PNG is committed to protecting your privacy. All evidence is stored locally on your device and only shared with authorities when you explicitly choose to submit a report.\n\nWe do not collect, store, or share your personal information without your consent.",
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -132,7 +137,7 @@ export default function SettingsScreen() {
     Alert.alert(
       "Terms of Service",
       "By using Crime Prevention PNG, you agree to:\n\n1. Only submit accurate and truthful information\n2. Not use this app for false or malicious reports\n3. Comply with all applicable laws\n4. Accept responsibility for the content you submit\n\nFalse reports may be subject to legal action.",
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -140,7 +145,7 @@ export default function SettingsScreen() {
     Alert.alert(
       "About Crime Prevention PNG",
       "Version 1.0.0\n\nCrime Prevention PNG empowers citizens to safely and securely report crime-related incidents to local authorities.\n\nBuilt with privacy and security as core priorities.",
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -148,7 +153,7 @@ export default function SettingsScreen() {
     Alert.alert(
       "Contact Support",
       "For support or feedback, please reach out through our official channels.\n\nYour feedback helps us improve the app and better serve our community.",
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -162,10 +167,19 @@ export default function SettingsScreen() {
       scrollIndicatorInsets={{ bottom: insets.bottom }}
     >
       <View style={styles.section}>
-        <ThemedText type="small" style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+        <ThemedText
+          type="small"
+          style={[styles.sectionTitle, { color: theme.textSecondary }]}
+        >
           PERMISSIONS
         </ThemedText>
-        <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+        <View
+          style={[
+            styles.sectionContent,
+            { backgroundColor: theme.cardBackground },
+            Shadows.small,
+          ]}
+        >
           <SettingsItem
             icon="camera"
             label="Camera Access"
@@ -187,10 +201,19 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="small" style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+        <ThemedText
+          type="small"
+          style={[styles.sectionTitle, { color: theme.textSecondary }]}
+        >
           DATA & PRIVACY
         </ThemedText>
-        <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+        <View
+          style={[
+            styles.sectionContent,
+            { backgroundColor: theme.cardBackground },
+            Shadows.small,
+          ]}
+        >
           <SettingsItem
             icon="shield"
             label="Privacy Policy"
@@ -214,10 +237,19 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="small" style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+        <ThemedText
+          type="small"
+          style={[styles.sectionTitle, { color: theme.textSecondary }]}
+        >
           SUPPORT
         </ThemedText>
-        <View style={[styles.sectionContent, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+        <View
+          style={[
+            styles.sectionContent,
+            { backgroundColor: theme.cardBackground },
+            Shadows.small,
+          ]}
+        >
           <SettingsItem
             icon="help-circle"
             label="Help & FAQ"
@@ -240,10 +272,16 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.footer}>
-        <ThemedText type="caption" style={{ color: theme.textSecondary, textAlign: "center" }}>
+        <ThemedText
+          type="caption"
+          style={{ color: theme.textSecondary, textAlign: "center" }}
+        >
           Crime Prevention PNG v1.0.0
         </ThemedText>
-        <ThemedText type="caption" style={{ color: theme.textSecondary, textAlign: "center" }}>
+        <ThemedText
+          type="caption"
+          style={{ color: theme.textSecondary, textAlign: "center" }}
+        >
           Your reports help keep our communities safe.
         </ThemedText>
       </View>

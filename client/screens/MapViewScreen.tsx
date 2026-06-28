@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  StyleSheet,
-  Platform,
-  Pressable,
-  Linking,
-} from "react-native";
+import { View, StyleSheet, Platform, Pressable, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -36,7 +30,7 @@ export default function MapViewScreen() {
         await Linking.openURL(url);
       } else {
         await Linking.openURL(
-          `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+          `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`,
         );
       }
     } catch (error) {
@@ -54,14 +48,16 @@ export default function MapViewScreen() {
           <ThemedText type="h3" style={styles.title}>
             Evidence Location
           </ThemedText>
-          
+
           {address ? (
             <ThemedText style={[styles.address, { color: theme.text }]}>
               {address}
             </ThemedText>
           ) : null}
-          
-          <ThemedText style={[styles.coordinates, { color: theme.textSecondary }]}>
+
+          <ThemedText
+            style={[styles.coordinates, { color: theme.textSecondary }]}
+          >
             {latitude.toFixed(6)}, {longitude.toFixed(6)}
           </ThemedText>
 
@@ -73,7 +69,10 @@ export default function MapViewScreen() {
           </View>
 
           <Pressable
-            style={[styles.openButton, { backgroundColor: Colors.light.primary }]}
+            style={[
+              styles.openButton,
+              { backgroundColor: Colors.light.primary },
+            ]}
             onPress={openInMaps}
           >
             <Feather name="navigation" size={20} color="#FFF" />
@@ -81,9 +80,12 @@ export default function MapViewScreen() {
               Open in Maps App
             </ThemedText>
           </Pressable>
-          
-          <ThemedText type="caption" style={[styles.hint, { color: theme.textSecondary }]}>
-            View the exact location in your device's maps application
+
+          <ThemedText
+            type="caption"
+            style={[styles.hint, { color: theme.textSecondary }]}
+          >
+            View the exact location in your device maps application
           </ThemedText>
         </View>
       </View>

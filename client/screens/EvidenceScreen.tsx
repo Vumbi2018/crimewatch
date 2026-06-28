@@ -50,7 +50,7 @@ export default function EvidenceScreen() {
   useFocusEffect(
     useCallback(() => {
       loadEvidence();
-    }, [loadEvidence])
+    }, [loadEvidence]),
   );
 
   const handleRefresh = async () => {
@@ -73,7 +73,7 @@ export default function EvidenceScreen() {
         item.incidentType?.toLowerCase().includes(lowerQuery) ||
         item.description?.toLowerCase().includes(lowerQuery) ||
         item.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
-        new Date(item.timestamp).toLocaleDateString().includes(query)
+        new Date(item.timestamp).toLocaleDateString().includes(query),
     );
     setFilteredEvidence(filtered);
   };
@@ -121,7 +121,7 @@ export default function EvidenceScreen() {
             loadEvidence();
           },
         },
-      ]
+      ],
     );
   };
 
@@ -132,7 +132,9 @@ export default function EvidenceScreen() {
         { backgroundColor: theme.cardBackground },
         Shadows.small,
       ]}
-      onPress={() => navigation.navigate("EvidenceDetail", { evidenceId: item.id })}
+      onPress={() =>
+        navigation.navigate("EvidenceDetail", { evidenceId: item.id })
+      }
       onLongPress={() => handleDelete(item.id)}
     >
       <View style={styles.thumbnailContainer}>
@@ -157,7 +159,13 @@ export default function EvidenceScreen() {
         )}
         <View style={styles.typeBadge}>
           <Feather
-            name={item.type === "photo" ? "image" : item.type === "video" ? "video" : "mic"}
+            name={
+              item.type === "photo"
+                ? "image"
+                : item.type === "video"
+                  ? "video"
+                  : "mic"
+            }
             size={12}
             color="#FFF"
           />
@@ -227,7 +235,10 @@ export default function EvidenceScreen() {
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
         <ThemedText type="h2">Evidence</ThemedText>
         <View
-          style={[styles.searchContainer, { backgroundColor: theme.backgroundSecondary }]}
+          style={[
+            styles.searchContainer,
+            { backgroundColor: theme.backgroundSecondary },
+          ]}
         >
           <Feather name="search" size={18} color={theme.textSecondary} />
           <TextInput

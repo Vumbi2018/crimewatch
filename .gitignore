@@ -41,3 +41,18 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local secrets and generated app artifacts
+.env
+.config/
+.local/
+static-build/
+server/cache/
+server/data/
+uploads/
+*.log
+admin-*.html
+admin-*.txt
+admin-inline-debug.js
+emulator-screen.png
+window.xml

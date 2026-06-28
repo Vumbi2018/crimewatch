@@ -19,7 +19,12 @@ import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
-import { Evidence, getEvidenceById, saveEvidence, deleteEvidence } from "@/lib/storage";
+import {
+  Evidence,
+  getEvidenceById,
+  saveEvidence,
+  deleteEvidence,
+} from "@/lib/storage";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, "EvidenceDetail">;
@@ -106,12 +111,14 @@ export default function EvidenceDetailScreen() {
           onPress: async () => {
             if (evidence) {
               await deleteEvidence(evidence.id);
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               navigation.goBack();
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -127,14 +134,26 @@ export default function EvidenceDetailScreen() {
     setTags(tags.filter((t) => t !== tag));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!evidence) return;
-    
+
     if (!incidentType) {
-      Alert.alert("Required", "Please select an incident type before submitting.");
+      Alert.alert(
+        "Required",
+        "Please select an incident type before submitting.",
+      );
       return;
     }
 
+    const updatedEvidence: Evidence = {
+      ...evidence,
+      incidentType,
+      description: description.trim() || null,
+      tags,
+    };
+
+    await saveEvidence(updatedEvidence);
+    setEvidence(updatedEvidence);
     navigation.navigate("ReportSubmission", { evidenceId: evidence.id });
   };
 
@@ -150,7 +169,12 @@ export default function EvidenceDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.backgroundRoot },
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -158,7 +182,12 @@ export default function EvidenceDetailScreen() {
 
   if (!evidence) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.backgroundRoot },
+        ]}
+      >
         <ThemedText>Evidence not found</ThemedText>
       </View>
     );
@@ -186,7 +215,9 @@ export default function EvidenceDetailScreen() {
           ) : null}
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <ThemedText type="small" style={styles.sectionLabel}>
             Captured
           </ThemedText>
@@ -196,7 +227,7 @@ export default function EvidenceDetailScreen() {
               {formatDateTime(evidence.timestamp)}
             </ThemedText>
           </View>
-          
+
           {evidence.latitude && evidence.longitude ? (
             <Pressable
               style={styles.metadataRow}
@@ -209,22 +240,33 @@ export default function EvidenceDetailScreen() {
               }
             >
               <Feather name="map-pin" size={16} color={theme.primary} />
-              <ThemedText style={[styles.metadataText, { color: theme.primary }]}>
-                {evidence.address || `${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}`}
+              <ThemedText
+                style={[styles.metadataText, { color: theme.primary }]}
+              >
+                {evidence.address ||
+                  `${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}`}
               </ThemedText>
-              <Feather name="chevron-right" size={16} color={theme.textSecondary} />
+              <Feather
+                name="chevron-right"
+                size={16}
+                color={theme.textSecondary}
+              />
             </Pressable>
           ) : (
             <View style={styles.metadataRow}>
               <Feather name="map-pin" size={16} color={theme.textSecondary} />
-              <ThemedText style={[styles.metadataText, { color: theme.textSecondary }]}>
+              <ThemedText
+                style={[styles.metadataText, { color: theme.textSecondary }]}
+              >
                 Location not available
               </ThemedText>
             </View>
           )}
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <ThemedText type="small" style={styles.sectionLabel}>
             Incident Type
           </ThemedText>
@@ -278,7 +320,9 @@ export default function EvidenceDetailScreen() {
           ) : null}
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <View style={styles.sectionHeader}>
             <ThemedText type="small" style={styles.sectionLabel}>
               Description
@@ -302,7 +346,9 @@ export default function EvidenceDetailScreen() {
           />
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <ThemedText type="small" style={styles.sectionLabel}>
             Tags
           </ThemedText>
@@ -331,7 +377,10 @@ export default function EvidenceDetailScreen() {
               {tags.map((tag) => (
                 <Pressable
                   key={tag}
-                  style={[styles.tag, { backgroundColor: theme.backgroundSecondary }]}
+                  style={[
+                    styles.tag,
+                    { backgroundColor: theme.backgroundSecondary },
+                  ]}
                   onPress={() => handleRemoveTag(tag)}
                 >
                   <ThemedText type="small">{tag}</ThemedText>
@@ -342,10 +391,7 @@ export default function EvidenceDetailScreen() {
           ) : null}
         </View>
 
-        <Pressable
-          style={styles.saveButton}
-          onPress={handleSave}
-        >
+        <Pressable style={styles.saveButton} onPress={handleSave}>
           <Feather name="save" size={18} color={theme.primary} />
           <ThemedText style={{ color: theme.primary, fontWeight: "600" }}>
             Save Changes
@@ -356,10 +402,16 @@ export default function EvidenceDetailScreen() {
       <View
         style={[
           styles.submitContainer,
-          { paddingBottom: insets.bottom + Spacing.lg, backgroundColor: theme.backgroundRoot },
+          {
+            paddingBottom: insets.bottom + Spacing.lg,
+            backgroundColor: theme.backgroundRoot,
+          },
         ]}
       >
-        <Button onPress={handleSubmit} style={{ backgroundColor: Colors.light.primary }}>
+        <Button
+          onPress={handleSubmit}
+          style={{ backgroundColor: Colors.light.primary }}
+        >
           Submit to Authorities
         </Button>
       </View>

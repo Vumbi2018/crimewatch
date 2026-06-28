@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "Crime Prevention PNG",
-    "slug": "crimestoppers",
+    "name": "CrimeWatch PNG",
+    "slug": "crimewatch-png",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "crimestoppers",
+    "scheme": "crimewatchpng",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.crimestoppers.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Crime Prevention PNG needs camera access to capture photo and video evidence of incidents.",
-        "NSMicrophoneUsageDescription": "Crime Prevention PNG needs microphone access to record audio with video evidence.",
-        "NSLocationWhenInUseUsageDescription": "Crime Prevention PNG needs your location to tag evidence with precise coordinates.",
-        "NSPhotoLibraryUsageDescription": "Crime Prevention PNG needs photo library access to save captured evidence."
+        "NSCameraUsageDescription": "CrimeWatch PNG needs camera access to capture photo and video evidence of incidents.",
+        "NSMicrophoneUsageDescription": "CrimeWatch PNG needs microphone access to record audio with video evidence.",
+        "NSLocationWhenInUseUsageDescription": "CrimeWatch PNG needs your location to tag evidence with precise coordinates.",
+        "NSPhotoLibraryUsageDescription": "CrimeWatch PNG needs photo library access to save captured evidence."
       }
     },
     "android": {
@@ -63,22 +63,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Crime Prevention PNG needs camera access to capture photo and video evidence of incidents.",
-          "microphonePermission": "Crime Prevention PNG needs microphone access to record audio with video evidence.",
+          "cameraPermission": "CrimeWatch PNG needs camera access to capture photo and video evidence of incidents.",
+          "microphonePermission": "CrimeWatch PNG needs microphone access to record audio with video evidence.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Crime Prevention PNG needs your location to tag evidence with precise coordinates."
+          "locationWhenInUsePermission": "CrimeWatch PNG needs your location to tag evidence with precise coordinates."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Crime Prevention PNG needs photo library access to save captured evidence.",
-          "savePhotosPermission": "Crime Prevention PNG needs permission to save evidence photos to your device.",
+          "photosPermission": "CrimeWatch PNG needs photo library access to save captured evidence.",
+          "savePhotosPermission": "CrimeWatch PNG needs permission to save evidence photos to your device.",
           "isAccessMediaLocationEnabled": true
         }
       ]

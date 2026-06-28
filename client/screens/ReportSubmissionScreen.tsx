@@ -27,18 +27,63 @@ import {
   updateEvidenceSubmissionStatus,
   getUserProfile,
   saveUserProfile,
+  savePendingReportSubmission,
+  generatePendingReportId,
+  saveSubmittedReportReceipt,
 } from "@/lib/storage";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, "ReportSubmission">;
 
-const AGENCIES = [
-  "Boroko Police Station",
-  "Local Police Station",
-  "Crime Stoppers Anonymous Tip Line",
-];
+const AGENCIES = ["NCD Command Centre"];
 
 const PRIORITY_LEVELS = ["Low", "Medium", "High"];
+
+type NearestStation = {
+  id: string;
+  name: string;
+  distanceKm: number;
+  withinResponseRadius: boolean;
+};
+
+type ReportPayload = {
+  evidenceType: Evidence["type"];
+  incidentType: string | null;
+  description: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  address: string | null;
+  tags: string[];
+  agency: string;
+  priority: string;
+  isAnonymous: number;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  reporterName: string | null;
+  fileUrl: string | null;
+};
+
+function getSubmitErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (
+    message.includes("Network request failed") ||
+    message.includes("Failed to fetch") ||
+    message.includes("NetworkError")
+  ) {
+    return "We could not reach the reporting server. The report has been saved on this device so it can be retried when the connection is working.";
+  }
+
+  if (message.startsWith("413:")) {
+    return "The evidence file is too large to upload. Try submitting a shorter video or smaller file.";
+  }
+
+  if (message.startsWith("401:") || message.startsWith("403:")) {
+    return "The reporting server rejected this request. Please check the app configuration and try again.";
+  }
+
+  return "The report could not be submitted right now. It has been saved on this device so it can be retried later.";
+}
 
 export default function ReportSubmissionScreen() {
   const insets = useSafeAreaInsets();
@@ -56,6 +101,7 @@ export default function ReportSubmissionScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [nearestStation, setNearestStation] = useState<NearestStation | null>(null);
 
   useEffect(() => {
     loadEvidence();
@@ -65,6 +111,17 @@ export default function ReportSubmissionScreen() {
     try {
       const data = await getEvidenceById(route.params.evidenceId);
       setEvidence(data);
+      if (data?.latitude && data.longitude) {
+        const url = new URL("/api/police-stations/nearest", getApiUrl());
+        url.searchParams.set("latitude", String(data.latitude));
+        url.searchParams.set("longitude", String(data.longitude));
+        const response = await fetch(url.toString());
+        if (response.ok) {
+          const station = (await response.json()) as NearestStation | null;
+          setNearestStation(station);
+          if (station) setSelectedAgency("NCD Command Centre");
+        }
+      }
     } catch (error) {
       console.error("Error loading evidence:", error);
     } finally {
@@ -83,10 +140,22 @@ export default function ReportSubmissionScreen() {
     });
   };
 
-  const uploadEvidenceFile = async (evidence: Evidence): Promise<string | null> => {
+  const uploadEvidenceFile = async (
+    evidence: Evidence,
+  ): Promise<string | null> => {
     try {
-      const ext = evidence.type === "photo" ? ".jpg" : evidence.type === "video" ? ".mp4" : ".m4a";
-      const mimeType = evidence.type === "photo" ? "image/jpeg" : evidence.type === "video" ? "video/mp4" : "audio/m4a";
+      const ext =
+        evidence.type === "photo"
+          ? ".jpg"
+          : evidence.type === "video"
+            ? ".mp4"
+            : ".m4a";
+      const mimeType =
+        evidence.type === "photo"
+          ? "image/jpeg"
+          : evidence.type === "video"
+            ? "video/mp4"
+            : "audio/m4a";
       const filename = `evidence_${Date.now()}${ext}`;
 
       const formData = new FormData();
@@ -114,19 +183,23 @@ export default function ReportSubmissionScreen() {
     }
 
     if (allowContact && !contactPhone && !contactEmail) {
-      Alert.alert("Required", "Please provide contact information or disable contact preference.");
+      Alert.alert(
+        "Required",
+        "Please provide contact information or disable contact preference.",
+      );
       return;
     }
 
     setIsSubmitting(true);
 
+    let reportPayload: ReportPayload | null = null;
+
     try {
       if (evidence) {
         const profile = await getUserProfile();
-
         const fileUrl = await uploadEvidenceFile(evidence);
 
-        await apiRequest("POST", "/api/reports", {
+        reportPayload = {
           evidenceType: evidence.type,
           incidentType: evidence.incidentType || null,
           description: evidence.description || null,
@@ -141,29 +214,60 @@ export default function ReportSubmissionScreen() {
           contactEmail: allowContact ? contactEmail || null : null,
           reporterName: isAnonymous ? null : profile.displayName,
           fileUrl: fileUrl || null,
-        });
+        };
+
+        const response = await apiRequest("POST", "/api/reports", reportPayload);
+        const submittedReport = (await response.json().catch(() => null)) as {
+          referenceNumber?: string;
+        } | null;
 
         await updateEvidenceSubmissionStatus(evidence.id, "sent");
+        await saveSubmittedReportReceipt({
+          id: submittedReport?.referenceNumber || evidence.id,
+          evidenceId: evidence.id,
+          referenceNumber: submittedReport?.referenceNumber || null,
+          agency: selectedAgency,
+          priority,
+          status: "submitted",
+          submittedAt: Date.now(),
+        });
         await saveUserProfile({
           totalSubmissions: profile.totalSubmissions + 1,
         });
+
+        const referenceLine = submittedReport?.referenceNumber
+          ? `\n\nReference: ${submittedReport.referenceNumber}`
+          : "";
+
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        Alert.alert(
+          "Report Submitted",
+          `Your evidence has been securely submitted to the authorities.${referenceLine}\n\nYou may be contacted for follow-up if you opted in.`,
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.popToTop(),
+            },
+          ],
+        );
       }
-
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      Alert.alert(
-        "Report Submitted",
-        "Your evidence has been securely submitted to the authorities. You may be contacted for follow-up if you opted in.",
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.popToTop(),
-          },
-        ]
-      );
     } catch (error) {
       console.error("Error submitting report:", error);
-      Alert.alert("Error", "Failed to submit report. Please try again.");
+
+      if (evidence && reportPayload) {
+        await savePendingReportSubmission({
+          id: generatePendingReportId(),
+          evidenceId: evidence.id,
+          payload: reportPayload,
+          createdAt: Date.now(),
+          attempts: 0,
+          lastError: error instanceof Error ? error.message : String(error),
+        });
+        await updateEvidenceSubmissionStatus(evidence.id, "pending");
+      }
+
+      Alert.alert("Report Saved", getSubmitErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -171,7 +275,12 @@ export default function ReportSubmissionScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.backgroundRoot },
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -179,7 +288,12 @@ export default function ReportSubmissionScreen() {
 
   if (!evidence) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.backgroundRoot },
+        ]}
+      >
         <ThemedText>Evidence not found</ThemedText>
       </View>
     );
@@ -194,7 +308,13 @@ export default function ReportSubmissionScreen() {
         ]}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
       >
-        <View style={[styles.evidenceCard, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+        <View
+          style={[
+            styles.evidenceCard,
+            { backgroundColor: theme.cardBackground },
+            Shadows.small,
+          ]}
+        >
           {evidence.type === "audio" ? (
             <View style={[styles.evidenceThumbnail, styles.audioThumbnail]}>
               <Feather name="mic" size={36} color="rgba(255,255,255,0.5)" />
@@ -209,7 +329,13 @@ export default function ReportSubmissionScreen() {
           <View style={styles.evidenceInfo}>
             <View style={styles.typeBadge}>
               <Feather
-                name={evidence.type === "photo" ? "image" : evidence.type === "video" ? "video" : "mic"}
+                name={
+                  evidence.type === "photo"
+                    ? "image"
+                    : evidence.type === "video"
+                      ? "video"
+                      : "mic"
+                }
                 size={14}
                 color="#FFF"
               />
@@ -228,7 +354,11 @@ export default function ReportSubmissionScreen() {
             {evidence.address ? (
               <View style={styles.locationRow}>
                 <Feather name="map-pin" size={12} color={theme.textSecondary} />
-                <ThemedText type="caption" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                <ThemedText
+                  type="caption"
+                  style={{ color: theme.textSecondary }}
+                  numberOfLines={1}
+                >
                   {evidence.address}
                 </ThemedText>
               </View>
@@ -236,7 +366,63 @@ export default function ReportSubmissionScreen() {
           </View>
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
+          <View style={styles.reviewHeader}>
+            <Feather name="clipboard" size={18} color={theme.primary} />
+            <ThemedText style={styles.reviewTitle}>Review Before Sending</ThemedText>
+          </View>
+          <View style={styles.reviewGrid}>
+            <View style={styles.reviewItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Incident</ThemedText>
+              <ThemedText style={styles.reviewValue}>
+                {evidence.incidentType || "Not specified"}
+              </ThemedText>
+            </View>
+            <View style={styles.reviewItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>GPS</ThemedText>
+              <ThemedText style={styles.reviewValue}>
+                {evidence.latitude && evidence.longitude ? "Captured" : "Not available"}
+              </ThemedText>
+            </View>
+            <View style={styles.reviewItemWide}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Description</ThemedText>
+              <ThemedText style={styles.reviewValue} numberOfLines={3}>
+                {evidence.description || "No description added"}
+              </ThemedText>
+            </View>
+            <View style={styles.reviewItemWide}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Location</ThemedText>
+              <ThemedText style={styles.reviewValue} numberOfLines={2}>
+                {evidence.address || "No address captured"}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.safetyNotice}>
+          <Feather name="shield" size={18} color={Colors.light.warning} />
+          <ThemedText type="caption" style={styles.safetyText}>
+            Stay safe. Do not record or submit evidence while it puts you at risk. Anonymous reports do not include your name or contact details.
+          </ThemedText>
+        </View>
+
+        {nearestStation ? (
+          <View style={styles.dispatchNotice}>
+            <Feather name="radio" size={18} color={Colors.light.success} />
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.dispatchTitle}>Nearest police command detected</ThemedText>
+              <ThemedText type="caption" style={styles.dispatchText}>
+                {nearestStation.name} is about {nearestStation.distanceKm} km away and will be notified immediately when you submit.
+              </ThemedText>
+            </View>
+          </View>
+        ) : null}
+
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <ThemedText type="small" style={styles.sectionLabel}>
             Submit To
           </ThemedText>
@@ -293,7 +479,9 @@ export default function ReportSubmissionScreen() {
           ) : null}
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <ThemedText type="small" style={styles.sectionLabel}>
             Priority Level
           </ThemedText>
@@ -309,8 +497,8 @@ export default function ReportSubmissionScreen() {
                         ? level === "High"
                           ? Colors.light.accent
                           : level === "Medium"
-                          ? Colors.light.warning
-                          : Colors.light.success
+                            ? Colors.light.warning
+                            : Colors.light.success
                         : theme.backgroundSecondary,
                   },
                 ]}
@@ -332,13 +520,20 @@ export default function ReportSubmissionScreen() {
           </View>
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <View style={styles.switchRow}>
             <View style={styles.switchContent}>
               <Feather name="user-x" size={20} color={theme.textSecondary} />
               <View style={styles.switchTextContainer}>
-                <ThemedText style={styles.switchLabel}>Submit Anonymously</ThemedText>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                <ThemedText style={styles.switchLabel}>
+                  Submit Anonymously
+                </ThemedText>
+                <ThemedText
+                  type="caption"
+                  style={{ color: theme.textSecondary }}
+                >
                   Your identity will not be shared
                 </ThemedText>
               </View>
@@ -358,13 +553,20 @@ export default function ReportSubmissionScreen() {
         </View>
 
         {!isAnonymous ? (
-          <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+          <View
+            style={[styles.section, { backgroundColor: theme.cardBackground }]}
+          >
             <View style={styles.switchRow}>
               <View style={styles.switchContent}>
                 <Feather name="phone" size={20} color={theme.textSecondary} />
                 <View style={styles.switchTextContainer}>
-                  <ThemedText style={styles.switchLabel}>Allow Authorities to Contact Me</ThemedText>
-                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  <ThemedText style={styles.switchLabel}>
+                    Allow Authorities to Contact Me
+                  </ThemedText>
+                  <ThemedText
+                    type="caption"
+                    style={{ color: theme.textSecondary }}
+                  >
                     For follow-up questions about your report
                   </ThemedText>
                 </View>
@@ -381,7 +583,10 @@ export default function ReportSubmissionScreen() {
             {allowContact ? (
               <View style={styles.contactInputs}>
                 <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                  style={[
+                    styles.input,
+                    { color: theme.text, borderColor: theme.border },
+                  ]}
                   placeholder="Phone number (optional)"
                   placeholderTextColor={theme.textSecondary}
                   value={contactPhone}
@@ -389,7 +594,10 @@ export default function ReportSubmissionScreen() {
                   keyboardType="phone-pad"
                 />
                 <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                  style={[
+                    styles.input,
+                    { color: theme.text, borderColor: theme.border },
+                  ]}
                   placeholder="Email address (optional)"
                   placeholderTextColor={theme.textSecondary}
                   value={contactEmail}
@@ -404,15 +612,23 @@ export default function ReportSubmissionScreen() {
 
         <View style={styles.disclaimer}>
           <Feather name="info" size={16} color={theme.textSecondary} />
-          <ThemedText type="caption" style={{ color: theme.textSecondary, flex: 1 }}>
-            By submitting this report, you confirm that the information and evidence provided is accurate to the best of your knowledge. False reports may be subject to legal action.
+          <ThemedText
+            type="caption"
+            style={{ color: theme.textSecondary, flex: 1 }}
+          >
+            By submitting this report, you confirm that the information and
+            evidence provided is accurate to the best of your knowledge. False
+            reports may be subject to legal action.
           </ThemedText>
         </View>
 
         <Button
           onPress={handleSubmit}
           disabled={isSubmitting}
-          style={{ marginTop: Spacing.xl, backgroundColor: Colors.light.primary }}
+          style={{
+            marginTop: Spacing.xl,
+            backgroundColor: Colors.light.primary,
+          }}
         >
           {isSubmitting ? "Submitting..." : "Submit Report"}
         </Button>
@@ -480,6 +696,65 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontWeight: "600",
     marginBottom: Spacing.sm,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  reviewTitle: {
+    fontWeight: "700",
+  },
+  reviewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
+  reviewItem: {
+    flexBasis: "48%",
+    minHeight: 64,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: "rgba(100,116,139,0.10)",
+  },
+  reviewItemWide: {
+    width: "100%",
+    minHeight: 64,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: "rgba(100,116,139,0.10)",
+  },
+  reviewValue: {
+    marginTop: Spacing.xs,
+    fontWeight: "600",
+  },
+  safetyNotice: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: "rgba(245,158,11,0.12)",
+  },
+  safetyText: {
+    flex: 1,
+    color: Colors.light.textSecondary,
+  },
+  dispatchNotice: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: "rgba(5,150,105,0.12)",
+  },
+  dispatchTitle: {
+    fontWeight: "700",
+  },
+  dispatchText: {
+    marginTop: Spacing.xs,
+    color: Colors.light.textSecondary,
   },
   pickerButton: {
     flexDirection: "row",

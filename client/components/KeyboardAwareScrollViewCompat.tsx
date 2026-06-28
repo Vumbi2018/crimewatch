@@ -1,4 +1,10 @@
-import { ScrollView, ScrollViewProps, KeyboardAvoidingView, Platform, View } from "react-native";
+import {
+  ScrollView,
+  ScrollViewProps,
+  KeyboardAvoidingView,
+  Platform,
+  View,
+} from "react-native";
 
 type Props = ScrollViewProps & {
   children?: React.ReactNode;
@@ -12,7 +18,7 @@ export function KeyboardAwareScrollViewCompat({
   ...props
 }: Props) {
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >

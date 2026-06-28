@@ -35,7 +35,7 @@ export default function HomeScreen() {
         resizeMode="cover"
       >
         <View style={styles.overlay} />
-        
+
         <View
           style={[
             styles.content,
@@ -45,13 +45,13 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <Animated.View 
+          <Animated.View
             entering={FadeInUp.delay(200).duration(800)}
             style={styles.header}
           >
             <View style={styles.logoContainer}>
-              <Image 
-                source={policeEmblem} 
+              <Image
+                source={policeEmblem}
                 style={styles.emblemImage}
                 resizeMode="contain"
               />
@@ -59,7 +59,7 @@ export default function HomeScreen() {
             <ThemedText style={styles.title}>Crime Prevention PNG</ThemedText>
           </Animated.View>
 
-          <Animated.View 
+          <Animated.View
             entering={FadeIn.delay(600).duration(800)}
             style={styles.taglineContainer}
           >
@@ -71,7 +71,7 @@ export default function HomeScreen() {
             </ThemedText>
           </Animated.View>
 
-          <Animated.View 
+          <Animated.View
             entering={FadeInUp.delay(1000).duration(800)}
             style={styles.buttonContainer}
           >

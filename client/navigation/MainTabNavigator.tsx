@@ -8,10 +8,12 @@ import { Colors } from "@/constants/theme";
 import EvidenceScreen from "@/screens/EvidenceScreen";
 import CaptureScreen from "@/screens/CaptureScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
+import ReportsScreen from "@/screens/ReportsScreen";
 
 export type MainTabParamList = {
   EvidenceTab: undefined;
   CaptureTab: undefined;
+  ReportsTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -74,6 +76,16 @@ export default function MainTabNavigator() {
             >
               <Feather name="camera" size={size} color="#FFFFFF" />
             </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ReportsTab"
+        component={ReportsScreen}
+        options={{
+          title: "Reports",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="file-text" size={size} color={color} />
           ),
         }}
       />

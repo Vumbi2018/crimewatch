@@ -1,19 +1,19 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const DEFAULT_API_DOMAIN = "crimewatch.lamtoninvestments.com";
+
 /**
  * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
  * @returns {string} The API base URL
  */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
+  const host = process.env.EXPO_PUBLIC_DOMAIN || DEFAULT_API_DOMAIN;
 
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  if (host.startsWith("http://") || host.startsWith("https://")) {
+    return new URL(host).href;
   }
 
-  let url = new URL(`https://${host}`);
-
-  return url.href;
+  return new URL(`https://${host}`).href;
 }
 
 async function throwIfResNotOk(res: Response) {

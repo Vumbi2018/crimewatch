@@ -30,7 +30,11 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const AVATAR_TYPES = [
   { type: "shield" as const, icon: "shield", color: Colors.light.primary },
   { type: "star" as const, icon: "star", color: "#F59E0B" },
-  { type: "checkmark" as const, icon: "check-circle", color: Colors.light.success },
+  {
+    type: "checkmark" as const,
+    icon: "check-circle",
+    color: Colors.light.success,
+  },
   { type: "eye" as const, icon: "eye", color: "#64748B" },
 ];
 
@@ -44,14 +48,15 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [badgeNumber, setBadgeNumber] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState<UserProfile["avatarType"]>("shield");
+  const [selectedAvatar, setSelectedAvatar] =
+    useState<UserProfile["avatarType"]>("shield");
   const [recentSubmissions, setRecentSubmissions] = useState<Evidence[]>([]);
   const [stats, setStats] = useState({ totalEvidence: 0, totalSubmissions: 0 });
 
   useFocusEffect(
     useCallback(() => {
       loadProfileData();
-    }, [])
+    }, []),
   );
 
   const loadProfileData = async () => {
@@ -120,20 +125,29 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <ThemedText type="h2">Profile</ThemedText>
         <Pressable
-          style={[styles.settingsButton, { backgroundColor: theme.backgroundSecondary }]}
+          style={[
+            styles.settingsButton,
+            { backgroundColor: theme.backgroundSecondary },
+          ]}
           onPress={() => navigation.navigate("Settings")}
         >
           <Feather name="settings" size={20} color={theme.text} />
         </Pressable>
       </View>
 
-      <View style={[styles.profileCard, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+      <View
+        style={[
+          styles.profileCard,
+          { backgroundColor: theme.cardBackground },
+          Shadows.small,
+        ]}
+      >
         {isEditing ? (
           <View style={styles.editingContainer}>
             <ThemedText type="h4" style={styles.editingTitle}>
               Edit Profile
             </ThemedText>
-            
+
             <View style={styles.avatarPicker}>
               {AVATAR_TYPES.map((avatar) => (
                 <Pressable
@@ -151,13 +165,20 @@ export default function ProfileScreen() {
                     Haptics.selectionAsync();
                   }}
                 >
-                  <Feather name={avatar.icon as any} size={24} color={avatar.color} />
+                  <Feather
+                    name={avatar.icon as any}
+                    size={24}
+                    color={avatar.color}
+                  />
                 </Pressable>
               ))}
             </View>
 
             <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              style={[
+                styles.input,
+                { color: theme.text, borderColor: theme.border },
+              ]}
               placeholder="Display Name"
               placeholderTextColor={theme.textSecondary}
               value={displayName}
@@ -165,7 +186,10 @@ export default function ProfileScreen() {
             />
 
             <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              style={[
+                styles.input,
+                { color: theme.text, borderColor: theme.border },
+              ]}
               placeholder="Badge Number (optional)"
               placeholderTextColor={theme.textSecondary}
               value={badgeNumber}
@@ -185,10 +209,15 @@ export default function ProfileScreen() {
                 <ThemedText>Cancel</ThemedText>
               </Pressable>
               <Pressable
-                style={[styles.saveButton, { backgroundColor: Colors.light.primary }]}
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: Colors.light.primary },
+                ]}
                 onPress={handleSaveProfile}
               >
-                <ThemedText style={{ color: "#FFF", fontWeight: "600" }}>Save</ThemedText>
+                <ThemedText style={{ color: "#FFF", fontWeight: "600" }}>
+                  Save
+                </ThemedText>
               </Pressable>
             </View>
           </View>
@@ -210,13 +239,19 @@ export default function ProfileScreen() {
               <View style={styles.profileInfo}>
                 <ThemedText type="h4">{profile?.displayName}</ThemedText>
                 {profile?.badgeNumber ? (
-                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  <ThemedText
+                    type="small"
+                    style={{ color: theme.textSecondary }}
+                  >
                     Badge: {profile.badgeNumber}
                   </ThemedText>
                 ) : null}
               </View>
               <Pressable
-                style={[styles.editButton, { backgroundColor: theme.backgroundSecondary }]}
+                style={[
+                  styles.editButton,
+                  { backgroundColor: theme.backgroundSecondary },
+                ]}
                 onPress={() => setIsEditing(true)}
               >
                 <Feather name="edit-2" size={16} color={theme.text} />
@@ -228,16 +263,24 @@ export default function ProfileScreen() {
                 <ThemedText type="h3" style={{ color: Colors.light.primary }}>
                   {stats.totalEvidence}
                 </ThemedText>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                <ThemedText
+                  type="caption"
+                  style={{ color: theme.textSecondary }}
+                >
                   Evidence
                 </ThemedText>
               </View>
-              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+              <View
+                style={[styles.statDivider, { backgroundColor: theme.border }]}
+              />
               <View style={styles.statItem}>
                 <ThemedText type="h3" style={{ color: Colors.light.success }}>
                   {stats.totalSubmissions}
                 </ThemedText>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                <ThemedText
+                  type="caption"
+                  style={{ color: theme.textSecondary }}
+                >
                   Submitted
                 </ThemedText>
               </View>
@@ -251,7 +294,13 @@ export default function ProfileScreen() {
       </View>
 
       {recentSubmissions.length > 0 ? (
-        <View style={[styles.submissionsList, { backgroundColor: theme.cardBackground }, Shadows.small]}>
+        <View
+          style={[
+            styles.submissionsList,
+            { backgroundColor: theme.cardBackground },
+            Shadows.small,
+          ]}
+        >
           {recentSubmissions.map((item, index) => (
             <Pressable
               key={item.id}
@@ -262,7 +311,9 @@ export default function ProfileScreen() {
                   borderBottomColor: theme.border,
                 },
               ]}
-              onPress={() => navigation.navigate("EvidenceDetail", { evidenceId: item.id })}
+              onPress={() =>
+                navigation.navigate("EvidenceDetail", { evidenceId: item.id })
+              }
             >
               <View style={styles.submissionContent}>
                 <Feather
@@ -274,15 +325,24 @@ export default function ProfileScreen() {
                   <ThemedText numberOfLines={1}>
                     {item.incidentType || "No incident type"}
                   </ThemedText>
-                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                    Submitted {item.submittedAt ? formatDate(item.submittedAt) : formatDate(item.timestamp)}
+                  <ThemedText
+                    type="caption"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    Submitted{" "}
+                    {item.submittedAt
+                      ? formatDate(item.submittedAt)
+                      : formatDate(item.timestamp)}
                   </ThemedText>
                 </View>
               </View>
               <View
                 style={[
                   styles.statusBadge,
-                  { backgroundColor: getStatusColor(item.submissionStatus) + "20" },
+                  {
+                    backgroundColor:
+                      getStatusColor(item.submissionStatus) + "20",
+                  },
                 ]}
               >
                 <Feather
@@ -295,9 +355,16 @@ export default function ProfileScreen() {
           ))}
         </View>
       ) : (
-        <View style={[styles.emptySubmissions, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[
+            styles.emptySubmissions,
+            { backgroundColor: theme.cardBackground },
+          ]}
+        >
           <Feather name="inbox" size={40} color={theme.textSecondary} />
-          <ThemedText style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
+          <ThemedText
+            style={{ color: theme.textSecondary, marginTop: Spacing.md }}
+          >
             No submissions yet
           </ThemedText>
         </View>
