@@ -1,4 +1,356 @@
-export const adminHtml = `<!DOCTYPE html>
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc2) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+
+// server/index.ts
+var import_express = __toESM(require("express"));
+
+// server/routes.ts
+var import_node_crypto = require("node:crypto");
+var import_node_http = require("node:http");
+var import_multer = __toESM(require("multer"));
+var path2 = __toESM(require("path"));
+var fs2 = __toESM(require("fs"));
+
+// shared/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  adminUsers: () => adminUsers,
+  deletedReportAudits: () => deletedReportAudits,
+  districts: () => districts,
+  evidenceReports: () => evidenceReports,
+  insertAdminUserSchema: () => insertAdminUserSchema,
+  insertDeletedReportAuditSchema: () => insertDeletedReportAuditSchema,
+  insertDistrictSchema: () => insertDistrictSchema,
+  insertEvidenceReportSchema: () => insertEvidenceReportSchema,
+  insertNotificationLogSchema: () => insertNotificationLogSchema,
+  insertPoliceCommandSchema: () => insertPoliceCommandSchema,
+  insertPoliceStationSchema: () => insertPoliceStationSchema,
+  insertProvinceSchema: () => insertProvinceSchema,
+  insertReportDispatchSchema: () => insertReportDispatchSchema,
+  insertUserSchema: () => insertUserSchema,
+  notificationLogs: () => notificationLogs,
+  policeCommands: () => policeCommands,
+  policeStations: () => policeStations,
+  provinces: () => provinces,
+  reportDispatches: () => reportDispatches,
+  users: () => users
+});
+var import_drizzle_orm = require("drizzle-orm");
+var import_pg_core = require("drizzle-orm/pg-core");
+var import_drizzle_zod = require("drizzle-zod");
+var users = (0, import_pg_core.pgTable)("users", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  username: (0, import_pg_core.text)("username").notNull().unique(),
+  password: (0, import_pg_core.text)("password").notNull()
+});
+var evidenceReports = (0, import_pg_core.pgTable)("evidence_reports", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  evidenceType: (0, import_pg_core.text)("evidence_type").notNull(),
+  incidentType: (0, import_pg_core.text)("incident_type"),
+  description: (0, import_pg_core.text)("description"),
+  latitude: (0, import_pg_core.text)("latitude"),
+  longitude: (0, import_pg_core.text)("longitude"),
+  address: (0, import_pg_core.text)("address"),
+  tags: (0, import_pg_core.jsonb)("tags").$type().default([]),
+  agency: (0, import_pg_core.text)("agency").notNull(),
+  priority: (0, import_pg_core.text)("priority").notNull().default("Medium"),
+  isAnonymous: (0, import_pg_core.integer)("is_anonymous").notNull().default(0),
+  contactPhone: (0, import_pg_core.text)("contact_phone"),
+  contactEmail: (0, import_pg_core.text)("contact_email"),
+  reporterName: (0, import_pg_core.text)("reporter_name"),
+  status: (0, import_pg_core.text)("status").notNull().default("pending"),
+  fileUrl: (0, import_pg_core.text)("file_url"),
+  assignedStationId: (0, import_pg_core.varchar)("assigned_station_id"),
+  submittedAt: (0, import_pg_core.timestamp)("submitted_at").defaultNow().notNull()
+});
+var policeCommands = (0, import_pg_core.pgTable)("police_commands", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  name: (0, import_pg_core.text)("name").notNull(),
+  code: (0, import_pg_core.text)("code").notNull().unique(),
+  headquarters: (0, import_pg_core.text)("headquarters"),
+  phone: (0, import_pg_core.text)("phone"),
+  email: (0, import_pg_core.text)("email"),
+  commanderName: (0, import_pg_core.text)("commander_name"),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var provinces = (0, import_pg_core.pgTable)("provinces", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  commandId: (0, import_pg_core.varchar)("command_id").notNull(),
+  name: (0, import_pg_core.text)("name").notNull(),
+  code: (0, import_pg_core.text)("code").notNull().unique(),
+  capital: (0, import_pg_core.text)("capital"),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var districts = (0, import_pg_core.pgTable)("districts", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  provinceId: (0, import_pg_core.varchar)("province_id").notNull(),
+  name: (0, import_pg_core.text)("name").notNull(),
+  code: (0, import_pg_core.text)("code").notNull().unique(),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var policeStations = (0, import_pg_core.pgTable)("police_stations", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  commandId: (0, import_pg_core.varchar)("command_id").notNull(),
+  provinceId: (0, import_pg_core.varchar)("province_id").notNull(),
+  districtId: (0, import_pg_core.varchar)("district_id").notNull(),
+  name: (0, import_pg_core.text)("name").notNull(),
+  code: (0, import_pg_core.text)("code"),
+  stationType: (0, import_pg_core.text)("station_type").notNull().default("station"),
+  address: (0, import_pg_core.text)("address"),
+  latitude: (0, import_pg_core.real)("latitude").notNull(),
+  longitude: (0, import_pg_core.real)("longitude").notNull(),
+  commandPhone: (0, import_pg_core.text)("command_phone"),
+  commandEmail: (0, import_pg_core.text)("command_email"),
+  commanderName: (0, import_pg_core.text)("commander_name"),
+  operatingHours: (0, import_pg_core.text)("operating_hours").notNull().default("24/7"),
+  responseRadiusKm: (0, import_pg_core.real)("response_radius_km").notNull().default(20),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  notes: (0, import_pg_core.text)("notes"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var adminUsers = (0, import_pg_core.pgTable)("admin_users", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  name: (0, import_pg_core.text)("name").notNull(),
+  username: (0, import_pg_core.text)("username").notNull().unique(),
+  passwordHash: (0, import_pg_core.text)("password_hash"),
+  role: (0, import_pg_core.text)("role").notNull().default("viewer"),
+  commandId: (0, import_pg_core.varchar)("command_id"),
+  provinceId: (0, import_pg_core.varchar)("province_id"),
+  districtId: (0, import_pg_core.varchar)("district_id"),
+  stationId: (0, import_pg_core.varchar)("station_id"),
+  phone: (0, import_pg_core.text)("phone"),
+  email: (0, import_pg_core.text)("email"),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var notificationLogs = (0, import_pg_core.pgTable)("notification_logs", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  stationId: (0, import_pg_core.varchar)("station_id"),
+  reportId: (0, import_pg_core.varchar)("report_id"),
+  userId: (0, import_pg_core.varchar)("user_id"),
+  title: (0, import_pg_core.text)("title").notNull(),
+  message: (0, import_pg_core.text)("message").notNull(),
+  channel: (0, import_pg_core.text)("channel").notNull().default("console"),
+  recipient: (0, import_pg_core.text)("recipient").notNull(),
+  status: (0, import_pg_core.text)("status").notNull().default("queued"),
+  providerMessageId: (0, import_pg_core.text)("provider_message_id"),
+  errorMessage: (0, import_pg_core.text)("error_message"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var reportDispatches = (0, import_pg_core.pgTable)("report_dispatches", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  reportId: (0, import_pg_core.varchar)("report_id").notNull(),
+  stationId: (0, import_pg_core.varchar)("station_id").notNull(),
+  distanceKm: (0, import_pg_core.real)("distance_km"),
+  withinResponseRadius: (0, import_pg_core.boolean)("within_response_radius").notNull().default(false),
+  status: (0, import_pg_core.text)("status").notNull().default("notified"),
+  notifiedAt: (0, import_pg_core.timestamp)("notified_at").defaultNow().notNull(),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var deletedReportAudits = (0, import_pg_core.pgTable)("deleted_report_audits", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  reportId: (0, import_pg_core.varchar)("report_id").notNull(),
+  referenceNumber: (0, import_pg_core.text)("reference_number"),
+  reason: (0, import_pg_core.text)("reason").notNull(),
+  deletedBy: (0, import_pg_core.text)("deleted_by").notNull().default("admin"),
+  reportSnapshot: (0, import_pg_core.jsonb)("report_snapshot").$type().notNull(),
+  deletedAt: (0, import_pg_core.timestamp)("deleted_at").defaultNow().notNull()
+});
+var insertUserSchema = (0, import_drizzle_zod.createInsertSchema)(users).pick({
+  username: true,
+  password: true
+});
+var insertEvidenceReportSchema = (0, import_drizzle_zod.createInsertSchema)(evidenceReports).omit({
+  id: true,
+  submittedAt: true
+});
+var insertPoliceCommandSchema = (0, import_drizzle_zod.createInsertSchema)(policeCommands).omit({ id: true, createdAt: true });
+var insertProvinceSchema = (0, import_drizzle_zod.createInsertSchema)(provinces).omit({ id: true, createdAt: true });
+var insertDistrictSchema = (0, import_drizzle_zod.createInsertSchema)(districts).omit({ id: true, createdAt: true });
+var insertPoliceStationSchema = (0, import_drizzle_zod.createInsertSchema)(policeStations).omit({ id: true, createdAt: true });
+var insertAdminUserSchema = (0, import_drizzle_zod.createInsertSchema)(adminUsers).omit({ id: true, createdAt: true });
+var insertNotificationLogSchema = (0, import_drizzle_zod.createInsertSchema)(notificationLogs).omit({ id: true, createdAt: true });
+var insertReportDispatchSchema = (0, import_drizzle_zod.createInsertSchema)(reportDispatches).omit({ id: true, createdAt: true });
+var insertDeletedReportAuditSchema = (0, import_drizzle_zod.createInsertSchema)(deletedReportAudits).omit({ id: true, deletedAt: true });
+
+// server/storage.ts
+var import_crypto = require("crypto");
+
+// server/db.ts
+var import_dotenv = require("dotenv");
+var import_neon_serverless = require("drizzle-orm/neon-serverless");
+var import_node_postgres = require("drizzle-orm/node-postgres");
+var import_ws = __toESM(require("ws"));
+(0, import_dotenv.config)();
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
+}
+var databaseUrl = process.env.DATABASE_URL;
+var isLocalPostgres = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("host.docker.internal");
+var db;
+if (isLocalPostgres) {
+  const { Pool } = require("pg");
+  const pool = new Pool({ connectionString: databaseUrl });
+  console.log("Using node-postgres database driver for local DATABASE_URL");
+  db = (0, import_node_postgres.drizzle)(pool, { schema: schema_exports });
+} else {
+  console.log("Using Neon serverless database driver");
+  db = (0, import_neon_serverless.drizzle)({
+    connection: databaseUrl,
+    schema: schema_exports,
+    ws: import_ws.default
+  });
+}
+
+// server/storage.ts
+var import_drizzle_orm2 = require("drizzle-orm");
+var DatabaseStorage = class {
+  async getUser(id) {
+    return void 0;
+  }
+  async getUserByUsername(username) {
+    return void 0;
+  }
+  async createUser(insertUser) {
+    const id = (0, import_crypto.randomUUID)();
+    const user = { ...insertUser, id };
+    return user;
+  }
+  async createEvidenceReport(report) {
+    const [created] = await db.insert(evidenceReports).values(report).returning();
+    return created;
+  }
+  async getAllEvidenceReports() {
+    return db.select().from(evidenceReports).orderBy((0, import_drizzle_orm2.desc)(evidenceReports.submittedAt));
+  }
+  async getEvidenceReportById(id) {
+    const [report] = await db.select().from(evidenceReports).where((0, import_drizzle_orm2.eq)(evidenceReports.id, id));
+    return report;
+  }
+  async updateEvidenceReportStatus(id, status) {
+    await db.update(evidenceReports).set({ status }).where((0, import_drizzle_orm2.eq)(evidenceReports.id, id));
+  }
+  async deleteEvidenceReportWithAudit(id, audit) {
+    const report = await this.getEvidenceReportById(id);
+    if (!report) return void 0;
+    const [createdAudit] = await db.insert(deletedReportAudits).values({
+      ...audit,
+      reportId: id,
+      reportSnapshot: report
+    }).returning();
+    await db.delete(evidenceReports).where((0, import_drizzle_orm2.eq)(evidenceReports.id, id));
+    return createdAudit;
+  }
+  async listDeletedReportAudits() {
+    return db.select().from(deletedReportAudits).orderBy((0, import_drizzle_orm2.desc)(deletedReportAudits.deletedAt));
+  }
+  async listPoliceCommands() {
+    return db.select().from(policeCommands).orderBy((0, import_drizzle_orm2.asc)(policeCommands.name));
+  }
+  async createPoliceCommand(command) {
+    const [created] = await db.insert(policeCommands).values(command).onConflictDoUpdate({
+      target: policeCommands.code,
+      set: command
+    }).returning();
+    return created;
+  }
+  async listProvinces(commandId) {
+    const query = db.select().from(provinces);
+    if (commandId) return query.where((0, import_drizzle_orm2.eq)(provinces.commandId, commandId)).orderBy((0, import_drizzle_orm2.asc)(provinces.name));
+    return query.orderBy((0, import_drizzle_orm2.asc)(provinces.name));
+  }
+  async createProvince(province) {
+    const [created] = await db.insert(provinces).values(province).onConflictDoUpdate({
+      target: provinces.code,
+      set: province
+    }).returning();
+    return created;
+  }
+  async listDistricts(provinceId) {
+    const query = db.select().from(districts);
+    if (provinceId) return query.where((0, import_drizzle_orm2.eq)(districts.provinceId, provinceId)).orderBy((0, import_drizzle_orm2.asc)(districts.name));
+    return query.orderBy((0, import_drizzle_orm2.asc)(districts.name));
+  }
+  async createDistrict(district) {
+    const [created] = await db.insert(districts).values(district).onConflictDoUpdate({
+      target: districts.code,
+      set: district
+    }).returning();
+    return created;
+  }
+  async listPoliceStations(filters = {}) {
+    let results = await db.select().from(policeStations).orderBy((0, import_drizzle_orm2.asc)(policeStations.name));
+    if (filters.commandId) results = results.filter((station) => station.commandId === filters.commandId);
+    if (filters.provinceId) results = results.filter((station) => station.provinceId === filters.provinceId);
+    if (filters.districtId) results = results.filter((station) => station.districtId === filters.districtId);
+    if (filters.activeOnly) results = results.filter((station) => station.isActive);
+    return results;
+  }
+  async createPoliceStation(station) {
+    if (station.code) {
+      const [existing] = await db.select().from(policeStations).where((0, import_drizzle_orm2.eq)(policeStations.code, station.code));
+      if (existing) {
+        const [updated] = await db.update(policeStations).set(station).where((0, import_drizzle_orm2.eq)(policeStations.id, existing.id)).returning();
+        return updated;
+      }
+    }
+    const [created] = await db.insert(policeStations).values(station).returning();
+    return created;
+  }
+  async listAdminUsers() {
+    return db.select().from(adminUsers).orderBy((0, import_drizzle_orm2.asc)(adminUsers.name));
+  }
+  async createAdminUser(user) {
+    const [created] = await db.insert(adminUsers).values(user).onConflictDoUpdate({
+      target: adminUsers.username,
+      set: user
+    }).returning();
+    return created;
+  }
+  async listNotificationLogs() {
+    return db.select().from(notificationLogs).orderBy((0, import_drizzle_orm2.desc)(notificationLogs.createdAt));
+  }
+  async createNotificationLog(notification) {
+    const [created] = await db.insert(notificationLogs).values(notification).returning();
+    return created;
+  }
+  async createReportDispatch(dispatch) {
+    const [created] = await db.insert(reportDispatches).values(dispatch).returning();
+    return created;
+  }
+};
+var storage = new DatabaseStorage();
+
+// server/admin-html.ts
+var adminHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1927,3 +2279,823 @@ export const adminHtml = `<!DOCTYPE html>
   </script>
 </body>
 </html>`;
+
+// server/admin-store.ts
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
+var import_crypto2 = require("crypto");
+var storePath = path.resolve(process.cwd(), "server", "data", "admin-management.json");
+var now = () => (/* @__PURE__ */ new Date()).toISOString();
+var defaultStations = [
+  {
+    id: "station_boroko",
+    name: "Boroko Police Station",
+    province: "National Capital District",
+    district: "Port Moresby",
+    address: "Boroko, Port Moresby, National Capital District",
+    latitude: -9.4672,
+    longitude: 147.1957,
+    commandPhone: "+675 0000 0001",
+    commandEmail: "boroko.command@example.gov.pg",
+    commanderName: "Station Commander",
+    operatingHours: "24/7",
+    responseRadiusKm: 15,
+    isActive: true,
+    notes: "Default station for Port Moresby reports.",
+    createdAt: now()
+  },
+  {
+    id: "station_local",
+    name: "Local Police Station",
+    province: "Papua New Guinea",
+    district: "Local District",
+    address: "Nearest local police station",
+    latitude: -6.314993,
+    longitude: 143.95555,
+    commandPhone: "+675 0000 0002",
+    commandEmail: "local.command@example.gov.pg",
+    commanderName: "Duty Commander",
+    operatingHours: "24/7",
+    responseRadiusKm: 25,
+    isActive: true,
+    notes: "Fallback local command station.",
+    createdAt: now()
+  }
+];
+var defaultData = {
+  users: [
+    {
+      id: "user_admin",
+      name: "System Administrator",
+      username: "admin",
+      role: "admin",
+      stationId: null,
+      phone: null,
+      email: null,
+      isActive: true,
+      createdAt: now()
+    }
+  ],
+  stations: defaultStations,
+  notifications: []
+};
+function ensureStore() {
+  if (fs.existsSync(storePath)) return;
+  fs.mkdirSync(path.dirname(storePath), { recursive: true });
+  fs.writeFileSync(storePath, JSON.stringify(defaultData, null, 2));
+}
+function readStore() {
+  ensureStore();
+  const data = JSON.parse(fs.readFileSync(storePath, "utf-8"));
+  return {
+    users: data.users || [],
+    stations: data.stations || [],
+    notifications: data.notifications || []
+  };
+}
+function writeStore(data) {
+  fs.mkdirSync(path.dirname(storePath), { recursive: true });
+  fs.writeFileSync(storePath, JSON.stringify(data, null, 2));
+}
+function normalizeNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+function distanceKm(aLat, aLng, bLat, bLng) {
+  const toRad = (value) => value * Math.PI / 180;
+  const radius = 6371;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * radius * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+var adminStore = {
+  listUsers() {
+    return readStore().users;
+  },
+  saveUser(input) {
+    const data = readStore();
+    const existingIndex = input.id ? data.users.findIndex((item) => item.id === input.id) : -1;
+    const user = {
+      id: input.id || (0, import_crypto2.randomUUID)(),
+      name: String(input.name || "Unnamed User"),
+      username: String(input.username || "user"),
+      role: input.role || "viewer",
+      stationId: input.stationId || null,
+      phone: input.phone || null,
+      email: input.email || null,
+      isActive: input.isActive !== false,
+      createdAt: input.createdAt || now()
+    };
+    if (existingIndex >= 0) data.users[existingIndex] = user;
+    else data.users.unshift(user);
+    writeStore(data);
+    return user;
+  },
+  listStations() {
+    return readStore().stations;
+  },
+  saveStation(input) {
+    const data = readStore();
+    const existingIndex = input.id ? data.stations.findIndex((item) => item.id === input.id) : -1;
+    const station = {
+      id: input.id || (0, import_crypto2.randomUUID)(),
+      name: String(input.name || "Unnamed Police Station"),
+      province: String(input.province || ""),
+      district: String(input.district || ""),
+      address: String(input.address || ""),
+      latitude: normalizeNumber(input.latitude, 0),
+      longitude: normalizeNumber(input.longitude, 0),
+      commandPhone: String(input.commandPhone || ""),
+      commandEmail: String(input.commandEmail || ""),
+      commanderName: String(input.commanderName || ""),
+      operatingHours: String(input.operatingHours || "24/7"),
+      responseRadiusKm: normalizeNumber(input.responseRadiusKm, 20),
+      isActive: input.isActive !== false,
+      notes: String(input.notes || ""),
+      createdAt: input.createdAt || now()
+    };
+    if (existingIndex >= 0) data.stations[existingIndex] = station;
+    else data.stations.unshift(station);
+    writeStore(data);
+    return station;
+  },
+  nearestStation(latitude, longitude) {
+    const stations = readStore().stations.filter((station) => station.isActive);
+    const nearest = stations.map((station) => {
+      const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+      return {
+        ...station,
+        distanceKm: Math.round(distance * 10) / 10,
+        withinResponseRadius: distance <= station.responseRadiusKm
+      };
+    }).sort((a, b) => a.distanceKm - b.distanceKm)[0];
+    return nearest || null;
+  },
+  listNotifications() {
+    return readStore().notifications;
+  },
+  createNotification(input) {
+    const data = readStore();
+    const notification = {
+      id: (0, import_crypto2.randomUUID)(),
+      stationId: input.stationId || null,
+      reportId: input.reportId || null,
+      title: String(input.title || "Crime report notification"),
+      message: String(input.message || ""),
+      channel: input.channel || "console",
+      recipient: String(input.recipient || "command"),
+      status: "sent",
+      createdAt: now()
+    };
+    data.notifications.unshift(notification);
+    data.notifications = data.notifications.slice(0, 200);
+    writeStore(data);
+    console.log("Police command notification:", notification);
+    return notification;
+  }
+};
+
+// server/routes.ts
+var PRODUCTION_DOMAIN = process.env.PRODUCTION_DOMAIN || process.env.EXPO_PUBLIC_DOMAIN || "crimewatch.lamtoninvestments.com";
+var ADMIN_COOKIE_NAME = "cpng_admin";
+var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.CPNG_ADMIN_PASSWORD || "admin123";
+var ADMIN_COOKIE_VALUE = (0, import_node_crypto.createHash)("sha256").update(ADMIN_PASSWORD).digest("hex");
+var uploadsDir = path2.resolve(process.cwd(), "uploads");
+var productionReportsCachePath = path2.resolve(process.cwd(), "server", "cache", "production-reports.json");
+if (!fs2.existsSync(uploadsDir)) {
+  fs2.mkdirSync(uploadsDir, { recursive: true });
+}
+var upload = (0, import_multer.default)({
+  storage: import_multer.default.diskStorage({
+    destination: uploadsDir,
+    filename: (_req, file, cb) => {
+      const ext = path2.extname(file.originalname) || getExtByMime(file.mimetype);
+      cb(null, `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`);
+    }
+  }),
+  limits: { fileSize: 200 * 1024 * 1024 }
+});
+function getExtByMime(mime) {
+  if (mime.startsWith("image/")) return ".jpg";
+  if (mime.startsWith("video/")) return ".mp4";
+  if (mime.startsWith("audio/")) return ".m4a";
+  return ".bin";
+}
+function buildReferenceNumber(report) {
+  const submittedAt = report.submittedAt ? new Date(report.submittedAt) : /* @__PURE__ */ new Date();
+  const year = Number.isNaN(submittedAt.getTime()) ? (/* @__PURE__ */ new Date()).getUTCFullYear() : submittedAt.getUTCFullYear();
+  const shortId = report.id.replace(/-/g, "").slice(0, 8).toUpperCase();
+  return `CPNG-${year}-${shortId}`;
+}
+function withReferenceNumber(report) {
+  const fileUrl = report.fileUrl?.startsWith("/uploads/") ? `https://${PRODUCTION_DOMAIN}${report.fileUrl}` : report.fileUrl;
+  const tags = Array.isArray(report.tags) ? report.tags : typeof report.tags === "string" && report.tags.length > 0 ? [report.tags] : [];
+  return {
+    ...report,
+    fileUrl,
+    tags,
+    referenceNumber: buildReferenceNumber(report)
+  };
+}
+async function findNearestDbPoliceStation(latitude, longitude) {
+  try {
+    const stations = await storage.listPoliceStations({ activeOnly: true });
+    const nearest = stations.map((station) => {
+      const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+      return {
+        ...station,
+        province: "",
+        district: "",
+        commandPhone: station.commandPhone || "",
+        commandEmail: station.commandEmail || "",
+        commanderName: station.commanderName || "",
+        notes: station.notes || "",
+        distanceKm: Math.round(distance * 10) / 10,
+        withinResponseRadius: distance <= station.responseRadiusKm
+      };
+    }).sort((a, b) => a.distanceKm - b.distanceKm)[0];
+    return nearest || null;
+  } catch (error) {
+    console.warn("Falling back to JSON police station store:", error);
+    return adminStore.nearestStation(latitude, longitude);
+  }
+}
+function isProductionServer() {
+  return !!(process.env.REPLIT_INTERNAL_APP_DOMAIN || process.env.NODE_ENV === "production");
+}
+async function fetchProductionReports() {
+  try {
+    const response = await fetch(`https://${PRODUCTION_DOMAIN}/api/reports`, {
+      signal: AbortSignal.timeout(2e4)
+    });
+    if (!response.ok) {
+      throw new Error(`Production reports request failed: ${response.status}`);
+    }
+    const reports = await response.json();
+    fs2.mkdirSync(path2.dirname(productionReportsCachePath), { recursive: true });
+    fs2.writeFileSync(productionReportsCachePath, JSON.stringify(reports, null, 2));
+    return reports;
+  } catch (error) {
+    if (fs2.existsSync(productionReportsCachePath)) {
+      console.warn("Using cached production reports because live fetch failed:", error);
+      return JSON.parse(fs2.readFileSync(productionReportsCachePath, "utf-8"));
+    }
+    throw error;
+  }
+}
+async function patchProductionReportStatus(id, status) {
+  const response = await fetch(`https://${PRODUCTION_DOMAIN}/api/reports/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
+  });
+  if (!response.ok) {
+    throw new Error(`Production status update failed: ${response.status}`);
+  }
+}
+function getCookies(cookieHeader) {
+  if (!cookieHeader) return {};
+  return Object.fromEntries(
+    cookieHeader.split(";").map((part) => part.trim().split("=")).filter(([key, value]) => key && value).map(([key, value]) => [key, decodeURIComponent(value)])
+  );
+}
+function isAdminAuthenticated(req) {
+  return getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME] === ADMIN_COOKIE_VALUE;
+}
+function requireAdmin(req, res, next) {
+  if (!isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: "Admin login required" });
+  }
+  next();
+}
+function adminLoginHtml(errorMessage = "") {
+  const error = errorMessage ? `<p class="error">${errorMessage}</p>` : "";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crime Prevention PNG - Admin Login</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0f1724;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .login-card {
+      width: min(420px, calc(100vw - 32px));
+      background: #1a2744;
+      border: 1px solid #2d3a4f;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p { margin: 0 0 22px; color: #94a3b8; }
+    label { display: block; margin-bottom: 8px; font-size: 13px; color: #cbd5e1; }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0f1724;
+      color: #f8fafc;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      background: #1d4ed8;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .error {
+      margin: 0 0 14px;
+      color: #fca5a5;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <form class="login-card" method="POST" action="/api/admin/login">
+    <h1>Crime Prevention PNG</h1>
+    <p>Sign in to view and manage submitted reports.</p>
+    ${error}
+    <label for="password">Admin password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+    <button type="submit">Open Admin Portal</button>
+  </form>
+</body>
+</html>`;
+}
+async function forwardToProduction(reportData) {
+  try {
+    const isProduction = isProductionServer();
+    if (isProduction) return;
+    const prodUrl = `https://${PRODUCTION_DOMAIN}/api/reports`;
+    const response = await fetch(prodUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reportData)
+    });
+    if (response.ok) {
+      console.log("Report forwarded to production successfully");
+    } else {
+      console.error("Failed to forward report to production:", response.status);
+    }
+  } catch (err) {
+    console.error("Error forwarding report to production:", err);
+  }
+}
+async function forwardFileToProduction(filePath, mimeType, originalName) {
+  try {
+    const fileBuffer = fs2.readFileSync(filePath);
+    const blob = new Blob([fileBuffer], { type: mimeType });
+    const formData = new FormData();
+    formData.append("file", blob, originalName);
+    const prodResponse = await fetch(`https://${PRODUCTION_DOMAIN}/api/upload`, {
+      method: "POST",
+      body: formData
+    });
+    if (prodResponse.ok) {
+      const data = await prodResponse.json();
+      return data.fileUrl;
+    }
+    console.error("Failed to forward file to production:", prodResponse.status);
+    return null;
+  } catch (err) {
+    console.error("Error forwarding file to production:", err);
+    return null;
+  }
+}
+async function registerRoutes(app2) {
+  app2.post("/api/admin/login", (req, res) => {
+    if (req.body?.password !== ADMIN_PASSWORD) {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.status(401).send(adminLoginHtml("Incorrect password. Please try again."));
+    }
+    res.setHeader(
+      "Set-Cookie",
+      `${ADMIN_COOKIE_NAME}=${encodeURIComponent(ADMIN_COOKIE_VALUE)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
+    );
+    res.redirect("/admin");
+  });
+  app2.post("/api/admin/logout", (_req, res) => {
+    res.setHeader(
+      "Set-Cookie",
+      `${ADMIN_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`
+    );
+    res.redirect("/admin");
+  });
+  app2.get("/uploads/:filename", (req, res) => {
+    res.redirect(302, `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`);
+  });
+  app2.post("/api/upload", upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    const isProduction = isProductionServer();
+    if (!isProduction) {
+      const prodFileUrl = await forwardFileToProduction(
+        req.file.path,
+        req.file.mimetype,
+        req.file.originalname || `upload${path2.extname(req.file.path)}`
+      );
+      try {
+        fs2.unlinkSync(req.file.path);
+      } catch {
+      }
+      if (prodFileUrl) {
+        return res.json({ fileUrl: prodFileUrl });
+      }
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ fileUrl });
+  });
+  app2.post("/api/reports", async (req, res) => {
+    try {
+      const latitude = req.body?.latitude !== null && req.body?.latitude !== void 0 ? Number(req.body.latitude) : NaN;
+      const longitude = req.body?.longitude !== null && req.body?.longitude !== void 0 ? Number(req.body.longitude) : NaN;
+      const nearestStation = Number.isFinite(latitude) && Number.isFinite(longitude) ? await findNearestDbPoliceStation(latitude, longitude) : null;
+      const reportData = {
+        ...req.body,
+        agency: nearestStation?.name || req.body.agency
+      };
+      const report = await storage.createEvidenceReport(reportData);
+      forwardToProduction(reportData);
+      if (nearestStation) {
+        try {
+          await storage.createReportDispatch({
+            reportId: report.id,
+            stationId: nearestStation.id,
+            distanceKm: nearestStation.distanceKm,
+            withinResponseRadius: nearestStation.withinResponseRadius,
+            status: "notified"
+          });
+          await storage.createNotificationLog({
+            stationId: nearestStation.id,
+            reportId: report.id,
+            title: "Immediate crime report dispatch",
+            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+            channel: "console",
+            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name,
+            status: "sent"
+          });
+        } catch (notificationError) {
+          adminStore.createNotification({
+            stationId: nearestStation.id,
+            reportId: report.id,
+            title: "Immediate crime report dispatch",
+            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+            channel: "console",
+            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name
+          });
+        }
+      }
+      res.status(201).json({
+        ...withReferenceNumber(report),
+        nearestStation
+      });
+    } catch (error) {
+      console.error("Error creating report:", error);
+      res.status(500).json({ message: "Failed to submit report" });
+    }
+  });
+  app2.get("/api/police-stations", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      res.json(await storage.listPoliceStations({ activeOnly: true }));
+    } catch (error) {
+      res.json(adminStore.listStations().filter((station) => station.isActive));
+    }
+  });
+  app2.get("/api/police-stations/nearest", async (req, res) => {
+    const latitude = Number(req.query.latitude);
+    const longitude = Number(req.query.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ message: "Valid latitude and longitude are required" });
+    }
+    res.json(await findNearestDbPoliceStation(latitude, longitude));
+  });
+  app2.get("/api/admin/location/commands", requireAdmin, async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listPoliceCommands());
+  });
+  app2.post("/api/admin/location/commands", requireAdmin, async (req, res) => {
+    res.status(201).json(await storage.createPoliceCommand(req.body));
+  });
+  app2.get("/api/admin/location/provinces", requireAdmin, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listProvinces(req.query.commandId));
+  });
+  app2.post("/api/admin/location/provinces", requireAdmin, async (req, res) => {
+    res.status(201).json(await storage.createProvince(req.body));
+  });
+  app2.get("/api/admin/location/districts", requireAdmin, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listDistricts(req.query.provinceId));
+  });
+  app2.post("/api/admin/location/districts", requireAdmin, async (req, res) => {
+    res.status(201).json(await storage.createDistrict(req.body));
+  });
+  app2.get("/api/admin/users", requireAdmin, async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listAdminUsers());
+  });
+  app2.post("/api/admin/users", requireAdmin, async (req, res) => {
+    res.status(201).json(await storage.createAdminUser(req.body));
+  });
+  app2.get("/api/admin/police-stations", requireAdmin, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listPoliceStations({
+      commandId: req.query.commandId,
+      provinceId: req.query.provinceId,
+      districtId: req.query.districtId
+    }));
+  });
+  app2.post("/api/admin/police-stations", requireAdmin, async (req, res) => {
+    res.status(201).json(await storage.createPoliceStation(req.body));
+  });
+  app2.get("/api/admin/deleted-reports", requireAdmin, async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listDeletedReportAudits());
+  });
+  app2.get("/api/admin/notifications", requireAdmin, async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await storage.listNotificationLogs());
+  });
+  app2.post("/api/admin/notifications", requireAdmin, async (req, res) => {
+    const notification = await storage.createNotificationLog({
+      ...req.body,
+      status: "sent"
+    });
+    res.status(201).json(notification);
+  });
+  app2.get("/api/reports", requireAdmin, async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      const reports = await storage.getAllEvidenceReports();
+      if (reports.length === 0 && !isProductionServer()) {
+        const productionReports = await fetchProductionReports();
+        return res.json(productionReports.map(withReferenceNumber));
+      }
+      res.json(reports.map(withReferenceNumber));
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+  app2.get("/api/reports/:id", requireAdmin, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      const report = await storage.getEvidenceReportById(req.params.id);
+      if (report) {
+        return res.json(withReferenceNumber(report));
+      }
+      if (!isProductionServer()) {
+        const productionReports = await fetchProductionReports();
+        const productionReport = productionReports.find((item) => item.id === req.params.id);
+        if (productionReport) {
+          return res.json(withReferenceNumber(productionReport));
+        }
+      }
+      return res.status(404).json({ message: "Report not found" });
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      res.status(500).json({ message: "Failed to fetch report" });
+    }
+  });
+  app2.delete("/api/reports/:id", requireAdmin, async (req, res) => {
+    try {
+      const reason = String(req.body?.reason || "").trim();
+      if (reason.length < 8) {
+        return res.status(400).json({ message: "Deletion reason must be at least 8 characters." });
+      }
+      const report = await storage.getEvidenceReportById(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found or cannot be deleted from this environment." });
+      }
+      const audit = await storage.deleteEvidenceReportWithAudit(req.params.id, {
+        reason,
+        deletedBy: "admin",
+        referenceNumber: withReferenceNumber(report).referenceNumber
+      });
+      res.json({ message: "Report deleted", auditId: audit?.id });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+  app2.patch("/api/reports/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const localReport = await storage.getEvidenceReportById(req.params.id);
+      if (localReport || isProductionServer()) {
+        await storage.updateEvidenceReportStatus(req.params.id, status);
+      } else {
+        await patchProductionReportStatus(req.params.id, status);
+      }
+      res.json({ message: "Status updated" });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      res.status(500).json({ message: "Failed to update status" });
+    }
+  });
+  app2.get("/admin", (req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    if (!isAdminAuthenticated(req)) {
+      return res.status(200).send(adminLoginHtml());
+    }
+    res.status(200).send(adminHtml);
+  });
+  const httpServer = (0, import_node_http.createServer)(app2);
+  return httpServer;
+}
+
+// server/index.ts
+var fs3 = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
+var app = (0, import_express.default)();
+var log = console.log;
+function setupCors(app2) {
+  app2.use((req, res, next) => {
+    const origins = /* @__PURE__ */ new Set();
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+    }
+    if (process.env.REPLIT_DOMAINS) {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+        origins.add(`https://${d.trim()}`);
+      });
+    }
+    const origin = req.header("origin");
+    if (origin && origins.has(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS"
+      );
+      res.header("Access-Control-Allow-Headers", "Content-Type");
+      res.header("Access-Control-Allow-Credentials", "true");
+    }
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+}
+function setupBodyParsing(app2) {
+  app2.use(
+    import_express.default.json({
+      verify: (req, _res, buf) => {
+        req.rawBody = buf;
+      }
+    })
+  );
+  app2.use(import_express.default.urlencoded({ extended: false }));
+}
+function setupRequestLogging(app2) {
+  app2.use((req, res, next) => {
+    const start = Date.now();
+    const path4 = req.path;
+    let capturedJsonResponse = void 0;
+    const originalResJson = res.json;
+    res.json = function(bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+    res.on("finish", () => {
+      if (!path4.startsWith("/api")) return;
+      const duration = Date.now() - start;
+      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "\u2026";
+      }
+      log(logLine);
+    });
+    next();
+  });
+}
+function getAppName() {
+  try {
+    const appJsonPath = path3.resolve(process.cwd(), "app.json");
+    const appJsonContent = fs3.readFileSync(appJsonPath, "utf-8");
+    const appJson = JSON.parse(appJsonContent);
+    return appJson.expo?.name || "App Landing Page";
+  } catch {
+    return "App Landing Page";
+  }
+}
+function serveExpoManifest(platform, res) {
+  const manifestPath = path3.resolve(
+    process.cwd(),
+    "static-build",
+    platform,
+    "manifest.json"
+  );
+  if (!fs3.existsSync(manifestPath)) {
+    return res.status(404).json({ error: `Manifest not found for platform: ${platform}` });
+  }
+  res.setHeader("expo-protocol-version", "1");
+  res.setHeader("expo-sfv-version", "0");
+  res.setHeader("content-type", "application/json");
+  const manifest = fs3.readFileSync(manifestPath, "utf-8");
+  res.send(manifest);
+}
+function serveLandingPage({
+  req,
+  res,
+  landingPageTemplate,
+  appName
+}) {
+  const forwardedProto = req.header("x-forwarded-proto");
+  const protocol = forwardedProto || req.protocol || "https";
+  const forwardedHost = req.header("x-forwarded-host");
+  const host = forwardedHost || req.get("host");
+  const baseUrl = `${protocol}://${host}`;
+  const expsUrl = `${host}`;
+  log(`baseUrl`, baseUrl);
+  log(`expsUrl`, expsUrl);
+  const html = landingPageTemplate.replace(/BASE_URL_PLACEHOLDER/g, baseUrl).replace(/EXPS_URL_PLACEHOLDER/g, expsUrl).replace(/APP_NAME_PLACEHOLDER/g, appName);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.status(200).send(html);
+}
+function configureExpoAndLanding(app2) {
+  const templatePath = path3.resolve(
+    process.cwd(),
+    "server",
+    "templates",
+    "landing-page.html"
+  );
+  const landingPageTemplate = fs3.readFileSync(templatePath, "utf-8");
+  const appName = getAppName();
+  log("Serving static Expo files with dynamic manifest routing");
+  app2.use((req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    if (req.path !== "/" && req.path !== "/manifest") {
+      return next();
+    }
+    const platform = req.header("expo-platform");
+    if (platform && (platform === "ios" || platform === "android")) {
+      return serveExpoManifest(platform, res);
+    }
+    if (req.path === "/") {
+      return serveLandingPage({
+        req,
+        res,
+        landingPageTemplate,
+        appName
+      });
+    }
+    next();
+  });
+  app2.use("/assets", import_express.default.static(path3.resolve(process.cwd(), "assets")));
+  app2.use("/uploads", import_express.default.static(path3.resolve(process.cwd(), "uploads")));
+  app2.use(import_express.default.static(path3.resolve(process.cwd(), "static-build")));
+  log("Expo routing: Checking expo-platform header on / and /manifest");
+}
+function setupErrorHandler(app2) {
+  app2.use((err, _req, res, _next) => {
+    const error = err;
+    const status = error.status || error.statusCode || 500;
+    const message = error.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
+}
+(async () => {
+  setupCors(app);
+  setupBodyParsing(app);
+  setupRequestLogging(app);
+  configureExpoAndLanding(app);
+  const server = await registerRoutes(app);
+  setupErrorHandler(app);
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0"
+    },
+    () => {
+      log(`express server serving on port ${port}`);
+    }
+  );
+})();
