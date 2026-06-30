@@ -240,6 +240,34 @@ export const adminHtml = `<!DOCTYPE html>
     .module-section.active {
       display: block;
     }
+    .workspace-tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      margin: 18px 0 20px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .workspace-tab {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 16px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .workspace-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+    }
+    .workspace-panel { display: none; }
+    .workspace-panel.active { display: block; }
+    body.light-theme .workspace-tabs { background:#eef4fb; border-color:#cbd9ea; }
+    body.light-theme .workspace-tab { color:#34465c; }
+    body.light-theme .workspace-tab.active { color:#fff; }
     .module-heading {
       display: flex;
       align-items: center;
@@ -939,8 +967,7 @@ export const adminHtml = `<!DOCTYPE html>
     <aside class="sidebar">
       <div class="sidebar-label">Modules</div>
       <nav class="sidebar-nav">
-        <button class="sidebar-btn active" data-module-target="dashboard" onclick="showModule('dashboard', this)"><span class="sidebar-icon">DB</span>Dashboard</button>
-        <button class="sidebar-btn" data-module-target="reports" onclick="showModule('reports', this)"><span class="sidebar-icon">RM</span>Reports & Map</button>
+        <button class="sidebar-btn active" data-module-target="dashboard" onclick="showModule('dashboard', this)"><span class="sidebar-icon">RM</span>Reports Workspace</button>
         <button class="sidebar-btn" data-module-target="locations" onclick="showModule('locations', this)"><span class="sidebar-icon">LC</span>Location Cascade</button>
         <button class="sidebar-btn" data-module-target="users" onclick="showModule('users', this)"><span class="sidebar-icon">US</span>Users</button>
         <button class="sidebar-btn" data-module-target="stations" onclick="showModule('stations', this)"><span class="sidebar-icon">PS</span>Stations & Posts</button>
@@ -950,8 +977,13 @@ export const adminHtml = `<!DOCTYPE html>
     <main class="main-panel">
       <section class="module-section active" data-module="dashboard">
         <div class="module-heading">
-          <div class="module-title"><h2>Dashboard</h2><p>Operational report totals and quick status overview.</p></div>
+          <div class="module-title"><h2>Reports Workspace</h2><p>Operational dashboard, evidence reports, and map intelligence in one place.</p></div>
         </div>
+        <div class="workspace-tabs" role="tablist" aria-label="Reports workspace tabs">
+          <button id="dashboardTabButton" class="workspace-tab active" type="button" onclick="showWorkspaceTab('dashboard')">Dashboard</button>
+          <button id="reportsTabButton" class="workspace-tab" type="button" onclick="showWorkspaceTab('reports')">Reports & Map</button>
+        </div>
+        <div id="dashboardTab" class="workspace-panel active">
         <div class="stats-bar">
           <div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
           <div class="stat-card new"><div class="number" id="newCount">0</div><div class="label">New</div></div>
@@ -959,9 +991,9 @@ export const adminHtml = `<!DOCTYPE html>
           <div class="stat-card reviewed"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
           <div class="stat-card resolved"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
         </div>
-      </section>
+        </div>
 
-      <section class="module-section" data-module="reports">
+        <div id="reportsTab" class="workspace-panel">
         <div class="content">
           <div class="toolbar">
             <div class="module-title"><h2>Evidence Reports</h2><p>Review submissions, map hotspots, and update report status.</p></div>
@@ -1060,6 +1092,7 @@ export const adminHtml = `<!DOCTYPE html>
             </div>
           </div>
         </div>
+        </div>
       </section>
 
       <section class="module-section" data-module="locations">
@@ -1135,23 +1168,22 @@ export const adminHtml = `<!DOCTYPE html>
 
     const moduleTitles = {
       dashboard: 'Admin Portal - Dashboard',
-      reports: 'Admin Portal - Evidence Reports',
       locations: 'Admin Portal - Location Cascade',
       users: 'Admin Portal - User Management',
       stations: 'Admin Portal - Police Stations & Posts',
       notifications: 'Admin Portal - Notifications',
     };
 
-    function showModule(moduleName, button) {
-      document.querySelectorAll('.module-section').forEach(function(section) {
-        section.classList.toggle('active', section.dataset.module === moduleName);
+    function showWorkspaceTab(tabName) {
+      document.querySelectorAll('.workspace-panel').forEach(function(panel) {
+        panel.classList.toggle('active', panel.id === tabName + 'Tab');
       });
-      document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
-        btn.classList.toggle('active', btn === button || btn.dataset.moduleTarget === moduleName);
+      document.querySelectorAll('.workspace-tab').forEach(function(tab) {
+        tab.classList.toggle('active', tab.id === tabName + 'TabButton');
       });
       const subtitle = document.getElementById('moduleSubtitle');
-      if (subtitle) subtitle.textContent = moduleTitles[moduleName] || 'Admin Portal';
-      if (moduleName === 'reports') {
+      if (subtitle) subtitle.textContent = tabName === 'reports' ? 'Admin Portal - Reports & Map' : 'Admin Portal - Dashboard';
+      if (tabName === 'reports') {
         setTimeout(function() {
           if (crimeMap) crimeMap.invalidateSize();
           renderCrimeMap();
@@ -1159,6 +1191,23 @@ export const adminHtml = `<!DOCTYPE html>
       }
     }
 
+    function showModule(moduleName, button) {
+      if (moduleName === 'reports') {
+        moduleName = 'dashboard';
+        showWorkspaceTab('reports');
+      }
+      document.querySelectorAll('.module-section').forEach(function(section) {
+        section.classList.toggle('active', section.dataset.module === moduleName);
+      });
+      document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn === button || btn.dataset.moduleTarget === moduleName);
+      });
+      const subtitle = document.getElementById('moduleSubtitle');
+      if (subtitle && moduleName !== 'dashboard') subtitle.textContent = moduleTitles[moduleName] || 'Admin Portal';
+      if (moduleName === 'dashboard' && !document.getElementById('reportsTab')?.classList.contains('active')) {
+        showWorkspaceTab('dashboard');
+      }
+    }
     let allReports = [];
     let currentFilter = 'all';
     let crimeMap = null;
@@ -2032,7 +2081,7 @@ export const adminHtml = `<!DOCTYPE html>
         document.body.classList.add('role-viewer');
         document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
           const target = btn.dataset.moduleTarget;
-          if (target && !['dashboard', 'reports'].includes(target)) {
+          if (target && !['dashboard'].includes(target)) {
             btn.style.display = 'none';
           }
         });
