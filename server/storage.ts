@@ -19,6 +19,12 @@ import {
   type InsertNotificationLog,
   type InsertReportDispatch,
   type InsertDeletedReportAudit,
+  type OfficerProfile,
+  type ReportAssignment,
+  type ReportNote,
+  type InsertOfficerProfile,
+  type InsertReportAssignment,
+  type InsertReportNote,
   evidenceReports,
   policeCommands,
   provinces,
@@ -28,10 +34,13 @@ import {
   notificationLogs,
   reportDispatches,
   deletedReportAudits,
+  officerProfiles,
+  reportAssignments,
+  reportNotes,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -52,10 +61,19 @@ export interface IStorage {
   listPoliceStations(filters?: { commandId?: string; provinceId?: string; districtId?: string; activeOnly?: boolean }): Promise<PoliceStation[]>;
   createPoliceStation(station: InsertPoliceStation): Promise<PoliceStation>;
   listAdminUsers(): Promise<AdminUser[]>;
+  getAdminUserByUsername(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
   listNotificationLogs(): Promise<NotificationLog[]>;
   createNotificationLog(notification: InsertNotificationLog): Promise<NotificationLog>;
   createReportDispatch(dispatch: InsertReportDispatch): Promise<ReportDispatch>;
+  listOfficerProfiles(): Promise<OfficerProfile[]>;
+  getOfficerProfileByUserId(userId: string): Promise<OfficerProfile | undefined>;
+  createOfficerProfile(profile: InsertOfficerProfile): Promise<OfficerProfile>;
+  listReportAssignments(filters?: { officerUserId?: string; reportId?: string }): Promise<ReportAssignment[]>;
+  createReportAssignment(assignment: InsertReportAssignment): Promise<ReportAssignment>;
+  updateReportAssignmentStatus(id: string, status: string): Promise<void>;
+  listReportNotes(reportId: string): Promise<ReportNote[]>;
+  createReportNote(note: InsertReportNote): Promise<ReportNote>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -197,6 +215,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(adminUsers).orderBy(asc(adminUsers.name));
   }
 
+  async getAdminUserByUsername(username: string): Promise<AdminUser | undefined> {
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    return user;
+  }
+
   async createAdminUser(user: InsertAdminUser): Promise<AdminUser> {
     const [created] = await db
       .insert(adminUsers)
@@ -220,6 +243,52 @@ export class DatabaseStorage implements IStorage {
 
   async createReportDispatch(dispatch: InsertReportDispatch): Promise<ReportDispatch> {
     const [created] = await db.insert(reportDispatches).values(dispatch).returning();
+    return created;
+  }
+
+  async listOfficerProfiles(): Promise<OfficerProfile[]> {
+    return db.select().from(officerProfiles).orderBy(desc(officerProfiles.createdAt));
+  }
+
+  async getOfficerProfileByUserId(userId: string): Promise<OfficerProfile | undefined> {
+    const [profile] = await db.select().from(officerProfiles).where(eq(officerProfiles.userId, userId));
+    return profile;
+  }
+
+  async createOfficerProfile(profile: InsertOfficerProfile): Promise<OfficerProfile> {
+    const [created] = await db.insert(officerProfiles).values(profile).returning();
+    return created;
+  }
+
+  async listReportAssignments(filters: { officerUserId?: string; reportId?: string } = {}): Promise<ReportAssignment[]> {
+    const query = db.select().from(reportAssignments);
+    if (filters.officerUserId && filters.reportId) {
+      return query.where(and(eq(reportAssignments.officerUserId, filters.officerUserId), eq(reportAssignments.reportId, filters.reportId))).orderBy(desc(reportAssignments.createdAt));
+    }
+    if (filters.officerUserId) {
+      return query.where(eq(reportAssignments.officerUserId, filters.officerUserId)).orderBy(desc(reportAssignments.createdAt));
+    }
+    if (filters.reportId) {
+      return query.where(eq(reportAssignments.reportId, filters.reportId)).orderBy(desc(reportAssignments.createdAt));
+    }
+    return query.orderBy(desc(reportAssignments.createdAt));
+  }
+
+  async createReportAssignment(assignment: InsertReportAssignment): Promise<ReportAssignment> {
+    const [created] = await db.insert(reportAssignments).values(assignment).returning();
+    return created;
+  }
+
+  async updateReportAssignmentStatus(id: string, status: string): Promise<void> {
+    await db.update(reportAssignments).set({ status, updatedAt: new Date() }).where(eq(reportAssignments.id, id));
+  }
+
+  async listReportNotes(reportId: string): Promise<ReportNote[]> {
+    return db.select().from(reportNotes).where(eq(reportNotes.reportId, reportId)).orderBy(desc(reportNotes.createdAt));
+  }
+
+  async createReportNote(note: InsertReportNote): Promise<ReportNote> {
+    const [created] = await db.insert(reportNotes).values(note).returning();
     return created;
   }
 }

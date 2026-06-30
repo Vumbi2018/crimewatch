@@ -343,6 +343,17 @@ export default function CaptureScreen() {
   };
 
   const handleCapture = async () => {
+    if (mode === "video" && isRecording) {
+      if (cameraRef.current) {
+        try {
+          cameraRef.current.stopRecording();
+        } catch (err) {
+          console.error("Error stopping video recording:", err);
+        }
+      }
+      return;
+    }
+
     if (isCapturing) return;
 
     if (mode === "audio") {
@@ -391,58 +402,54 @@ export default function CaptureScreen() {
           );
         }
       } else {
-        if (isRecording) {
-          cameraRef.current.stopRecording();
-          setIsRecording(false);
-        } else {
-          if (!micPermission?.granted) {
-            const result = await requestMicPermission();
-            if (!result.granted) {
-              Alert.alert(
-                "Microphone Required",
-                "Please enable microphone access to record video with audio.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  Platform.OS !== "web"
-                    ? { text: "Settings", onPress: openSettings }
-                    : null,
-                ].filter(Boolean) as any,
-              );
-              setIsCapturing(false);
-              return;
-            }
-          }
-          setIsRecording(true);
-          const video = await cameraRef.current.recordAsync({
-            maxDuration: 60,
-          });
-
-          if (video?.uri) {
-            const locationData = await getCurrentLocation();
-
-            const evidence: Evidence = {
-              id: generateEvidenceId(),
-              type: "video",
-              uri: video.uri,
-              timestamp: Date.now(),
-              latitude: locationData.latitude,
-              longitude: locationData.longitude,
-              address: locationData.address,
-              incidentType: null,
-              description: null,
-              tags: [],
-              submissionStatus: "draft",
-              submittedAt: null,
-            };
-
-            await saveEvidence(evidence);
-            setLastCapturedUri(video.uri);
-            await Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success,
+        if (!micPermission?.granted) {
+          const result = await requestMicPermission();
+          if (!result.granted) {
+            Alert.alert(
+              "Microphone Required",
+              "Please enable microphone access to record video with audio.",
+              [
+                { text: "Cancel", style: "cancel" },
+                Platform.OS !== "web"
+                  ? { text: "Settings", onPress: openSettings }
+                  : null,
+              ].filter(Boolean) as any,
             );
+            setIsCapturing(false);
+            return;
           }
-          setIsRecording(false);
         }
+        setIsRecording(true);
+        setIsCapturing(false); // Enable the capture button so the user can tap STOP!
+        const video = await cameraRef.current.recordAsync({
+          maxDuration: 60,
+        });
+
+        if (video?.uri) {
+          const locationData = await getCurrentLocation();
+
+          const evidence: Evidence = {
+            id: generateEvidenceId(),
+            type: "video",
+            uri: video.uri,
+            timestamp: Date.now(),
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            address: locationData.address,
+            incidentType: null,
+            description: null,
+            tags: [],
+            submissionStatus: "draft",
+            submittedAt: null,
+          };
+
+          await saveEvidence(evidence);
+          setLastCapturedUri(video.uri);
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
+        }
+        setIsRecording(false);
       }
     } catch (error) {
       console.error("Capture error:", error);
@@ -497,7 +504,7 @@ export default function CaptureScreen() {
             Camera Access Required
           </ThemedText>
           <ThemedText style={styles.permissionText}>
-            Crime Prevention PNG needs camera access to capture photo and video
+            Crime Reporting PNG needs camera access to capture photo and video
             evidence of incidents.
           </ThemedText>
           {permission.status === "denied" && !permission.canAskAgain ? (

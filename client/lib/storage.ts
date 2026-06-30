@@ -252,3 +252,33 @@ export function generateEvidenceId(): string {
 export function generatePendingReportId(): string {
   return `pending_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+
+const OFFICER_PROFILE_KEY = "@crimestoppers_officer_profile";
+
+export async function getOfficerProfile(): Promise<any | null> {
+  try {
+    const data = await AsyncStorage.getItem(OFFICER_PROFILE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error("Error getting officer profile:", error);
+    return null;
+  }
+}
+
+export async function saveOfficerProfile(profile: any): Promise<void> {
+  try {
+    await AsyncStorage.setItem(OFFICER_PROFILE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    console.error("Error saving officer profile:", error);
+    throw error;
+  }
+}
+
+export async function clearOfficerProfile(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(OFFICER_PROFILE_KEY);
+  } catch (error) {
+    console.error("Error clearing officer profile:", error);
+    throw error;
+  }
+}

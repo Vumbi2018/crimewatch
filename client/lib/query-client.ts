@@ -13,7 +13,9 @@ export function getApiUrl(): string {
     return new URL(host).href;
   }
 
-  return new URL(`https://${host}`).href;
+  const useHttp = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("10.0.2.2") || host.startsWith("169.254");
+  const protocol = useHttp ? "http" : "https";
+  return new URL(`${protocol}://${host}`).href;
 }
 
 async function throwIfResNotOk(res: Response) {

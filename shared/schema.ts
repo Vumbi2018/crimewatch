@@ -28,9 +28,16 @@ export const evidenceReports = pgTable("evidence_reports", {
   contactPhone: text("contact_phone"),
   contactEmail: text("contact_email"),
   reporterName: text("reporter_name"),
-  status: text("status").notNull().default("pending"),
+  status: text("status").notNull().default("New"),
   fileUrl: text("file_url"),
   assignedStationId: varchar("assigned_station_id"),
+  isBehalfReport: boolean("is_behalf_report").notNull().default(false),
+  behalfName: text("behalf_name"),
+  behalfContact: text("behalf_contact"),
+  behalfRelationship: text("behalf_relationship"),
+  behalfConsent: boolean("behalf_consent").notNull().default(false),
+  behalfSource: text("behalf_source"),
+  attachments: jsonb("attachments").$type<{ fileUrl: string; fileType: string }[]>().default([]),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
@@ -154,6 +161,50 @@ export const deletedReportAudits = pgTable("deleted_report_audits", {
   deletedAt: timestamp("deleted_at").defaultNow().notNull(),
 });
 
+// Dynamic Routing & Assignment Additions
+export const officerProfiles = pgTable("officer_profiles", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  rank: text("rank").notNull(),
+  stationId: varchar("station_id"),
+  responsibilityAreaName: text("responsibility_area_name").notNull(),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  radiusKm: real("radius_km").notNull().default(10),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const reportAssignments = pgTable("report_assignments", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  reportId: varchar("report_id").notNull(),
+  officerUserId: varchar("officer_user_id").notNull(),
+  assignmentType: text("assignment_type").notNull().default("automatic"),
+  assignmentReason: text("assignment_reason"),
+  matchedAreaName: text("matched_area_name"),
+  status: text("status").notNull().default("Sent to Officer"),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const reportNotes = pgTable("report_notes", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  reportId: varchar("report_id").notNull(),
+  noteType: text("note_type").notNull().default("general"),
+  note: text("note").notNull(),
+  createdBy: text("created_by").notNull().default("system"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -172,6 +223,9 @@ export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({ id: t
 export const insertNotificationLogSchema = createInsertSchema(notificationLogs).omit({ id: true, createdAt: true });
 export const insertReportDispatchSchema = createInsertSchema(reportDispatches).omit({ id: true, createdAt: true });
 export const insertDeletedReportAuditSchema = createInsertSchema(deletedReportAudits).omit({ id: true, deletedAt: true });
+export const insertOfficerProfileSchema = createInsertSchema(officerProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReportAssignmentSchema = createInsertSchema(reportAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReportNoteSchema = createInsertSchema(reportNotes).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -185,6 +239,9 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type ReportDispatch = typeof reportDispatches.$inferSelect;
 export type DeletedReportAudit = typeof deletedReportAudits.$inferSelect;
+export type OfficerProfile = typeof officerProfiles.$inferSelect;
+export type ReportAssignment = typeof reportAssignments.$inferSelect;
+export type ReportNote = typeof reportNotes.$inferSelect;
 export type InsertPoliceCommand = z.infer<typeof insertPoliceCommandSchema>;
 export type InsertProvince = z.infer<typeof insertProvinceSchema>;
 export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
@@ -193,3 +250,6 @@ export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 export type InsertNotificationLog = z.infer<typeof insertNotificationLogSchema>;
 export type InsertReportDispatch = z.infer<typeof insertReportDispatchSchema>;
 export type InsertDeletedReportAudit = z.infer<typeof insertDeletedReportAuditSchema>;
+export type InsertOfficerProfile = z.infer<typeof insertOfficerProfileSchema>;
+export type InsertReportAssignment = z.infer<typeof insertReportAssignmentSchema>;
+export type InsertReportNote = z.infer<typeof insertReportNoteSchema>;

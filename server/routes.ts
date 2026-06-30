@@ -1,5 +1,5 @@
 import type { Express, NextFunction, Request, Response } from "express";
-import { createHash } from "node:crypto";
+import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import multer from "multer";
 import * as path from "path";
@@ -15,6 +15,38 @@ const ADMIN_PASSWORD =
 const ADMIN_COOKIE_VALUE = createHash("sha256")
   .update(ADMIN_PASSWORD)
   .digest("hex");
+const PASSWORD_ITERATIONS = 210000;
+
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const hash = pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
+  return `pbkdf2:${PASSWORD_ITERATIONS}:${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, stored: string | null | undefined): boolean {
+  if (!stored) return false;
+  if (!stored.startsWith("pbkdf2:")) {
+    return stored === password;
+  }
+
+  const [, iterationsText, salt, expectedHash] = stored.split(":");
+  const iterations = Number(iterationsText);
+  if (!iterations || !salt || !expectedHash) return false;
+
+  const actual = pbkdf2Sync(password, salt, iterations, 32, "sha256");
+  const expected = Buffer.from(expectedHash, "hex");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function defaultUserPassword(username: string): string {
+  const envKey = `CRIMEWATCH_${username.toUpperCase()}_PASSWORD`;
+  return process.env[envKey] || (username === "admin" ? ADMIN_PASSWORD : `${username}123`);
+}
+
+function sanitizeAdminUser<T extends { passwordHash?: string | null }>(user: T): Omit<T, "passwordHash"> {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return safeUser;
+}
 
 const uploadsDir = path.resolve(process.cwd(), "uploads");
 const productionReportsCachePath = path.resolve(process.cwd(), "server", "cache", "production-reports.json");
@@ -163,13 +195,35 @@ function getCookies(cookieHeader: string | undefined): Record<string, string> {
   );
 }
 
+import { verifySession, signSession, SessionData } from "./cookie-auth";
+
+export function getSession(req: Request): SessionData | null {
+  const cookieVal = getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME];
+  if (!cookieVal) return null;
+  if (cookieVal === ADMIN_COOKIE_VALUE) {
+    return { username: "admin", role: "admin" };
+  }
+  return verifySession(cookieVal);
+}
+
 function isAdminAuthenticated(req: Request): boolean {
-  return getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME] === ADMIN_COOKIE_VALUE;
+  return getSession(req) !== null;
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!isAdminAuthenticated(req)) {
     return res.status(401).json({ message: "Admin login required" });
+  }
+  next();
+}
+
+function requireAdminWrite(req: Request, res: Response, next: NextFunction) {
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ message: "Admin login required" });
+  }
+  if (session.role !== "admin") {
+    return res.status(403).json({ message: "Access denied. Admin role required." });
   }
   next();
 }
@@ -183,7 +237,7 @@ function adminLoginHtml(errorMessage = ""): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crime Prevention PNG - Admin Login</title>
+  <title>Crime Reporting PNG - Admin Login</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -235,11 +289,13 @@ function adminLoginHtml(errorMessage = ""): string {
 </head>
 <body>
   <form class="login-card" method="POST" action="/api/admin/login">
-    <h1>Crime Prevention PNG</h1>
+    <h1>Crime Reporting PNG</h1>
     <p>Sign in to view and manage submitted reports.</p>
     ${error}
-    <label for="password">Admin password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" placeholder="e.g. admin or viewer" autocomplete="username" autofocus required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
     <button type="submit">Open Admin Portal</button>
   </form>
 </body>
@@ -292,18 +348,90 @@ async function forwardFileToProduction(filePath: string, mimeType: string, origi
   }
 }
 
+async function seedDefaultUsers() {
+  try {
+    const admin = await storage.getAdminUserByUsername("admin");
+    if (!admin) {
+      await storage.createAdminUser({
+        name: "Administrator",
+        username: "admin",
+        passwordHash: hashPassword(defaultUserPassword("admin")),
+        role: "admin",
+        isActive: true,
+      });
+      console.log("Seeded admin user.");
+    }
+    const viewer = await storage.getAdminUserByUsername("viewer");
+    if (!viewer) {
+      await storage.createAdminUser({
+        name: "Viewer",
+        username: "viewer",
+        passwordHash: hashPassword(defaultUserPassword("viewer")),
+        role: "viewer",
+        isActive: true,
+      });
+      console.log("Seeded viewer user.");
+    }
+    const officer = await storage.getAdminUserByUsername("officer");
+    let officerUser = officer;
+    if (!officer) {
+      officerUser = await storage.createAdminUser({
+        name: "Officer",
+        username: "officer",
+        passwordHash: hashPassword(defaultUserPassword("officer")),
+        role: "officer",
+        isActive: true,
+      });
+      console.log("Seeded officer user.");
+    }
+    if (officerUser) {
+      const profile = await storage.getOfficerProfileByUserId(officerUser.id);
+      if (!profile) {
+        await storage.createOfficerProfile({
+          userId: officerUser.id,
+          rank: "Sergeant",
+          responsibilityAreaName: "Port Moresby Town",
+          latitude: -9.4789,
+          longitude: 147.1494,
+          radiusKm: 15.0,
+          isActive: true,
+        });
+        console.log("Seeded default officer profile.");
+      }
+    }
+  } catch (err) {
+    console.error("Failed to seed default users:", err);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post("/api/admin/login", (req, res) => {
-    if (req.body?.password !== ADMIN_PASSWORD) {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.status(401).send(adminLoginHtml("Incorrect password. Please try again."));
+  await seedDefaultUsers();
+
+  app.post("/api/admin/login", async (req, res) => {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "").trim();
+
+    if (username) {
+      const user = await storage.getAdminUserByUsername(username);
+      if (user && user.isActive && verifyPassword(password, user.passwordHash)) {
+        res.setHeader(
+          "Set-Cookie",
+          `${ADMIN_COOKIE_NAME}=${encodeURIComponent(signSession(user.username, user.role))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        );
+        return res.redirect("/admin");
+      }
+    } else {
+      if (password === ADMIN_PASSWORD) {
+        res.setHeader(
+          "Set-Cookie",
+          `${ADMIN_COOKIE_NAME}=${encodeURIComponent(signSession("admin", "admin"))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        );
+        return res.redirect("/admin");
+      }
     }
 
-    res.setHeader(
-      "Set-Cookie",
-      `${ADMIN_COOKIE_NAME}=${encodeURIComponent(ADMIN_COOKIE_VALUE)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
-    );
-    res.redirect("/admin");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(401).send(adminLoginHtml("Incorrect credentials. Please try again."));
   });
 
   app.post("/api/admin/logout", (_req, res) => {
@@ -357,6 +485,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const report = await storage.createEvidenceReport(reportData);
       forwardToProduction(reportData);
+
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        try {
+          const officers = await storage.listOfficerProfiles();
+          for (const officer of officers) {
+            if (officer.isActive) {
+              const dist = distanceKm(latitude, longitude, officer.latitude, officer.longitude);
+              if (dist <= officer.radiusKm) {
+                await storage.createReportAssignment({
+                  reportId: report.id,
+                  officerUserId: officer.userId,
+                  assignmentType: "automatic",
+                  assignmentReason: `Report coordinates are within ${dist.toFixed(1)} km of officer's coverage area (${officer.radiusKm} km radius).`,
+                  matchedAreaName: officer.responsibilityAreaName,
+                  status: "Sent to Officer",
+                });
+                console.log(`Automatically assigned report ${report.id} to officer ${officer.userId}`);
+              }
+            }
+          }
+        } catch (routingError) {
+          console.error("Failed to automatically route report:", routingError);
+        }
+      }
       if (nearestStation) {
         try {
           await storage.createReportDispatch({
@@ -419,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(await storage.listPoliceCommands());
   });
 
-  app.post("/api/admin/location/commands", requireAdmin, async (req, res) => {
+  app.post("/api/admin/location/commands", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createPoliceCommand(req.body));
   });
 
@@ -428,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(await storage.listProvinces(req.query.commandId as string | undefined));
   });
 
-  app.post("/api/admin/location/provinces", requireAdmin, async (req, res) => {
+  app.post("/api/admin/location/provinces", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createProvince(req.body));
   });
 
@@ -437,17 +589,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(await storage.listDistricts(req.query.provinceId as string | undefined));
   });
 
-  app.post("/api/admin/location/districts", requireAdmin, async (req, res) => {
+  app.post("/api/admin/location/districts", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createDistrict(req.body));
   });
 
   app.get("/api/admin/users", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listAdminUsers());
+    const users = await storage.listAdminUsers();
+    res.json(users.map(sanitizeAdminUser));
   });
 
-  app.post("/api/admin/users", requireAdmin, async (req, res) => {
-    res.status(201).json(await storage.createAdminUser(req.body));
+  app.post("/api/admin/users", requireAdminWrite, async (req, res) => {
+    const password = String(req.body?.password || req.body?.passwordHash || defaultUserPassword(String(req.body?.username || 'user')));
+    const created = await storage.createAdminUser({ ...req.body, passwordHash: hashPassword(password) });
+    res.status(201).json(sanitizeAdminUser(created));
   });
 
   app.get("/api/admin/police-stations", requireAdmin, async (req, res) => {
@@ -459,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
   });
 
-  app.post("/api/admin/police-stations", requireAdmin, async (req, res) => {
+  app.post("/api/admin/police-stations", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createPoliceStation(req.body));
   });
 
@@ -473,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(await storage.listNotificationLogs());
   });
 
-  app.post("/api/admin/notifications", requireAdmin, async (req, res) => {
+  app.post("/api/admin/notifications", requireAdminWrite, async (req, res) => {
     const notification = await storage.createNotificationLog({
       ...req.body,
       status: "sent",
@@ -521,8 +676,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
+    try {
+      const list = await storage.listReportAssignments({ reportId: req.params.id });
+      const detailed = [];
+      const usersList = await storage.listAdminUsers();
+      for (const assignment of list) {
+        const user = usersList.find((u) => u.id === assignment.officerUserId);
+        detailed.push({
+          ...assignment,
+          officerName: user ? user.name : "Unknown Officer",
+        });
+      }
+      res.json(detailed);
+    } catch (error) {
+      console.error("Error fetching report assignments:", error);
+      res.status(500).json({ message: "Failed to fetch assignments." });
+    }
+  });
 
-  app.delete("/api/reports/:id", requireAdmin, async (req, res) => {
+  app.post("/api/admin/reports/:id/assign", requireAdminWrite, async (req, res) => {
+    const { id } = req.params;
+    const { officerUserId } = req.body;
+    try {
+      const assignment = await storage.createReportAssignment({
+        reportId: id,
+        officerUserId,
+        assignmentType: "manual",
+        assignmentReason: "Assigned manually by dispatcher.",
+        status: "Sent to Officer",
+      });
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error manual assigning:", error);
+      res.status(500).json({ message: "Failed to assign officer." });
+    }
+  });
+
+  app.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
       const reason = String(req.body?.reason || "").trim();
       if (reason.length < 8) {
@@ -547,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/reports/:id/status", requireAdmin, async (req, res) => {
+  app.patch("/api/reports/:id/status", requireAdminWrite, async (req, res) => {
     try {
       const { status } = req.body;
       const localReport = await storage.getEvidenceReportById(req.params.id);
@@ -564,14 +755,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update status" });
     }
   });
+  app.post("/api/officer/login", async (req, res) => {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "").trim();
+
+    const user = await storage.getAdminUserByUsername(username);
+    if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ success: false, message: "Invalid credentials." });
+    }
+
+    if (user.role !== "officer" && user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "User is not a police officer." });
+    }
+
+    const profile = await storage.getOfficerProfileByUserId(user.id);
+    res.json({
+      success: true,
+      officerProfile: {
+        userId: user.id,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        rank: profile?.rank || "Officer",
+        responsibilityAreaName: profile?.responsibilityAreaName || "General Coverage Area",
+        latitude: profile?.latitude || -9.4438,
+        longitude: profile?.longitude || 147.1803,
+        radiusKm: profile?.radiusKm || 10,
+      }
+    });
+  });
+
+  app.get("/api/officer/assignments", async (req, res) => {
+    const officerUserId = String(req.query.officerUserId || "");
+    if (!officerUserId) {
+      return res.status(400).json({ message: "officerUserId is required." });
+    }
+    try {
+      const list = await storage.listReportAssignments({ officerUserId });
+      const detailed = [];
+      for (const assignment of list) {
+        const report = await storage.getEvidenceReportById(assignment.reportId);
+        if (report) {
+          detailed.push({
+            ...assignment,
+            report: withReferenceNumber(report),
+          });
+        }
+      }
+      res.json(detailed);
+    } catch (error) {
+      console.error("Error listing assignments:", error);
+      res.status(500).json({ message: "Failed to list assignments." });
+    }
+  });
+
+  app.patch("/api/officer/assignments/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+      await storage.updateReportAssignmentStatus(id, status);
+      // Also update associated report status if relevant
+      const assignments = await storage.listReportAssignments();
+      const assignment = assignments.find((a) => a.id === id);
+      if (assignment) {
+        let reportStatus = "Pending";
+        if (status === "Resolved") reportStatus = "Resolved";
+        else if (status === "Rejected" || status === "Failed") reportStatus = "Rejected";
+        else if (status === "Acknowledged") reportStatus = "Pending";
+        else if (status === "On Route") reportStatus = "Pending";
+
+        await storage.updateEvidenceReportStatus(assignment.reportId, reportStatus);
+      }
+      res.json({ success: true, message: "Assignment status updated." });
+    } catch (error) {
+      console.error("Error updating assignment status:", error);
+      res.status(500).json({ message: "Failed to update assignment status." });
+    }
+  });
+
+  app.post("/api/officer/assignments/:id/notes", async (req, res) => {
+    const { id } = req.params;
+    const { note } = req.body;
+    try {
+      const assignments = await storage.listReportAssignments();
+      const assignment = assignments.find((a) => a.id === id);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found." });
+      }
+      const createdNote = await storage.createReportNote({
+        reportId: assignment.reportId,
+        noteType: "officer_update",
+        note,
+        createdBy: "officer",
+      });
+      res.json(createdNote);
+    } catch (error) {
+      console.error("Error creating report note:", error);
+      res.status(500).json({ message: "Failed to create report note." });
+    }
+  });
+
+  app.get("/api/reports/:id/notes", async (req, res) => {
+    try {
+      res.json(await storage.listReportNotes(req.params.id));
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
 
   app.get("/admin", (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
-    if (!isAdminAuthenticated(req)) {
+    const session = getSession(req);
+    if (!session) {
       return res.status(200).send(adminLoginHtml());
     }
-    res.status(200).send(adminHtml);
+    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}" };</script>`;
+    const responseHtml = adminHtml.replace("<head>", `<head>\n  ${roleScript}`);
+    res.status(200).send(responseHtml);
   });
 
   const httpServer = createServer(app);

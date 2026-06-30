@@ -1,0 +1,96 @@
+module.exports = {
+  expo: {
+    name: process.env.APP_MODE === "officer" ? "Crime Reporting PNG Officer" : "Crime Reporting PNG",
+    slug: "crimewatch-png",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "crimewatchpng",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: process.env.APP_MODE === "officer" ? "com.crimestoppers.officer" : "com.crimestoppers.app",
+      infoPlist: {
+        NSCameraUsageDescription: "Crime Reporting PNG needs camera access to capture photo and video evidence of incidents.",
+        NSMicrophoneUsageDescription: "Crime Reporting PNG needs microphone access to record audio with video evidence.",
+        NSLocationWhenInUseUsageDescription: "Crime Reporting PNG needs your location to tag evidence with precise coordinates.",
+        NSPhotoLibraryUsageDescription: "Crime Reporting PNG needs photo library access to save captured evidence."
+      }
+    },
+    android: {
+      package: process.env.APP_MODE === "officer" ? "com.crimestoppers.officer" : "com.crimestoppers.app",
+      adaptiveIcon: {
+        backgroundColor: "#1E3A8A",
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        backgroundImage: "./assets/images/android-icon-background.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png"
+      },
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false,
+      permissions: [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
+    },
+    web: {
+      output: "single",
+      favicon: "./assets/images/favicon.png"
+    },
+    plugins: [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1E3A8A",
+          "dark": {
+            "backgroundColor": "#0F172A"
+          }
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Crime Reporting PNG needs camera access to capture photo and video evidence of incidents.",
+          "microphonePermission": "Crime Reporting PNG needs microphone access to record audio with video evidence.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Crime Reporting PNG needs your location to tag evidence with precise coordinates."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Crime Reporting PNG needs photo library access to save captured evidence.",
+          "savePhotosPermission": "Crime Reporting PNG needs permission to save evidence photos to your device.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
+    experiments: {
+      "reactCompiler": true
+    },
+    extra: {
+      eas: {
+        projectId: "b3d00e31-7049-435c-b3fe-7ac8cf955dc5"
+      },
+      appMode: process.env.APP_MODE || "citizen"
+    }
+  }
+};

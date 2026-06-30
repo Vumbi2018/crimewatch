@@ -3,7 +3,7 @@ export const adminHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crime Prevention PNG - Admin Portal</title>
+  <title>Crime Reporting PNG - Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
@@ -282,6 +282,7 @@ export const adminHtml = `<!DOCTYPE html>
       letter-spacing: 0.5px;
       margin-top: 4px;
     }
+    .stat-card.new .number { color: #ef4444; }
     .stat-card.pending .number { color: #f59e0b; }
     .stat-card.reviewed .number { color: #3b82f6; }
     .stat-card.resolved .number { color: #22c55e; }
@@ -741,9 +742,12 @@ export const adminHtml = `<!DOCTYPE html>
     }
     .badge-photo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
     .badge-video { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .badge-new { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
     .badge-reviewed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .badge-referred { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
     .badge-resolved { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .badge-rejected { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
     .badge-high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
     .badge-low { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
@@ -906,6 +910,10 @@ export const adminHtml = `<!DOCTYPE html>
       .table-container { overflow-x: auto; }
       table { min-width: 900px; }
     }
+    body.role-viewer .delete-report-btn { display: none !important; }
+    body.role-viewer .status-select { pointer-events: none; opacity: 0.6; }
+    body.role-viewer .admin-action-btn { display: none !important; }
+    body.role-viewer .admin-form { display: none !important; }
   </style>
 </head>
 <body>
@@ -915,7 +923,7 @@ export const adminHtml = `<!DOCTYPE html>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
       <div>
-        <h1>Crime Prevention PNG</h1>
+        <h1>Crime Reporting PNG</h1>
         <p id="moduleSubtitle">Admin Portal - Dashboard</p>
       </div>
     </div>
@@ -946,6 +954,7 @@ export const adminHtml = `<!DOCTYPE html>
         </div>
         <div class="stats-bar">
           <div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
+          <div class="stat-card new"><div class="number" id="newCount">0</div><div class="label">New</div></div>
           <div class="stat-card pending"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
           <div class="stat-card reviewed"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
           <div class="stat-card resolved"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
@@ -1495,9 +1504,10 @@ export const adminHtml = `<!DOCTYPE html>
 
     function updateStats() {
       document.getElementById('totalCount').textContent = allReports.length;
-      document.getElementById('pendingCount').textContent = allReports.filter(r => r.status === 'pending').length;
-      document.getElementById('reviewedCount').textContent = allReports.filter(r => r.status === 'reviewed').length;
-      document.getElementById('resolvedCount').textContent = allReports.filter(r => r.status === 'resolved').length;
+      document.getElementById('newCount').textContent = allReports.filter(r => normalizeStatus(r) === 'new').length;
+      document.getElementById('pendingCount').textContent = allReports.filter(r => normalizeStatus(r) === 'pending').length;
+      document.getElementById('reviewedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'reviewed').length;
+      document.getElementById('resolvedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'resolved').length;
     }
 
     function filterReports(filter, btn) {
@@ -1777,6 +1787,7 @@ export const adminHtml = `<!DOCTYPE html>
 
         const hasFile = r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '';
         const reference = r.referenceNumber || r.id.slice(0, 8).toUpperCase();
+        const statusClass = normalizeStatus(r);
         return '<tr data-report-id="' + r.id + '" onclick="showDetail(this.dataset.reportId)" style="cursor:pointer">'
           + '<td class="reference-cell">' + reference + '</td>'
           + '<td style="white-space:nowrap">' + date + '</td>'
@@ -1787,12 +1798,15 @@ export const adminHtml = `<!DOCTYPE html>
           + '<td style="font-size:13px">' + r.agency + '</td>'
           + '<td>' + priorityBadge + '</td>'
           + '<td class="reporter-info">' + reporter + '</td>'
-          + '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>'
+          + '<td><span class="badge badge-' + statusClass + '">' + r.status + '</span></td>'
           + '<td onclick="event.stopPropagation()">'
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
-          + '<option value="pending"' + (r.status==='pending'?' selected':'') + '>Pending</option>'
-          + '<option value="reviewed"' + (r.status==='reviewed'?' selected':'') + '>Reviewed</option>'
-          + '<option value="resolved"' + (r.status==='resolved'?' selected':'') + '>Resolved</option>'
+          + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
+          + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+          + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
+          + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
+          + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
+          + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
           + '</select>'
           + '<button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete</button></td></tr>';
       }).join('');
@@ -1874,6 +1888,25 @@ export const adminHtml = `<!DOCTYPE html>
       return '';
     }
 
+    async function assignOfficer(reportId) {
+      const officerUserId = document.getElementById('assignOfficerSelect').value;
+      if (!officerUserId) return;
+      try {
+        const res = await fetch('/api/admin/reports/' + reportId + '/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ officerUserId: officerUserId })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Failed to assign.');
+        }
+        showDetail(reportId);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
     function showDetail(id) {
       const r = allReports.find(function(report) { return report.id === id; });
       if (!r) return;
@@ -1885,6 +1918,34 @@ export const adminHtml = `<!DOCTYPE html>
       const coordinates = r.latitude && r.longitude
         ? r.latitude + ', ' + r.longitude
         : 'Not available';
+
+      const statusClass = normalizeStatus(r);
+
+      // Behalf reporting info
+      let behalfHtml = '';
+      if (r.isBehalfReport) {
+        behalfHtml = ''
+          + '<div style="margin-top:16px;padding:12px;border:1px solid #3b82f6;border-radius:8px;background:rgba(59,130,246,0.05)">'
+          + '<h4 style="color:#60a5fa;margin-bottom:8px">Reported on Behalf of Someone Else</h4>'
+          + '<div class="detail-row"><div class="detail-label">Victim Name</div><div class="detail-value">' + (r.behalfName || 'Anonymous') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Contact Info</div><div class="detail-value">' + (r.behalfContact || 'None') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Relationship</div><div class="detail-value">' + (r.behalfRelationship || 'Not stated') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes ✅' : 'No ❌') + '</div></div>'
+          + '</div>';
+      } else {
+        behalfHtml = ''
+          + '<div style="margin-top:16px;padding:12px;border:1px solid var(--border-soft);border-radius:8px;background:rgba(255,255,255,0.02)">'
+          + '<h4 style="color:var(--text-secondary);margin-bottom:8px">Report Source</h4>'
+          + '<div class="detail-row"><div class="detail-label">Source Type</div><div class="detail-value">Direct Citizen App Submission</div></div>'
+          + '</div>';
+      }
+
+      // Assignments and Manual Assignment containers
+      let assignmentsHtml = ''
+        + '<div style="margin-top:20px;border-top:1px solid var(--border-soft);padding-top:16px">'
+        + '<div id="detailAssignments">Loading assignments...</div>'
+        + '<div id="detailAssignForm" style="margin-top:16px">Loading assignment form...</div>'
+        + '</div>';
 
       document.getElementById('detailContent').innerHTML = ''
         + '<h3>Report Details <button class="detail-close" onclick="closeDetail()">&times;</button></h3>'
@@ -1905,11 +1966,56 @@ export const adminHtml = `<!DOCTYPE html>
         + '<div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
-        + '<option value="pending"' + (r.status==='pending'?' selected':'') + '>Pending</option>'
-        + '<option value="reviewed"' + (r.status==='reviewed'?' selected':'') + '>Reviewed</option>'
-        + '<option value="resolved"' + (r.status==='resolved'?' selected':'') + '>Resolved</option>'
-        + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>';
+        + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
+        + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+        + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
+        + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
+        + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
+        + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
+        + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
+        + behalfHtml
+        + assignmentsHtml;
+
       document.getElementById('detailModal').classList.add('show');
+
+      // Fetch assignments dynamically
+      fetch('/api/reports/' + r.id + '/assignments')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          let html = '<h4 style="margin-bottom:8px">Police Officers Assigned</h4>';
+          if (data.length === 0) {
+            html += '<p style="color:var(--text-secondary);font-size:13px">No officers assigned yet.</p>';
+          } else {
+            data.forEach(function(asg) {
+              html += '<div style="background:var(--bg-secondary);padding:10px;border-radius:6px;margin:8px 0;font-size:13px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border-soft)">' +
+                '<div><strong>' + asg.officerName + '</strong> (' + asg.assignmentType + ')</div>' +
+                '<span class="badge" style="background:#3b82f6;color:white;font-size:11px">' + asg.status + '</span>' +
+                '</div>';
+            });
+          }
+          document.getElementById('detailAssignments').innerHTML = html;
+        });
+
+      // Fetch active officer list for manual assignment dropdown
+      fetch('/api/admin/users')
+        .then(function(res) { return res.json(); })
+        .then(function(users) {
+          const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
+          if (officers.length === 0) {
+            document.getElementById('detailAssignForm').innerHTML = '';
+            return;
+          }
+          let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
+            '<div style="display:flex;gap:8px;margin-top:8px">' +
+            '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
+          officers.forEach(function(o) {
+            html += '<option value="' + o.id + '">' + o.name + '</option>';
+          });
+          html += '</select>' +
+            '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
+            '</div>';
+          document.getElementById('detailAssignForm').innerHTML = html;
+        });
     }
 
     function closeDetail() {
@@ -1920,7 +2026,20 @@ export const adminHtml = `<!DOCTYPE html>
       if (e.target === this) closeDetail();
     });
 
+    function initRoleRestrictions() {
+      const user = window.currentUser || { username: 'admin', role: 'admin' };
+      if (user.role === 'viewer') {
+        document.body.classList.add('role-viewer');
+        document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+          const target = btn.dataset.moduleTarget;
+          if (target && !['dashboard', 'reports'].includes(target)) {
+            btn.style.display = 'none';
+          }
+        });
+      }
+    }
     initTheme();
+    initRoleRestrictions();
     loadReports();
     // Auto-refresh periodically while keeping map states if no new data arrives
     setInterval(loadReports, 5000);

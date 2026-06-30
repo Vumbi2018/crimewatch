@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
 
   const handleGetStarted = () => {
-    navigation.navigate("MainTabs");
+    navigation.navigate("ReportTypeSelection");
   };
 
   return (
@@ -56,7 +56,7 @@ export default function HomeScreen() {
                 resizeMode="contain"
               />
             </View>
-            <ThemedText style={styles.title}>Crime Prevention PNG</ThemedText>
+            <ThemedText style={styles.title}>Crime Reporting PNG</ThemedText>
           </Animated.View>
 
           <Animated.View

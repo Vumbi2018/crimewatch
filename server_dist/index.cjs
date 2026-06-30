@@ -48,16 +48,22 @@ __export(schema_exports, {
   insertDistrictSchema: () => insertDistrictSchema,
   insertEvidenceReportSchema: () => insertEvidenceReportSchema,
   insertNotificationLogSchema: () => insertNotificationLogSchema,
+  insertOfficerProfileSchema: () => insertOfficerProfileSchema,
   insertPoliceCommandSchema: () => insertPoliceCommandSchema,
   insertPoliceStationSchema: () => insertPoliceStationSchema,
   insertProvinceSchema: () => insertProvinceSchema,
+  insertReportAssignmentSchema: () => insertReportAssignmentSchema,
   insertReportDispatchSchema: () => insertReportDispatchSchema,
+  insertReportNoteSchema: () => insertReportNoteSchema,
   insertUserSchema: () => insertUserSchema,
   notificationLogs: () => notificationLogs,
+  officerProfiles: () => officerProfiles,
   policeCommands: () => policeCommands,
   policeStations: () => policeStations,
   provinces: () => provinces,
+  reportAssignments: () => reportAssignments,
   reportDispatches: () => reportDispatches,
+  reportNotes: () => reportNotes,
   users: () => users
 });
 var import_drizzle_orm = require("drizzle-orm");
@@ -83,9 +89,16 @@ var evidenceReports = (0, import_pg_core.pgTable)("evidence_reports", {
   contactPhone: (0, import_pg_core.text)("contact_phone"),
   contactEmail: (0, import_pg_core.text)("contact_email"),
   reporterName: (0, import_pg_core.text)("reporter_name"),
-  status: (0, import_pg_core.text)("status").notNull().default("pending"),
+  status: (0, import_pg_core.text)("status").notNull().default("New"),
   fileUrl: (0, import_pg_core.text)("file_url"),
   assignedStationId: (0, import_pg_core.varchar)("assigned_station_id"),
+  isBehalfReport: (0, import_pg_core.boolean)("is_behalf_report").notNull().default(false),
+  behalfName: (0, import_pg_core.text)("behalf_name"),
+  behalfContact: (0, import_pg_core.text)("behalf_contact"),
+  behalfRelationship: (0, import_pg_core.text)("behalf_relationship"),
+  behalfConsent: (0, import_pg_core.boolean)("behalf_consent").notNull().default(false),
+  behalfSource: (0, import_pg_core.text)("behalf_source"),
+  attachments: (0, import_pg_core.jsonb)("attachments").$type().default([]),
   submittedAt: (0, import_pg_core.timestamp)("submitted_at").defaultNow().notNull()
 });
 var policeCommands = (0, import_pg_core.pgTable)("police_commands", {
@@ -184,6 +197,40 @@ var deletedReportAudits = (0, import_pg_core.pgTable)("deleted_report_audits", {
   reportSnapshot: (0, import_pg_core.jsonb)("report_snapshot").$type().notNull(),
   deletedAt: (0, import_pg_core.timestamp)("deleted_at").defaultNow().notNull()
 });
+var officerProfiles = (0, import_pg_core.pgTable)("officer_profiles", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  userId: (0, import_pg_core.varchar)("user_id").notNull(),
+  rank: (0, import_pg_core.text)("rank").notNull(),
+  stationId: (0, import_pg_core.varchar)("station_id"),
+  responsibilityAreaName: (0, import_pg_core.text)("responsibility_area_name").notNull(),
+  latitude: (0, import_pg_core.real)("latitude").notNull(),
+  longitude: (0, import_pg_core.real)("longitude").notNull(),
+  radiusKm: (0, import_pg_core.real)("radius_km").notNull().default(10),
+  isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
+  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
+});
+var reportAssignments = (0, import_pg_core.pgTable)("report_assignments", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  reportId: (0, import_pg_core.varchar)("report_id").notNull(),
+  officerUserId: (0, import_pg_core.varchar)("officer_user_id").notNull(),
+  assignmentType: (0, import_pg_core.text)("assignment_type").notNull().default("automatic"),
+  assignmentReason: (0, import_pg_core.text)("assignment_reason"),
+  matchedAreaName: (0, import_pg_core.text)("matched_area_name"),
+  status: (0, import_pg_core.text)("status").notNull().default("Sent to Officer"),
+  sentAt: (0, import_pg_core.timestamp)("sent_at").defaultNow().notNull(),
+  acknowledgedAt: (0, import_pg_core.timestamp)("acknowledged_at"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
+  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
+});
+var reportNotes = (0, import_pg_core.pgTable)("report_notes", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  reportId: (0, import_pg_core.varchar)("report_id").notNull(),
+  noteType: (0, import_pg_core.text)("note_type").notNull().default("general"),
+  note: (0, import_pg_core.text)("note").notNull(),
+  createdBy: (0, import_pg_core.text)("created_by").notNull().default("system"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
 var insertUserSchema = (0, import_drizzle_zod.createInsertSchema)(users).pick({
   username: true,
   password: true
@@ -200,6 +247,9 @@ var insertAdminUserSchema = (0, import_drizzle_zod.createInsertSchema)(adminUser
 var insertNotificationLogSchema = (0, import_drizzle_zod.createInsertSchema)(notificationLogs).omit({ id: true, createdAt: true });
 var insertReportDispatchSchema = (0, import_drizzle_zod.createInsertSchema)(reportDispatches).omit({ id: true, createdAt: true });
 var insertDeletedReportAuditSchema = (0, import_drizzle_zod.createInsertSchema)(deletedReportAudits).omit({ id: true, deletedAt: true });
+var insertOfficerProfileSchema = (0, import_drizzle_zod.createInsertSchema)(officerProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+var insertReportAssignmentSchema = (0, import_drizzle_zod.createInsertSchema)(reportAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+var insertReportNoteSchema = (0, import_drizzle_zod.createInsertSchema)(reportNotes).omit({ id: true, createdAt: true });
 
 // server/storage.ts
 var import_crypto = require("crypto");
@@ -328,6 +378,10 @@ var DatabaseStorage = class {
   async listAdminUsers() {
     return db.select().from(adminUsers).orderBy((0, import_drizzle_orm2.asc)(adminUsers.name));
   }
+  async getAdminUserByUsername(username) {
+    const [user] = await db.select().from(adminUsers).where((0, import_drizzle_orm2.eq)(adminUsers.username, username));
+    return user;
+  }
   async createAdminUser(user) {
     const [created] = await db.insert(adminUsers).values(user).onConflictDoUpdate({
       target: adminUsers.username,
@@ -346,6 +400,44 @@ var DatabaseStorage = class {
     const [created] = await db.insert(reportDispatches).values(dispatch).returning();
     return created;
   }
+  async listOfficerProfiles() {
+    return db.select().from(officerProfiles).orderBy((0, import_drizzle_orm2.desc)(officerProfiles.createdAt));
+  }
+  async getOfficerProfileByUserId(userId) {
+    const [profile] = await db.select().from(officerProfiles).where((0, import_drizzle_orm2.eq)(officerProfiles.userId, userId));
+    return profile;
+  }
+  async createOfficerProfile(profile) {
+    const [created] = await db.insert(officerProfiles).values(profile).returning();
+    return created;
+  }
+  async listReportAssignments(filters = {}) {
+    const query = db.select().from(reportAssignments);
+    if (filters.officerUserId && filters.reportId) {
+      return query.where((0, import_drizzle_orm2.and)((0, import_drizzle_orm2.eq)(reportAssignments.officerUserId, filters.officerUserId), (0, import_drizzle_orm2.eq)(reportAssignments.reportId, filters.reportId))).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
+    }
+    if (filters.officerUserId) {
+      return query.where((0, import_drizzle_orm2.eq)(reportAssignments.officerUserId, filters.officerUserId)).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
+    }
+    if (filters.reportId) {
+      return query.where((0, import_drizzle_orm2.eq)(reportAssignments.reportId, filters.reportId)).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
+    }
+    return query.orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
+  }
+  async createReportAssignment(assignment) {
+    const [created] = await db.insert(reportAssignments).values(assignment).returning();
+    return created;
+  }
+  async updateReportAssignmentStatus(id, status) {
+    await db.update(reportAssignments).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm2.eq)(reportAssignments.id, id));
+  }
+  async listReportNotes(reportId) {
+    return db.select().from(reportNotes).where((0, import_drizzle_orm2.eq)(reportNotes.reportId, reportId)).orderBy((0, import_drizzle_orm2.desc)(reportNotes.createdAt));
+  }
+  async createReportNote(note) {
+    const [created] = await db.insert(reportNotes).values(note).returning();
+    return created;
+  }
 };
 var storage = new DatabaseStorage();
 
@@ -355,7 +447,7 @@ var adminHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crime Prevention PNG - Admin Portal</title>
+  <title>Crime Reporting PNG - Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
@@ -634,6 +726,7 @@ var adminHtml = `<!DOCTYPE html>
       letter-spacing: 0.5px;
       margin-top: 4px;
     }
+    .stat-card.new .number { color: #ef4444; }
     .stat-card.pending .number { color: #f59e0b; }
     .stat-card.reviewed .number { color: #3b82f6; }
     .stat-card.resolved .number { color: #22c55e; }
@@ -1093,9 +1186,12 @@ var adminHtml = `<!DOCTYPE html>
     }
     .badge-photo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
     .badge-video { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .badge-new { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
     .badge-reviewed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .badge-referred { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
     .badge-resolved { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .badge-rejected { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
     .badge-high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
     .badge-low { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
@@ -1258,6 +1354,10 @@ var adminHtml = `<!DOCTYPE html>
       .table-container { overflow-x: auto; }
       table { min-width: 900px; }
     }
+    body.role-viewer .delete-report-btn { display: none !important; }
+    body.role-viewer .status-select { pointer-events: none; opacity: 0.6; }
+    body.role-viewer .admin-action-btn { display: none !important; }
+    body.role-viewer .admin-form { display: none !important; }
   </style>
 </head>
 <body>
@@ -1267,7 +1367,7 @@ var adminHtml = `<!DOCTYPE html>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
       <div>
-        <h1>Crime Prevention PNG</h1>
+        <h1>Crime Reporting PNG</h1>
         <p id="moduleSubtitle">Admin Portal - Dashboard</p>
       </div>
     </div>
@@ -1298,6 +1398,7 @@ var adminHtml = `<!DOCTYPE html>
         </div>
         <div class="stats-bar">
           <div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
+          <div class="stat-card new"><div class="number" id="newCount">0</div><div class="label">New</div></div>
           <div class="stat-card pending"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
           <div class="stat-card reviewed"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
           <div class="stat-card resolved"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
@@ -1847,9 +1948,10 @@ var adminHtml = `<!DOCTYPE html>
 
     function updateStats() {
       document.getElementById('totalCount').textContent = allReports.length;
-      document.getElementById('pendingCount').textContent = allReports.filter(r => r.status === 'pending').length;
-      document.getElementById('reviewedCount').textContent = allReports.filter(r => r.status === 'reviewed').length;
-      document.getElementById('resolvedCount').textContent = allReports.filter(r => r.status === 'resolved').length;
+      document.getElementById('newCount').textContent = allReports.filter(r => normalizeStatus(r) === 'new').length;
+      document.getElementById('pendingCount').textContent = allReports.filter(r => normalizeStatus(r) === 'pending').length;
+      document.getElementById('reviewedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'reviewed').length;
+      document.getElementById('resolvedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'resolved').length;
     }
 
     function filterReports(filter, btn) {
@@ -2129,6 +2231,7 @@ var adminHtml = `<!DOCTYPE html>
 
         const hasFile = r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '';
         const reference = r.referenceNumber || r.id.slice(0, 8).toUpperCase();
+        const statusClass = normalizeStatus(r);
         return '<tr data-report-id="' + r.id + '" onclick="showDetail(this.dataset.reportId)" style="cursor:pointer">'
           + '<td class="reference-cell">' + reference + '</td>'
           + '<td style="white-space:nowrap">' + date + '</td>'
@@ -2139,12 +2242,15 @@ var adminHtml = `<!DOCTYPE html>
           + '<td style="font-size:13px">' + r.agency + '</td>'
           + '<td>' + priorityBadge + '</td>'
           + '<td class="reporter-info">' + reporter + '</td>'
-          + '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>'
+          + '<td><span class="badge badge-' + statusClass + '">' + r.status + '</span></td>'
           + '<td onclick="event.stopPropagation()">'
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
-          + '<option value="pending"' + (r.status==='pending'?' selected':'') + '>Pending</option>'
-          + '<option value="reviewed"' + (r.status==='reviewed'?' selected':'') + '>Reviewed</option>'
-          + '<option value="resolved"' + (r.status==='resolved'?' selected':'') + '>Resolved</option>'
+          + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
+          + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+          + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
+          + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
+          + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
+          + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
           + '</select>'
           + '<button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete</button></td></tr>';
       }).join('');
@@ -2226,6 +2332,25 @@ var adminHtml = `<!DOCTYPE html>
       return '';
     }
 
+    async function assignOfficer(reportId) {
+      const officerUserId = document.getElementById('assignOfficerSelect').value;
+      if (!officerUserId) return;
+      try {
+        const res = await fetch('/api/admin/reports/' + reportId + '/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ officerUserId: officerUserId })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Failed to assign.');
+        }
+        showDetail(reportId);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
     function showDetail(id) {
       const r = allReports.find(function(report) { return report.id === id; });
       if (!r) return;
@@ -2237,6 +2362,34 @@ var adminHtml = `<!DOCTYPE html>
       const coordinates = r.latitude && r.longitude
         ? r.latitude + ', ' + r.longitude
         : 'Not available';
+
+      const statusClass = normalizeStatus(r);
+
+      // Behalf reporting info
+      let behalfHtml = '';
+      if (r.isBehalfReport) {
+        behalfHtml = ''
+          + '<div style="margin-top:16px;padding:12px;border:1px solid #3b82f6;border-radius:8px;background:rgba(59,130,246,0.05)">'
+          + '<h4 style="color:#60a5fa;margin-bottom:8px">Reported on Behalf of Someone Else</h4>'
+          + '<div class="detail-row"><div class="detail-label">Victim Name</div><div class="detail-value">' + (r.behalfName || 'Anonymous') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Contact Info</div><div class="detail-value">' + (r.behalfContact || 'None') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Relationship</div><div class="detail-value">' + (r.behalfRelationship || 'Not stated') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes \u2705' : 'No \u274C') + '</div></div>'
+          + '</div>';
+      } else {
+        behalfHtml = ''
+          + '<div style="margin-top:16px;padding:12px;border:1px solid var(--border-soft);border-radius:8px;background:rgba(255,255,255,0.02)">'
+          + '<h4 style="color:var(--text-secondary);margin-bottom:8px">Report Source</h4>'
+          + '<div class="detail-row"><div class="detail-label">Source Type</div><div class="detail-value">Direct Citizen App Submission</div></div>'
+          + '</div>';
+      }
+
+      // Assignments and Manual Assignment containers
+      let assignmentsHtml = ''
+        + '<div style="margin-top:20px;border-top:1px solid var(--border-soft);padding-top:16px">'
+        + '<div id="detailAssignments">Loading assignments...</div>'
+        + '<div id="detailAssignForm" style="margin-top:16px">Loading assignment form...</div>'
+        + '</div>';
 
       document.getElementById('detailContent').innerHTML = ''
         + '<h3>Report Details <button class="detail-close" onclick="closeDetail()">&times;</button></h3>'
@@ -2257,11 +2410,56 @@ var adminHtml = `<!DOCTYPE html>
         + '<div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
-        + '<option value="pending"' + (r.status==='pending'?' selected':'') + '>Pending</option>'
-        + '<option value="reviewed"' + (r.status==='reviewed'?' selected':'') + '>Reviewed</option>'
-        + '<option value="resolved"' + (r.status==='resolved'?' selected':'') + '>Resolved</option>'
-        + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>';
+        + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
+        + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+        + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
+        + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
+        + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
+        + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
+        + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
+        + behalfHtml
+        + assignmentsHtml;
+
       document.getElementById('detailModal').classList.add('show');
+
+      // Fetch assignments dynamically
+      fetch('/api/reports/' + r.id + '/assignments')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          let html = '<h4 style="margin-bottom:8px">Police Officers Assigned</h4>';
+          if (data.length === 0) {
+            html += '<p style="color:var(--text-secondary);font-size:13px">No officers assigned yet.</p>';
+          } else {
+            data.forEach(function(asg) {
+              html += '<div style="background:var(--bg-secondary);padding:10px;border-radius:6px;margin:8px 0;font-size:13px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border-soft)">' +
+                '<div><strong>' + asg.officerName + '</strong> (' + asg.assignmentType + ')</div>' +
+                '<span class="badge" style="background:#3b82f6;color:white;font-size:11px">' + asg.status + '</span>' +
+                '</div>';
+            });
+          }
+          document.getElementById('detailAssignments').innerHTML = html;
+        });
+
+      // Fetch active officer list for manual assignment dropdown
+      fetch('/api/admin/users')
+        .then(function(res) { return res.json(); })
+        .then(function(users) {
+          const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
+          if (officers.length === 0) {
+            document.getElementById('detailAssignForm').innerHTML = '';
+            return;
+          }
+          let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
+            '<div style="display:flex;gap:8px;margin-top:8px">' +
+            '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
+          officers.forEach(function(o) {
+            html += '<option value="' + o.id + '">' + o.name + '</option>';
+          });
+          html += '</select>' +
+            '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
+            '</div>';
+          document.getElementById('detailAssignForm').innerHTML = html;
+        });
     }
 
     function closeDetail() {
@@ -2272,7 +2470,20 @@ var adminHtml = `<!DOCTYPE html>
       if (e.target === this) closeDetail();
     });
 
+    function initRoleRestrictions() {
+      const user = window.currentUser || { username: 'admin', role: 'admin' };
+      if (user.role === 'viewer') {
+        document.body.classList.add('role-viewer');
+        document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+          const target = btn.dataset.moduleTarget;
+          if (target && !['dashboard', 'reports'].includes(target)) {
+            btn.style.display = 'none';
+          }
+        });
+      }
+    }
     initTheme();
+    initRoleRestrictions();
     loadReports();
     // Auto-refresh periodically while keeping map states if no new data arrives
     setInterval(loadReports, 5000);
@@ -2458,11 +2669,61 @@ var adminStore = {
   }
 };
 
+// server/cookie-auth.ts
+var import_crypto3 = __toESM(require("crypto"));
+var SECRET = process.env.JWT_SECRET || "cpng_crime_reporting_png_secret_key_12345";
+function signSession(username, role) {
+  const payload = `${username}:${role}`;
+  const signature = import_crypto3.default.createHmac("sha256", SECRET).update(payload).digest("hex");
+  return `${payload}:${signature}`;
+}
+function verifySession(cookieValue) {
+  if (!cookieValue) return null;
+  const parts = cookieValue.split(":");
+  if (parts.length !== 3) return null;
+  const [username, role, signature] = parts;
+  const payload = `${username}:${role}`;
+  const expectedSignature = import_crypto3.default.createHmac("sha256", SECRET).update(payload).digest("hex");
+  if (signature === expectedSignature) {
+    return {
+      username,
+      role
+    };
+  }
+  return null;
+}
+
 // server/routes.ts
 var PRODUCTION_DOMAIN = process.env.PRODUCTION_DOMAIN || process.env.EXPO_PUBLIC_DOMAIN || "crimewatch.lamtoninvestments.com";
 var ADMIN_COOKIE_NAME = "cpng_admin";
 var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.CPNG_ADMIN_PASSWORD || "admin123";
 var ADMIN_COOKIE_VALUE = (0, import_node_crypto.createHash)("sha256").update(ADMIN_PASSWORD).digest("hex");
+var PASSWORD_ITERATIONS = 21e4;
+function hashPassword(password) {
+  const salt = (0, import_node_crypto.randomBytes)(16).toString("hex");
+  const hash = (0, import_node_crypto.pbkdf2Sync)(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
+  return `pbkdf2:${PASSWORD_ITERATIONS}:${salt}:${hash}`;
+}
+function verifyPassword(password, stored) {
+  if (!stored) return false;
+  if (!stored.startsWith("pbkdf2:")) {
+    return stored === password;
+  }
+  const [, iterationsText, salt, expectedHash] = stored.split(":");
+  const iterations = Number(iterationsText);
+  if (!iterations || !salt || !expectedHash) return false;
+  const actual = (0, import_node_crypto.pbkdf2Sync)(password, salt, iterations, 32, "sha256");
+  const expected = Buffer.from(expectedHash, "hex");
+  return actual.length === expected.length && (0, import_node_crypto.timingSafeEqual)(actual, expected);
+}
+function defaultUserPassword(username) {
+  const envKey = `CRIMEWATCH_${username.toUpperCase()}_PASSWORD`;
+  return process.env[envKey] || (username === "admin" ? ADMIN_PASSWORD : `${username}123`);
+}
+function sanitizeAdminUser(user) {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return safeUser;
+}
 var uploadsDir = path2.resolve(process.cwd(), "uploads");
 var productionReportsCachePath = path2.resolve(process.cwd(), "server", "cache", "production-reports.json");
 if (!fs2.existsSync(uploadsDir)) {
@@ -2570,12 +2831,30 @@ function getCookies(cookieHeader) {
     cookieHeader.split(";").map((part) => part.trim().split("=")).filter(([key, value]) => key && value).map(([key, value]) => [key, decodeURIComponent(value)])
   );
 }
+function getSession(req) {
+  const cookieVal = getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME];
+  if (!cookieVal) return null;
+  if (cookieVal === ADMIN_COOKIE_VALUE) {
+    return { username: "admin", role: "admin" };
+  }
+  return verifySession(cookieVal);
+}
 function isAdminAuthenticated(req) {
-  return getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME] === ADMIN_COOKIE_VALUE;
+  return getSession(req) !== null;
 }
 function requireAdmin(req, res, next) {
   if (!isAdminAuthenticated(req)) {
     return res.status(401).json({ message: "Admin login required" });
+  }
+  next();
+}
+function requireAdminWrite(req, res, next) {
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ message: "Admin login required" });
+  }
+  if (session.role !== "admin") {
+    return res.status(403).json({ message: "Access denied. Admin role required." });
   }
   next();
 }
@@ -2586,7 +2865,7 @@ function adminLoginHtml(errorMessage = "") {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crime Prevention PNG - Admin Login</title>
+  <title>Crime Reporting PNG - Admin Login</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -2638,11 +2917,13 @@ function adminLoginHtml(errorMessage = "") {
 </head>
 <body>
   <form class="login-card" method="POST" action="/api/admin/login">
-    <h1>Crime Prevention PNG</h1>
+    <h1>Crime Reporting PNG</h1>
     <p>Sign in to view and manage submitted reports.</p>
     ${error}
-    <label for="password">Admin password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" placeholder="e.g. admin or viewer" autocomplete="username" autofocus required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
     <button type="submit">Open Admin Portal</button>
   </form>
 </body>
@@ -2688,17 +2969,86 @@ async function forwardFileToProduction(filePath, mimeType, originalName) {
     return null;
   }
 }
-async function registerRoutes(app2) {
-  app2.post("/api/admin/login", (req, res) => {
-    if (req.body?.password !== ADMIN_PASSWORD) {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.status(401).send(adminLoginHtml("Incorrect password. Please try again."));
+async function seedDefaultUsers() {
+  try {
+    const admin = await storage.getAdminUserByUsername("admin");
+    if (!admin) {
+      await storage.createAdminUser({
+        name: "Administrator",
+        username: "admin",
+        passwordHash: hashPassword(defaultUserPassword("admin")),
+        role: "admin",
+        isActive: true
+      });
+      console.log("Seeded admin user.");
     }
-    res.setHeader(
-      "Set-Cookie",
-      `${ADMIN_COOKIE_NAME}=${encodeURIComponent(ADMIN_COOKIE_VALUE)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
-    );
-    res.redirect("/admin");
+    const viewer = await storage.getAdminUserByUsername("viewer");
+    if (!viewer) {
+      await storage.createAdminUser({
+        name: "Viewer",
+        username: "viewer",
+        passwordHash: hashPassword(defaultUserPassword("viewer")),
+        role: "viewer",
+        isActive: true
+      });
+      console.log("Seeded viewer user.");
+    }
+    const officer = await storage.getAdminUserByUsername("officer");
+    let officerUser = officer;
+    if (!officer) {
+      officerUser = await storage.createAdminUser({
+        name: "Officer",
+        username: "officer",
+        passwordHash: hashPassword(defaultUserPassword("officer")),
+        role: "officer",
+        isActive: true
+      });
+      console.log("Seeded officer user.");
+    }
+    if (officerUser) {
+      const profile = await storage.getOfficerProfileByUserId(officerUser.id);
+      if (!profile) {
+        await storage.createOfficerProfile({
+          userId: officerUser.id,
+          rank: "Sergeant",
+          responsibilityAreaName: "Port Moresby Town",
+          latitude: -9.4789,
+          longitude: 147.1494,
+          radiusKm: 15,
+          isActive: true
+        });
+        console.log("Seeded default officer profile.");
+      }
+    }
+  } catch (err) {
+    console.error("Failed to seed default users:", err);
+  }
+}
+async function registerRoutes(app2) {
+  await seedDefaultUsers();
+  app2.post("/api/admin/login", async (req, res) => {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "").trim();
+    if (username) {
+      const user = await storage.getAdminUserByUsername(username);
+      if (user && user.isActive && verifyPassword(password, user.passwordHash)) {
+        res.setHeader(
+          "Set-Cookie",
+          `${ADMIN_COOKIE_NAME}=${encodeURIComponent(signSession(user.username, user.role))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
+        );
+        return res.redirect("/admin");
+      }
+    } else {
+      if (password === ADMIN_PASSWORD) {
+        res.setHeader(
+          "Set-Cookie",
+          `${ADMIN_COOKIE_NAME}=${encodeURIComponent(signSession("admin", "admin"))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
+        );
+        return res.redirect("/admin");
+      }
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(401).send(adminLoginHtml("Incorrect credentials. Please try again."));
   });
   app2.post("/api/admin/logout", (_req, res) => {
     res.setHeader(
@@ -2746,6 +3096,29 @@ async function registerRoutes(app2) {
       };
       const report = await storage.createEvidenceReport(reportData);
       forwardToProduction(reportData);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        try {
+          const officers = await storage.listOfficerProfiles();
+          for (const officer of officers) {
+            if (officer.isActive) {
+              const dist = distanceKm(latitude, longitude, officer.latitude, officer.longitude);
+              if (dist <= officer.radiusKm) {
+                await storage.createReportAssignment({
+                  reportId: report.id,
+                  officerUserId: officer.userId,
+                  assignmentType: "automatic",
+                  assignmentReason: `Report coordinates are within ${dist.toFixed(1)} km of officer's coverage area (${officer.radiusKm} km radius).`,
+                  matchedAreaName: officer.responsibilityAreaName,
+                  status: "Sent to Officer"
+                });
+                console.log(`Automatically assigned report ${report.id} to officer ${officer.userId}`);
+              }
+            }
+          }
+        } catch (routingError) {
+          console.error("Failed to automatically route report:", routingError);
+        }
+      }
       if (nearestStation) {
         try {
           await storage.createReportDispatch({
@@ -2804,29 +3177,32 @@ async function registerRoutes(app2) {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listPoliceCommands());
   });
-  app2.post("/api/admin/location/commands", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/location/commands", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createPoliceCommand(req.body));
   });
   app2.get("/api/admin/location/provinces", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listProvinces(req.query.commandId));
   });
-  app2.post("/api/admin/location/provinces", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/location/provinces", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createProvince(req.body));
   });
   app2.get("/api/admin/location/districts", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listDistricts(req.query.provinceId));
   });
-  app2.post("/api/admin/location/districts", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/location/districts", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createDistrict(req.body));
   });
   app2.get("/api/admin/users", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listAdminUsers());
+    const users2 = await storage.listAdminUsers();
+    res.json(users2.map(sanitizeAdminUser));
   });
-  app2.post("/api/admin/users", requireAdmin, async (req, res) => {
-    res.status(201).json(await storage.createAdminUser(req.body));
+  app2.post("/api/admin/users", requireAdminWrite, async (req, res) => {
+    const password = String(req.body?.password || req.body?.passwordHash || defaultUserPassword(String(req.body?.username || "user")));
+    const created = await storage.createAdminUser({ ...req.body, passwordHash: hashPassword(password) });
+    res.status(201).json(sanitizeAdminUser(created));
   });
   app2.get("/api/admin/police-stations", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
@@ -2836,7 +3212,7 @@ async function registerRoutes(app2) {
       districtId: req.query.districtId
     }));
   });
-  app2.post("/api/admin/police-stations", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/police-stations", requireAdminWrite, async (req, res) => {
     res.status(201).json(await storage.createPoliceStation(req.body));
   });
   app2.get("/api/admin/deleted-reports", requireAdmin, async (_req, res) => {
@@ -2847,7 +3223,7 @@ async function registerRoutes(app2) {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listNotificationLogs());
   });
-  app2.post("/api/admin/notifications", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/notifications", requireAdminWrite, async (req, res) => {
     const notification = await storage.createNotificationLog({
       ...req.body,
       status: "sent"
@@ -2888,7 +3264,42 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch report" });
     }
   });
-  app2.delete("/api/reports/:id", requireAdmin, async (req, res) => {
+  app2.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
+    try {
+      const list = await storage.listReportAssignments({ reportId: req.params.id });
+      const detailed = [];
+      const usersList = await storage.listAdminUsers();
+      for (const assignment of list) {
+        const user = usersList.find((u) => u.id === assignment.officerUserId);
+        detailed.push({
+          ...assignment,
+          officerName: user ? user.name : "Unknown Officer"
+        });
+      }
+      res.json(detailed);
+    } catch (error) {
+      console.error("Error fetching report assignments:", error);
+      res.status(500).json({ message: "Failed to fetch assignments." });
+    }
+  });
+  app2.post("/api/admin/reports/:id/assign", requireAdminWrite, async (req, res) => {
+    const { id } = req.params;
+    const { officerUserId } = req.body;
+    try {
+      const assignment = await storage.createReportAssignment({
+        reportId: id,
+        officerUserId,
+        assignmentType: "manual",
+        assignmentReason: "Assigned manually by dispatcher.",
+        status: "Sent to Officer"
+      });
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error manual assigning:", error);
+      res.status(500).json({ message: "Failed to assign officer." });
+    }
+  });
+  app2.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
       const reason = String(req.body?.reason || "").trim();
       if (reason.length < 8) {
@@ -2909,7 +3320,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete report" });
     }
   });
-  app2.patch("/api/reports/:id/status", requireAdmin, async (req, res) => {
+  app2.patch("/api/reports/:id/status", requireAdminWrite, async (req, res) => {
     try {
       const { status } = req.body;
       const localReport = await storage.getEvidenceReportById(req.params.id);
@@ -2924,13 +3335,116 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to update status" });
     }
   });
+  app2.post("/api/officer/login", async (req, res) => {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "").trim();
+    const user = await storage.getAdminUserByUsername(username);
+    if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ success: false, message: "Invalid credentials." });
+    }
+    if (user.role !== "officer" && user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "User is not a police officer." });
+    }
+    const profile = await storage.getOfficerProfileByUserId(user.id);
+    res.json({
+      success: true,
+      officerProfile: {
+        userId: user.id,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        rank: profile?.rank || "Officer",
+        responsibilityAreaName: profile?.responsibilityAreaName || "General Coverage Area",
+        latitude: profile?.latitude || -9.4438,
+        longitude: profile?.longitude || 147.1803,
+        radiusKm: profile?.radiusKm || 10
+      }
+    });
+  });
+  app2.get("/api/officer/assignments", async (req, res) => {
+    const officerUserId = String(req.query.officerUserId || "");
+    if (!officerUserId) {
+      return res.status(400).json({ message: "officerUserId is required." });
+    }
+    try {
+      const list = await storage.listReportAssignments({ officerUserId });
+      const detailed = [];
+      for (const assignment of list) {
+        const report = await storage.getEvidenceReportById(assignment.reportId);
+        if (report) {
+          detailed.push({
+            ...assignment,
+            report: withReferenceNumber(report)
+          });
+        }
+      }
+      res.json(detailed);
+    } catch (error) {
+      console.error("Error listing assignments:", error);
+      res.status(500).json({ message: "Failed to list assignments." });
+    }
+  });
+  app2.patch("/api/officer/assignments/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+      await storage.updateReportAssignmentStatus(id, status);
+      const assignments = await storage.listReportAssignments();
+      const assignment = assignments.find((a) => a.id === id);
+      if (assignment) {
+        let reportStatus = "Pending";
+        if (status === "Resolved") reportStatus = "Resolved";
+        else if (status === "Rejected" || status === "Failed") reportStatus = "Rejected";
+        else if (status === "Acknowledged") reportStatus = "Pending";
+        else if (status === "On Route") reportStatus = "Pending";
+        await storage.updateEvidenceReportStatus(assignment.reportId, reportStatus);
+      }
+      res.json({ success: true, message: "Assignment status updated." });
+    } catch (error) {
+      console.error("Error updating assignment status:", error);
+      res.status(500).json({ message: "Failed to update assignment status." });
+    }
+  });
+  app2.post("/api/officer/assignments/:id/notes", async (req, res) => {
+    const { id } = req.params;
+    const { note } = req.body;
+    try {
+      const assignments = await storage.listReportAssignments();
+      const assignment = assignments.find((a) => a.id === id);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found." });
+      }
+      const createdNote = await storage.createReportNote({
+        reportId: assignment.reportId,
+        noteType: "officer_update",
+        note,
+        createdBy: "officer"
+      });
+      res.json(createdNote);
+    } catch (error) {
+      console.error("Error creating report note:", error);
+      res.status(500).json({ message: "Failed to create report note." });
+    }
+  });
+  app2.get("/api/reports/:id/notes", async (req, res) => {
+    try {
+      res.json(await storage.listReportNotes(req.params.id));
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
   app2.get("/admin", (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
-    if (!isAdminAuthenticated(req)) {
+    const session = getSession(req);
+    if (!session) {
       return res.status(200).send(adminLoginHtml());
     }
-    res.status(200).send(adminHtml);
+    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}" };</script>`;
+    const responseHtml = adminHtml.replace("<head>", `<head>
+  ${roleScript}`);
+    res.status(200).send(responseHtml);
   });
   const httpServer = (0, import_node_http.createServer)(app2);
   return httpServer;
