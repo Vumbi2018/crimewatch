@@ -63,6 +63,48 @@ type ReportPayload = {
   fileUrl: string | null;
 };
 
+const DEFAULT_EVIDENCE_EXTENSIONS: Record<Evidence["type"], string> = {
+  photo: ".jpg",
+  video: ".mp4",
+  audio: ".m4a",
+};
+
+const EVIDENCE_MIME_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  m4a: "audio/mp4",
+  caf: "audio/x-caf",
+  wav: "audio/wav",
+  aac: "audio/aac",
+  "3gp": "audio/3gpp",
+};
+
+const getEvidenceUploadMetadata = (evidence: Evidence) => {
+  const uriExtension = evidence.uri
+    .split("?")[0]
+    .match(/\.([a-zA-Z0-9]+)$/)?.[1]
+    ?.toLowerCase();
+  const extension = uriExtension
+    ? `.${uriExtension}`
+    : DEFAULT_EVIDENCE_EXTENSIONS[evidence.type];
+  const fallbackMimeType =
+    evidence.type === "photo"
+      ? "image/jpeg"
+      : evidence.type === "video"
+        ? "video/mp4"
+        : "audio/mp4";
+
+  return {
+    extension,
+    mimeType: uriExtension
+      ? EVIDENCE_MIME_TYPES[uriExtension] || fallbackMimeType
+      : fallbackMimeType,
+  };
+};
 function getSubmitErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -101,7 +143,9 @@ export default function ReportSubmissionScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-  const [nearestStation, setNearestStation] = useState<NearestStation | null>(null);
+  const [nearestStation, setNearestStation] = useState<NearestStation | null>(
+    null,
+  );
 
   useEffect(() => {
     loadEvidence();
@@ -144,19 +188,8 @@ export default function ReportSubmissionScreen() {
     evidence: Evidence,
   ): Promise<string | null> => {
     try {
-      const ext =
-        evidence.type === "photo"
-          ? ".jpg"
-          : evidence.type === "video"
-            ? ".mp4"
-            : ".m4a";
-      const mimeType =
-        evidence.type === "photo"
-          ? "image/jpeg"
-          : evidence.type === "video"
-            ? "video/mp4"
-            : "audio/m4a";
-      const filename = `evidence_${Date.now()}${ext}`;
+      const { extension, mimeType } = getEvidenceUploadMetadata(evidence);
+      const filename = `evidence_${Date.now()}${extension}`;
 
       const formData = new FormData();
       formData.append("file", {
@@ -167,7 +200,9 @@ export default function ReportSubmissionScreen() {
 
       const uploadUrl = new URL("/api/upload", getApiUrl()).toString();
       const res = await fetch(uploadUrl, { method: "POST", body: formData });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        throw new Error(`Upload failed with status ${res.status}`);
+      }
       const data = await res.json();
       return data.fileUrl || null;
     } catch (err) {
@@ -198,6 +233,9 @@ export default function ReportSubmissionScreen() {
       if (evidence) {
         const profile = await getUserProfile();
         const fileUrl = await uploadEvidenceFile(evidence);
+        if (!fileUrl) {
+          throw new Error("Evidence file upload failed.");
+        }
 
         reportPayload = {
           evidenceType: evidence.type,
@@ -216,7 +254,11 @@ export default function ReportSubmissionScreen() {
           fileUrl: fileUrl || null,
         };
 
-        const response = await apiRequest("POST", "/api/reports", reportPayload);
+        const response = await apiRequest(
+          "POST",
+          "/api/reports",
+          reportPayload,
+        );
         const submittedReport = (await response.json().catch(() => null)) as {
           referenceNumber?: string;
         } | null;
@@ -239,7 +281,9 @@ export default function ReportSubmissionScreen() {
           ? `\n\nReference: ${submittedReport.referenceNumber}`
           : "";
 
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
 
         Alert.alert(
           "Report Submitted",
@@ -371,29 +415,41 @@ export default function ReportSubmissionScreen() {
         >
           <View style={styles.reviewHeader}>
             <Feather name="clipboard" size={18} color={theme.primary} />
-            <ThemedText style={styles.reviewTitle}>Review Before Sending</ThemedText>
+            <ThemedText style={styles.reviewTitle}>
+              Review Before Sending
+            </ThemedText>
           </View>
           <View style={styles.reviewGrid}>
             <View style={styles.reviewItem}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Incident</ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                Incident
+              </ThemedText>
               <ThemedText style={styles.reviewValue}>
                 {evidence.incidentType || "Not specified"}
               </ThemedText>
             </View>
             <View style={styles.reviewItem}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>GPS</ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                GPS
+              </ThemedText>
               <ThemedText style={styles.reviewValue}>
-                {evidence.latitude && evidence.longitude ? "Captured" : "Not available"}
+                {evidence.latitude && evidence.longitude
+                  ? "Captured"
+                  : "Not available"}
               </ThemedText>
             </View>
             <View style={styles.reviewItemWide}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Description</ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                Description
+              </ThemedText>
               <ThemedText style={styles.reviewValue} numberOfLines={3}>
                 {evidence.description || "No description added"}
               </ThemedText>
             </View>
             <View style={styles.reviewItemWide}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Location</ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                Location
+              </ThemedText>
               <ThemedText style={styles.reviewValue} numberOfLines={2}>
                 {evidence.address || "No address captured"}
               </ThemedText>
@@ -404,7 +460,8 @@ export default function ReportSubmissionScreen() {
         <View style={styles.safetyNotice}>
           <Feather name="shield" size={18} color={Colors.light.warning} />
           <ThemedText type="caption" style={styles.safetyText}>
-            Stay safe. Do not record or submit evidence while it puts you at risk. Anonymous reports do not include your name or contact details.
+            Stay safe. Do not record or submit evidence while it puts you at
+            risk. Anonymous reports do not include your name or contact details.
           </ThemedText>
         </View>
 
@@ -412,9 +469,12 @@ export default function ReportSubmissionScreen() {
           <View style={styles.dispatchNotice}>
             <Feather name="radio" size={18} color={Colors.light.success} />
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.dispatchTitle}>Nearest police command detected</ThemedText>
+              <ThemedText style={styles.dispatchTitle}>
+                Nearest police command detected
+              </ThemedText>
               <ThemedText type="caption" style={styles.dispatchText}>
-                {nearestStation.name} is about {nearestStation.distanceKm} km away and will be notified immediately when you submit.
+                {nearestStation.name} is about {nearestStation.distanceKm} km
+                away and will be notified immediately when you submit.
               </ThemedText>
             </View>
           </View>

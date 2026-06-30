@@ -732,6 +732,35 @@ export const adminHtml = `<!DOCTYPE html>
       color: var(--text);
     }
     .admin-list-title { color: var(--text-strong); font-weight: 800; margin-bottom: 4px; }
+    .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
+    .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
+    .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
+    .enterprise-card p { margin:0 0 14px; color:var(--text-muted); }
+    .user-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .user-metric { border:1px solid var(--border); background:var(--bg-root); border-radius:12px; padding:12px; }
+    .user-metric strong { display:block; font-size:22px; color:var(--text-strong); }
+    .user-metric span { color:var(--text-muted); text-transform:uppercase; font-size:11px; font-weight:800; }
+    .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:8px 0 4px; }
+    .permission-item { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--bg-root); color:var(--text-muted); font-size:12px; }
+    .permission-item strong { display:block; color:var(--text-strong); font-size:12px; }
+    .user-directory-tools { display:grid; grid-template-columns:1fr 170px 150px; gap:10px; margin-bottom:12px; }
+    .user-directory { display:grid; gap:10px; max-height:650px; overflow:auto; }
+    .user-card { border:1px solid var(--border); background:var(--bg-root); border-radius:14px; padding:14px; display:grid; gap:10px; }
+    .user-card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .user-title { color:var(--text-strong); font-weight:900; font-size:15px; }
+    .user-subtitle { color:var(--text-muted); font-size:12px; margin-top:3px; }
+    .user-badges { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .user-badge { border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:var(--chip-bg); color:var(--text-muted); border:1px solid var(--border); }
+    .user-badge.active { background:rgba(34,197,94,.14); color:#22c55e; border-color:rgba(34,197,94,.25); }
+    .user-badge.inactive { background:rgba(239,68,68,.12); color:#ef4444; border-color:rgba(239,68,68,.25); }
+    .user-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; color:var(--text-muted); font-size:12px; }
+    .user-permissions { display:flex; gap:6px; flex-wrap:wrap; }
+    .permission-chip { border-radius:999px; padding:4px 8px; background:rgba(59,130,246,.14); color:#60a5fa; font-weight:800; font-size:11px; }
+    .user-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .mini-btn { border:1px solid var(--border); background:var(--bg-card); color:var(--text-strong); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:800; }
+    .mini-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    body.light-theme .enterprise-card, body.light-theme .user-card, body.light-theme .user-metric, body.light-theme .permission-item { background:#fff; }
+    @media (max-width:1100px){ .enterprise-grid{grid-template-columns:1fr;} .user-directory-tools{grid-template-columns:1fr;} .permission-grid{grid-template-columns:1fr;} .user-metrics{grid-template-columns:repeat(2,1fr);} }
     .table-container {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -935,7 +964,36 @@ export const adminHtml = `<!DOCTYPE html>
       .management-panel { grid-template-columns: 1fr; }
       #crimeMap { height: 420px; min-height: 420px; }
       .map-summary { max-height: none; }
-      .table-container { overflow-x: auto; }
+      .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
+    .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
+    .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
+    .enterprise-card p { margin:0 0 14px; color:var(--text-muted); }
+    .user-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .user-metric { border:1px solid var(--border); background:var(--bg-root); border-radius:12px; padding:12px; }
+    .user-metric strong { display:block; font-size:22px; color:var(--text-strong); }
+    .user-metric span { color:var(--text-muted); text-transform:uppercase; font-size:11px; font-weight:800; }
+    .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:8px 0 4px; }
+    .permission-item { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--bg-root); color:var(--text-muted); font-size:12px; }
+    .permission-item strong { display:block; color:var(--text-strong); font-size:12px; }
+    .user-directory-tools { display:grid; grid-template-columns:1fr 170px 150px; gap:10px; margin-bottom:12px; }
+    .user-directory { display:grid; gap:10px; max-height:650px; overflow:auto; }
+    .user-card { border:1px solid var(--border); background:var(--bg-root); border-radius:14px; padding:14px; display:grid; gap:10px; }
+    .user-card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .user-title { color:var(--text-strong); font-weight:900; font-size:15px; }
+    .user-subtitle { color:var(--text-muted); font-size:12px; margin-top:3px; }
+    .user-badges { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .user-badge { border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:var(--chip-bg); color:var(--text-muted); border:1px solid var(--border); }
+    .user-badge.active { background:rgba(34,197,94,.14); color:#22c55e; border-color:rgba(34,197,94,.25); }
+    .user-badge.inactive { background:rgba(239,68,68,.12); color:#ef4444; border-color:rgba(239,68,68,.25); }
+    .user-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; color:var(--text-muted); font-size:12px; }
+    .user-permissions { display:flex; gap:6px; flex-wrap:wrap; }
+    .permission-chip { border-radius:999px; padding:4px 8px; background:rgba(59,130,246,.14); color:#60a5fa; font-weight:800; font-size:11px; }
+    .user-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .mini-btn { border:1px solid var(--border); background:var(--bg-card); color:var(--text-strong); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:800; }
+    .mini-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    body.light-theme .enterprise-card, body.light-theme .user-card, body.light-theme .user-metric, body.light-theme .permission-item { background:#fff; }
+    @media (max-width:1100px){ .enterprise-grid{grid-template-columns:1fr;} .user-directory-tools{grid-template-columns:1fr;} .permission-grid{grid-template-columns:1fr;} .user-metrics{grid-template-columns:repeat(2,1fr);} }
+    .table-container { overflow-x: auto; }
       table { min-width: 900px; }
     }
     body.role-viewer .delete-report-btn { display: none !important; }
@@ -1112,19 +1170,33 @@ export const adminHtml = `<!DOCTYPE html>
       </section>
 
       <section class="module-section" data-module="users">
-        <section class="management-card">
-          <h3>User Management</h3>
-          <div class="admin-form">
-            <input id="adminUserName" class="admin-input" placeholder="Full name">
-            <div class="admin-form-row"><input id="adminUsername" class="admin-input" placeholder="Username"><select id="adminUserRole" class="admin-select"><option value="dispatcher">Dispatcher</option><option value="commander">Commander</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
-            <select id="adminUserStation" class="admin-select"><option value="">No station assignment</option></select>
-            <div class="admin-form-row"><input id="adminUserPhone" class="admin-input" placeholder="Phone"><input id="adminUserEmail" class="admin-input" placeholder="Email"></div>
-            <button class="admin-action-btn" onclick="saveAdminUser()">Add User</button>
-          </div>
-          <div id="adminUsersList" class="admin-list"></div>
-        </section>
+        <div class="enterprise-grid">
+          <section class="enterprise-card">
+            <h3>Enterprise User Management</h3>
+            <p>Create accounts, assign operational scope, and control exactly what each user can do.</p>
+            <div class="admin-form">
+              <input id="adminUserName" class="admin-input" placeholder="Full name">
+              <div class="admin-form-row"><input id="adminUsername" class="admin-input" placeholder="Username"><input id="adminUserPassword" class="admin-input" type="password" placeholder="Temporary password"></div>
+              <div class="admin-form-row"><input id="adminUserJobTitle" class="admin-input" placeholder="Rank / job title"><input id="adminUserDepartment" class="admin-input" placeholder="Department / unit"></div>
+              <div class="admin-form-row"><select id="adminUserRole" class="admin-select"><option value="admin">Admin</option><option value="commander">Commander</option><option value="dispatcher">Dispatcher</option><option value="officer">Officer</option><option value="analyst">Analyst</option><option value="viewer">Viewer</option></select><select id="adminPermissionProfile" class="admin-select" onchange="applyPermissionProfile(this.value)"><option value="super_admin">Super Admin</option><option value="command_lead">Command Lead</option><option value="dispatcher">Dispatcher</option><option value="field_officer">Field Officer</option><option value="analyst">Crime Analyst</option><option value="viewer">Viewer</option><option value="custom">Custom</option></select></div>
+              <select id="adminUserStation" class="admin-select"><option value="">No station assignment</option></select>
+              <div class="admin-form-row"><input id="adminUserPhone" class="admin-input" placeholder="Phone"><input id="adminUserEmail" class="admin-input" placeholder="Email"></div>
+              <textarea id="adminUserNotes" class="admin-textarea" placeholder="Access notes, appointment authority, or restrictions"></textarea>
+              <div class="admin-form-row"><label class="map-toggle"><input id="adminUserActive" type="checkbox" checked> Account active</label><label class="map-toggle"><input id="adminUserMfa" type="checkbox"> MFA required</label></div>
+              <div class="map-control-label">Granular permissions</div>
+              <div id="permissionMatrix" class="permission-grid"></div>
+              <button class="admin-action-btn" onclick="saveAdminUser()">Save User</button>
+            </div>
+          </section>
+          <section class="enterprise-card">
+            <h3>User Directory & Access Control</h3>
+            <p>Monitor account status, permissions, assigned station, and operational role.</p>
+            <div class="user-metrics" id="userMetrics"></div>
+            <div class="user-directory-tools"><input id="userSearch" class="admin-input" placeholder="Search users, role, station" oninput="renderUserDirectory()"><select id="userRoleFilter" class="admin-select" onchange="renderUserDirectory()"><option value="">All roles</option><option value="admin">Admin</option><option value="commander">Commander</option><option value="dispatcher">Dispatcher</option><option value="officer">Officer</option><option value="analyst">Analyst</option><option value="viewer">Viewer</option></select><select id="userStatusFilter" class="admin-select" onchange="renderUserDirectory()"><option value="">All status</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+            <div id="adminUsersList" class="user-directory"></div>
+          </section>
+        </div>
       </section>
-
       <section class="module-section" data-module="stations">
         <section class="management-card">
           <h3>Police Station/Post Management</h3>
@@ -1410,6 +1482,33 @@ export const adminHtml = `<!DOCTYPE html>
     let policeCommands = [];
     let provinces = [];
     let districts = [];
+    let editingAdminUserId = null;
+    const PERMISSION_CATALOG = [
+      ["reports.read", "View Reports", "Read submitted reports and evidence metadata"],
+      ["reports.create", "Create Reports", "Submit reports on behalf of citizens"],
+      ["reports.update_status", "Update Status", "Move reports through workflow states"],
+      ["reports.delete", "Delete Reports", "Remove wrong submissions with audit reasons"],
+      ["reports.assign", "Assign Officers", "Send reports to field officers or stations"],
+      ["map.view", "View Map", "Use operational map intelligence"],
+      ["map.export", "Export Map", "Export map or planning data"],
+      ["users.read", "View Users", "Read user directory and access settings"],
+      ["users.manage", "Manage Users", "Create, edit, disable, and reset accounts"],
+      ["stations.read", "View Stations", "Read station and command records"],
+      ["stations.manage", "Manage Stations", "Create and edit stations/posts"],
+      ["locations.manage", "Manage Locations", "Maintain command, province, district cascade"],
+      ["notifications.send", "Send Notifications", "Notify stations, officers, or command users"],
+      ["audit.read", "View Audit", "Read deletion and access audit history"],
+      ["settings.manage", "Manage Settings", "Control platform configuration"],
+    ];
+    const PERMISSION_PROFILES = {
+      super_admin: PERMISSION_CATALOG.map(function(item) { return item[0]; }),
+      command_lead: ["reports.read", "reports.update_status", "reports.assign", "map.view", "map.export", "users.read", "stations.read", "notifications.send", "audit.read"],
+      dispatcher: ["reports.read", "reports.create", "reports.update_status", "reports.assign", "map.view", "stations.read", "notifications.send"],
+      field_officer: ["reports.read", "reports.update_status", "map.view"],
+      analyst: ["reports.read", "map.view", "map.export", "audit.read"],
+      viewer: ["reports.read", "map.view"],
+      custom: [],
+    };
 
     async function loadAdminManagement() {
       try {
@@ -1454,11 +1553,8 @@ export const adminHtml = `<!DOCTYPE html>
       if (stationCommand) stationCommand.innerHTML = optionList(policeCommands, 'Select command / region', stationCommand.value);
       refreshStationCascade();
 
-      document.getElementById('adminUsersList').innerHTML = adminUsers.length ? adminUsers.map(function(user) {
-        const station = policeStations.find(function(item) { return item.id === user.stationId; });
-        return '<div class="admin-list-item"><div class="admin-list-title">' + user.name + ' | ' + user.role + '</div>'
-          + '<div>' + user.username + '</div><div>' + (station?.name || 'No station') + '</div><div>' + (user.phone || '-') + ' | ' + (user.email || '-') + '</div></div>';
-      }).join('') : '<div class="admin-list-item">No users configured.</div>';
+      renderPermissionMatrix();
+      renderUserDirectory();
 
       document.getElementById('policeStationsList').innerHTML = policeStations.length ? policeStations.map(function(station) {
         return '<div class="admin-list-item"><div class="admin-list-title">' + station.name + '</div>'
@@ -1473,22 +1569,70 @@ export const adminHtml = `<!DOCTYPE html>
       }).join('') : '<div class="admin-list-item">No notifications sent yet.</div>';
     }
 
-    async function saveAdminUser() {
-      await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: document.getElementById('adminUserName').value,
-          username: document.getElementById('adminUsername').value,
-          role: document.getElementById('adminUserRole').value,
-          stationId: document.getElementById('adminUserStation').value || null,
-          phone: document.getElementById('adminUserPhone').value || null,
-          email: document.getElementById('adminUserEmail').value || null,
-        }),
-      });
-      await loadAdminManagement();
+    function selectedPermissions() {
+      return Array.from(document.querySelectorAll('.permission-checkbox:checked')).map(function(input) { return input.value; });
     }
 
+    function renderPermissionMatrix(selected) {
+      const matrix = document.getElementById('permissionMatrix');
+      if (!matrix) return;
+      const profileEl = document.getElementById('adminPermissionProfile');
+      const active = selected || PERMISSION_PROFILES[profileEl ? profileEl.value : 'viewer'] || [];
+      matrix.innerHTML = PERMISSION_CATALOG.map(function(item) {
+        return '<label class="permission-item"><input class="permission-checkbox" type="checkbox" value="' + item[0] + '" ' + (active.includes(item[0]) ? 'checked' : '') + ' onchange="document.getElementById(\'adminPermissionProfile\').value=\'custom\'"><span><strong>' + item[1] + '</strong>' + item[2] + '</span></label>';
+      }).join('');
+    }
+
+    function applyPermissionProfile(profile) { renderPermissionMatrix(PERMISSION_PROFILES[profile] || []); }
+    function userStationName(user) { const station = policeStations.find(function(item) { return item.id === user.stationId; }); return station ? station.name : 'No station assignment'; }
+
+    function renderUserMetrics(filtered) {
+      const el = document.getElementById('userMetrics'); if (!el) return;
+      const users = filtered || adminUsers;
+      const active = users.filter(function(user) { return user.isActive; }).length;
+      const officers = users.filter(function(user) { return user.role === 'officer'; }).length;
+      const privileged = users.filter(function(user) { return (user.permissions || []).includes('users.manage') || user.role === 'admin'; }).length;
+      el.innerHTML = '<div class="user-metric"><strong>' + users.length + '</strong><span>Total users</span></div>' + '<div class="user-metric"><strong>' + active + '</strong><span>Active</span></div>' + '<div class="user-metric"><strong>' + officers + '</strong><span>Officers</span></div>' + '<div class="user-metric"><strong>' + privileged + '</strong><span>Privileged</span></div>';
+    }
+
+    function renderUserDirectory() {
+      const list = document.getElementById('adminUsersList'); if (!list) return;
+      const searchEl = document.getElementById('userSearch'); const roleEl = document.getElementById('userRoleFilter'); const statusEl = document.getElementById('userStatusFilter');
+      const search = String(searchEl ? searchEl.value : '').toLowerCase(); const role = roleEl ? roleEl.value : ''; const status = statusEl ? statusEl.value : '';
+      const filtered = adminUsers.filter(function(user) { const haystack = [user.name, user.username, user.role, user.jobTitle, user.department, userStationName(user), user.email, user.phone].join(' ').toLowerCase(); return (!search || haystack.includes(search)) && (!role || user.role === role) && (!status || (status === 'active' ? user.isActive : !user.isActive)); });
+      renderUserMetrics(filtered);
+      list.innerHTML = filtered.length ? filtered.map(function(user) {
+        const permissions = user.permissions || [];
+        return '<article class="user-card"><div class="user-card-head"><div><strong>' + (user.name || '-') + '</strong><span>@' + (user.username || '-') + ' | ' + (user.jobTitle || user.role || '-') + '</span></div><span class="user-badge ' + (user.isActive ? 'active' : 'inactive') + '">' + (user.isActive ? 'Active' : 'Inactive') + '</span></div>' + '<div class="user-card-grid"><div><strong>Role</strong><br>' + (user.role || '-') + '</div><div><strong>Station</strong><br>' + userStationName(user) + '</div><div><strong>Contact</strong><br>' + (user.phone || '-') + '<br>' + (user.email || '-') + '</div><div><strong>Department</strong><br>' + (user.department || '-') + '</div><div><strong>Profile</strong><br>' + (user.permissionProfile || 'viewer') + '</div><div><strong>MFA</strong><br>' + (user.mfaRequired ? 'Required' : 'Not required') + '</div></div>' + '<div class="user-permissions">' + (permissions.length ? permissions.slice(0, 8).map(function(permission) { return '<span class="permission-chip">' + permission + '</span>'; }).join('') : '<span class="permission-chip">No permissions</span>') + (permissions.length > 8 ? '<span class="permission-chip">+' + (permissions.length - 8) + '</span>' : '') + '</div>' + '<div class="user-card-actions"><button class="mini-btn primary" onclick="editAdminUser(\'' + user.id + '\')">Edit</button><button class="mini-btn" onclick="toggleAdminUser(\'' + user.id + '\')">' + (user.isActive ? 'Disable' : 'Activate') + '</button><button class="mini-btn" onclick="preparePasswordReset(\'' + user.id + '\')">Reset password</button></div></article>';
+      }).join('') : '<div class="admin-list-item">No users match this filter.</div>';
+    }
+
+    function resetAdminUserForm() {
+      editingAdminUserId = null; ['adminUserName','adminUsername','adminUserPassword','adminUserJobTitle','adminUserDepartment','adminUserPhone','adminUserEmail','adminUserNotes'].forEach(function(id) { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('adminUserRole').value = 'dispatcher'; document.getElementById('adminPermissionProfile').value = 'dispatcher'; document.getElementById('adminUserStation').value = ''; document.getElementById('adminUserActive').checked = true; document.getElementById('adminUserMfa').checked = false; document.getElementById('adminUsername').disabled = false; renderPermissionMatrix(PERMISSION_PROFILES.dispatcher);
+    }
+
+    function editAdminUser(id) {
+      const user = adminUsers.find(function(item) { return item.id === id; }); if (!user) return; editingAdminUserId = id;
+      document.getElementById('adminUserName').value = user.name || ''; document.getElementById('adminUsername').value = user.username || ''; document.getElementById('adminUsername').disabled = true; document.getElementById('adminUserPassword').value = ''; document.getElementById('adminUserJobTitle').value = user.jobTitle || ''; document.getElementById('adminUserDepartment').value = user.department || ''; document.getElementById('adminUserRole').value = user.role || 'viewer'; document.getElementById('adminPermissionProfile').value = user.permissionProfile || 'custom'; document.getElementById('adminUserStation').value = user.stationId || ''; document.getElementById('adminUserPhone').value = user.phone || ''; document.getElementById('adminUserEmail').value = user.email || ''; document.getElementById('adminUserNotes').value = user.notes || ''; document.getElementById('adminUserActive').checked = !!user.isActive; document.getElementById('adminUserMfa').checked = !!user.mfaRequired; renderPermissionMatrix(user.permissions || []); document.getElementById('adminUserName').focus();
+    }
+
+    function preparePasswordReset(id) { editAdminUser(id); document.getElementById('adminUserPassword').focus(); }
+
+    async function toggleAdminUser(id) {
+      const user = adminUsers.find(function(item) { return item.id === id; }); if (!user) return;
+      const payload = Object.assign({}, user, { isActive: !user.isActive }); delete payload.id; delete payload.createdAt; delete payload.updatedAt; delete payload.lastLoginAt;
+      await fetch('/api/admin/users/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await loadAdminManagement();
+    }
+
+    async function saveAdminUser() {
+      const payload = { name: document.getElementById('adminUserName').value.trim(), username: document.getElementById('adminUsername').value.trim(), password: document.getElementById('adminUserPassword').value, role: document.getElementById('adminUserRole').value, jobTitle: document.getElementById('adminUserJobTitle').value || null, department: document.getElementById('adminUserDepartment').value || null, permissionProfile: document.getElementById('adminPermissionProfile').value, permissions: selectedPermissions(), stationId: document.getElementById('adminUserStation').value || null, phone: document.getElementById('adminUserPhone').value || null, email: document.getElementById('adminUserEmail').value || null, notes: document.getElementById('adminUserNotes').value || null, isActive: document.getElementById('adminUserActive').checked, mfaRequired: document.getElementById('adminUserMfa').checked };
+      if (!payload.name || !payload.username) { alert('Full name and username are required.'); return; }
+      if (editingAdminUserId && !payload.password) delete payload.password;
+      const res = await fetch(editingAdminUserId ? '/api/admin/users/' + editingAdminUserId : '/api/admin/users', { method: editingAdminUserId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) { alert('User could not be saved.'); return; }
+      resetAdminUserForm(); await loadAdminManagement();
+    }
     async function savePoliceStation() {
       await fetch('/api/admin/police-stations', {
         method: 'POST',

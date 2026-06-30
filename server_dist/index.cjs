@@ -155,6 +155,10 @@ var adminUsers = (0, import_pg_core.pgTable)("admin_users", {
   username: (0, import_pg_core.text)("username").notNull().unique(),
   passwordHash: (0, import_pg_core.text)("password_hash"),
   role: (0, import_pg_core.text)("role").notNull().default("viewer"),
+  jobTitle: (0, import_pg_core.text)("job_title"),
+  department: (0, import_pg_core.text)("department"),
+  permissionProfile: (0, import_pg_core.text)("permission_profile").notNull().default("viewer"),
+  permissions: (0, import_pg_core.jsonb)("permissions").$type().default([]),
   commandId: (0, import_pg_core.varchar)("command_id"),
   provinceId: (0, import_pg_core.varchar)("province_id"),
   districtId: (0, import_pg_core.varchar)("district_id"),
@@ -162,7 +166,11 @@ var adminUsers = (0, import_pg_core.pgTable)("admin_users", {
   phone: (0, import_pg_core.text)("phone"),
   email: (0, import_pg_core.text)("email"),
   isActive: (0, import_pg_core.boolean)("is_active").notNull().default(true),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+  mfaRequired: (0, import_pg_core.boolean)("mfa_required").notNull().default(false),
+  lastLoginAt: (0, import_pg_core.timestamp)("last_login_at"),
+  notes: (0, import_pg_core.text)("notes"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
+  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
 });
 var notificationLogs = (0, import_pg_core.pgTable)("notification_logs", {
   id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
@@ -235,21 +243,49 @@ var insertUserSchema = (0, import_drizzle_zod.createInsertSchema)(users).pick({
   username: true,
   password: true
 });
-var insertEvidenceReportSchema = (0, import_drizzle_zod.createInsertSchema)(evidenceReports).omit({
+var insertEvidenceReportSchema = (0, import_drizzle_zod.createInsertSchema)(
+  evidenceReports
+).omit({
   id: true,
   submittedAt: true
 });
-var insertPoliceCommandSchema = (0, import_drizzle_zod.createInsertSchema)(policeCommands).omit({ id: true, createdAt: true });
-var insertProvinceSchema = (0, import_drizzle_zod.createInsertSchema)(provinces).omit({ id: true, createdAt: true });
-var insertDistrictSchema = (0, import_drizzle_zod.createInsertSchema)(districts).omit({ id: true, createdAt: true });
-var insertPoliceStationSchema = (0, import_drizzle_zod.createInsertSchema)(policeStations).omit({ id: true, createdAt: true });
-var insertAdminUserSchema = (0, import_drizzle_zod.createInsertSchema)(adminUsers).omit({ id: true, createdAt: true });
-var insertNotificationLogSchema = (0, import_drizzle_zod.createInsertSchema)(notificationLogs).omit({ id: true, createdAt: true });
-var insertReportDispatchSchema = (0, import_drizzle_zod.createInsertSchema)(reportDispatches).omit({ id: true, createdAt: true });
-var insertDeletedReportAuditSchema = (0, import_drizzle_zod.createInsertSchema)(deletedReportAudits).omit({ id: true, deletedAt: true });
-var insertOfficerProfileSchema = (0, import_drizzle_zod.createInsertSchema)(officerProfiles).omit({ id: true, createdAt: true, updatedAt: true });
-var insertReportAssignmentSchema = (0, import_drizzle_zod.createInsertSchema)(reportAssignments).omit({ id: true, createdAt: true, updatedAt: true });
-var insertReportNoteSchema = (0, import_drizzle_zod.createInsertSchema)(reportNotes).omit({ id: true, createdAt: true });
+var insertPoliceCommandSchema = (0, import_drizzle_zod.createInsertSchema)(
+  policeCommands
+).omit({ id: true, createdAt: true });
+var insertProvinceSchema = (0, import_drizzle_zod.createInsertSchema)(provinces).omit({
+  id: true,
+  createdAt: true
+});
+var insertDistrictSchema = (0, import_drizzle_zod.createInsertSchema)(districts).omit({
+  id: true,
+  createdAt: true
+});
+var insertPoliceStationSchema = (0, import_drizzle_zod.createInsertSchema)(
+  policeStations
+).omit({ id: true, createdAt: true });
+var insertAdminUserSchema = (0, import_drizzle_zod.createInsertSchema)(adminUsers).omit({
+  id: true,
+  createdAt: true
+});
+var insertNotificationLogSchema = (0, import_drizzle_zod.createInsertSchema)(
+  notificationLogs
+).omit({ id: true, createdAt: true });
+var insertReportDispatchSchema = (0, import_drizzle_zod.createInsertSchema)(
+  reportDispatches
+).omit({ id: true, createdAt: true });
+var insertDeletedReportAuditSchema = (0, import_drizzle_zod.createInsertSchema)(
+  deletedReportAudits
+).omit({ id: true, deletedAt: true });
+var insertOfficerProfileSchema = (0, import_drizzle_zod.createInsertSchema)(
+  officerProfiles
+).omit({ id: true, createdAt: true, updatedAt: true });
+var insertReportAssignmentSchema = (0, import_drizzle_zod.createInsertSchema)(
+  reportAssignments
+).omit({ id: true, createdAt: true, updatedAt: true });
+var insertReportNoteSchema = (0, import_drizzle_zod.createInsertSchema)(reportNotes).omit({
+  id: true,
+  createdAt: true
+});
 
 // server/storage.ts
 var import_crypto = require("crypto");
@@ -334,7 +370,8 @@ var DatabaseStorage = class {
   }
   async listProvinces(commandId) {
     const query = db.select().from(provinces);
-    if (commandId) return query.where((0, import_drizzle_orm2.eq)(provinces.commandId, commandId)).orderBy((0, import_drizzle_orm2.asc)(provinces.name));
+    if (commandId)
+      return query.where((0, import_drizzle_orm2.eq)(provinces.commandId, commandId)).orderBy((0, import_drizzle_orm2.asc)(provinces.name));
     return query.orderBy((0, import_drizzle_orm2.asc)(provinces.name));
   }
   async createProvince(province) {
@@ -346,7 +383,8 @@ var DatabaseStorage = class {
   }
   async listDistricts(provinceId) {
     const query = db.select().from(districts);
-    if (provinceId) return query.where((0, import_drizzle_orm2.eq)(districts.provinceId, provinceId)).orderBy((0, import_drizzle_orm2.asc)(districts.name));
+    if (provinceId)
+      return query.where((0, import_drizzle_orm2.eq)(districts.provinceId, provinceId)).orderBy((0, import_drizzle_orm2.asc)(districts.name));
     return query.orderBy((0, import_drizzle_orm2.asc)(districts.name));
   }
   async createDistrict(district) {
@@ -358,10 +396,20 @@ var DatabaseStorage = class {
   }
   async listPoliceStations(filters = {}) {
     let results = await db.select().from(policeStations).orderBy((0, import_drizzle_orm2.asc)(policeStations.name));
-    if (filters.commandId) results = results.filter((station) => station.commandId === filters.commandId);
-    if (filters.provinceId) results = results.filter((station) => station.provinceId === filters.provinceId);
-    if (filters.districtId) results = results.filter((station) => station.districtId === filters.districtId);
-    if (filters.activeOnly) results = results.filter((station) => station.isActive);
+    if (filters.commandId)
+      results = results.filter(
+        (station) => station.commandId === filters.commandId
+      );
+    if (filters.provinceId)
+      results = results.filter(
+        (station) => station.provinceId === filters.provinceId
+      );
+    if (filters.districtId)
+      results = results.filter(
+        (station) => station.districtId === filters.districtId
+      );
+    if (filters.activeOnly)
+      results = results.filter((station) => station.isActive);
     return results;
   }
   async createPoliceStation(station) {
@@ -389,6 +437,10 @@ var DatabaseStorage = class {
     }).returning();
     return created;
   }
+  async updateAdminUser(id, user) {
+    const [updated] = await db.update(adminUsers).set({ ...user, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm2.eq)(adminUsers.id, id)).returning();
+    return updated;
+  }
   async listNotificationLogs() {
     return db.select().from(notificationLogs).orderBy((0, import_drizzle_orm2.desc)(notificationLogs.createdAt));
   }
@@ -414,7 +466,12 @@ var DatabaseStorage = class {
   async listReportAssignments(filters = {}) {
     const query = db.select().from(reportAssignments);
     if (filters.officerUserId && filters.reportId) {
-      return query.where((0, import_drizzle_orm2.and)((0, import_drizzle_orm2.eq)(reportAssignments.officerUserId, filters.officerUserId), (0, import_drizzle_orm2.eq)(reportAssignments.reportId, filters.reportId))).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
+      return query.where(
+        (0, import_drizzle_orm2.and)(
+          (0, import_drizzle_orm2.eq)(reportAssignments.officerUserId, filters.officerUserId),
+          (0, import_drizzle_orm2.eq)(reportAssignments.reportId, filters.reportId)
+        )
+      ).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
     }
     if (filters.officerUserId) {
       return query.where((0, import_drizzle_orm2.eq)(reportAssignments.officerUserId, filters.officerUserId)).orderBy((0, import_drizzle_orm2.desc)(reportAssignments.createdAt));
@@ -1176,6 +1233,35 @@ var adminHtml = `<!DOCTYPE html>
       color: var(--text);
     }
     .admin-list-title { color: var(--text-strong); font-weight: 800; margin-bottom: 4px; }
+    .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
+    .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
+    .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
+    .enterprise-card p { margin:0 0 14px; color:var(--text-muted); }
+    .user-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .user-metric { border:1px solid var(--border); background:var(--bg-root); border-radius:12px; padding:12px; }
+    .user-metric strong { display:block; font-size:22px; color:var(--text-strong); }
+    .user-metric span { color:var(--text-muted); text-transform:uppercase; font-size:11px; font-weight:800; }
+    .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:8px 0 4px; }
+    .permission-item { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--bg-root); color:var(--text-muted); font-size:12px; }
+    .permission-item strong { display:block; color:var(--text-strong); font-size:12px; }
+    .user-directory-tools { display:grid; grid-template-columns:1fr 170px 150px; gap:10px; margin-bottom:12px; }
+    .user-directory { display:grid; gap:10px; max-height:650px; overflow:auto; }
+    .user-card { border:1px solid var(--border); background:var(--bg-root); border-radius:14px; padding:14px; display:grid; gap:10px; }
+    .user-card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .user-title { color:var(--text-strong); font-weight:900; font-size:15px; }
+    .user-subtitle { color:var(--text-muted); font-size:12px; margin-top:3px; }
+    .user-badges { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .user-badge { border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:var(--chip-bg); color:var(--text-muted); border:1px solid var(--border); }
+    .user-badge.active { background:rgba(34,197,94,.14); color:#22c55e; border-color:rgba(34,197,94,.25); }
+    .user-badge.inactive { background:rgba(239,68,68,.12); color:#ef4444; border-color:rgba(239,68,68,.25); }
+    .user-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; color:var(--text-muted); font-size:12px; }
+    .user-permissions { display:flex; gap:6px; flex-wrap:wrap; }
+    .permission-chip { border-radius:999px; padding:4px 8px; background:rgba(59,130,246,.14); color:#60a5fa; font-weight:800; font-size:11px; }
+    .user-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .mini-btn { border:1px solid var(--border); background:var(--bg-card); color:var(--text-strong); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:800; }
+    .mini-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    body.light-theme .enterprise-card, body.light-theme .user-card, body.light-theme .user-metric, body.light-theme .permission-item { background:#fff; }
+    @media (max-width:1100px){ .enterprise-grid{grid-template-columns:1fr;} .user-directory-tools{grid-template-columns:1fr;} .permission-grid{grid-template-columns:1fr;} .user-metrics{grid-template-columns:repeat(2,1fr);} }
     .table-container {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -1379,7 +1465,36 @@ var adminHtml = `<!DOCTYPE html>
       .management-panel { grid-template-columns: 1fr; }
       #crimeMap { height: 420px; min-height: 420px; }
       .map-summary { max-height: none; }
-      .table-container { overflow-x: auto; }
+      .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
+    .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
+    .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
+    .enterprise-card p { margin:0 0 14px; color:var(--text-muted); }
+    .user-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .user-metric { border:1px solid var(--border); background:var(--bg-root); border-radius:12px; padding:12px; }
+    .user-metric strong { display:block; font-size:22px; color:var(--text-strong); }
+    .user-metric span { color:var(--text-muted); text-transform:uppercase; font-size:11px; font-weight:800; }
+    .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:8px 0 4px; }
+    .permission-item { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:9px; background:var(--bg-root); color:var(--text-muted); font-size:12px; }
+    .permission-item strong { display:block; color:var(--text-strong); font-size:12px; }
+    .user-directory-tools { display:grid; grid-template-columns:1fr 170px 150px; gap:10px; margin-bottom:12px; }
+    .user-directory { display:grid; gap:10px; max-height:650px; overflow:auto; }
+    .user-card { border:1px solid var(--border); background:var(--bg-root); border-radius:14px; padding:14px; display:grid; gap:10px; }
+    .user-card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .user-title { color:var(--text-strong); font-weight:900; font-size:15px; }
+    .user-subtitle { color:var(--text-muted); font-size:12px; margin-top:3px; }
+    .user-badges { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .user-badge { border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:var(--chip-bg); color:var(--text-muted); border:1px solid var(--border); }
+    .user-badge.active { background:rgba(34,197,94,.14); color:#22c55e; border-color:rgba(34,197,94,.25); }
+    .user-badge.inactive { background:rgba(239,68,68,.12); color:#ef4444; border-color:rgba(239,68,68,.25); }
+    .user-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; color:var(--text-muted); font-size:12px; }
+    .user-permissions { display:flex; gap:6px; flex-wrap:wrap; }
+    .permission-chip { border-radius:999px; padding:4px 8px; background:rgba(59,130,246,.14); color:#60a5fa; font-weight:800; font-size:11px; }
+    .user-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .mini-btn { border:1px solid var(--border); background:var(--bg-card); color:var(--text-strong); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:800; }
+    .mini-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    body.light-theme .enterprise-card, body.light-theme .user-card, body.light-theme .user-metric, body.light-theme .permission-item { background:#fff; }
+    @media (max-width:1100px){ .enterprise-grid{grid-template-columns:1fr;} .user-directory-tools{grid-template-columns:1fr;} .permission-grid{grid-template-columns:1fr;} .user-metrics{grid-template-columns:repeat(2,1fr);} }
+    .table-container { overflow-x: auto; }
       table { min-width: 900px; }
     }
     body.role-viewer .delete-report-btn { display: none !important; }
@@ -1556,19 +1671,33 @@ var adminHtml = `<!DOCTYPE html>
       </section>
 
       <section class="module-section" data-module="users">
-        <section class="management-card">
-          <h3>User Management</h3>
-          <div class="admin-form">
-            <input id="adminUserName" class="admin-input" placeholder="Full name">
-            <div class="admin-form-row"><input id="adminUsername" class="admin-input" placeholder="Username"><select id="adminUserRole" class="admin-select"><option value="dispatcher">Dispatcher</option><option value="commander">Commander</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
-            <select id="adminUserStation" class="admin-select"><option value="">No station assignment</option></select>
-            <div class="admin-form-row"><input id="adminUserPhone" class="admin-input" placeholder="Phone"><input id="adminUserEmail" class="admin-input" placeholder="Email"></div>
-            <button class="admin-action-btn" onclick="saveAdminUser()">Add User</button>
-          </div>
-          <div id="adminUsersList" class="admin-list"></div>
-        </section>
+        <div class="enterprise-grid">
+          <section class="enterprise-card">
+            <h3>Enterprise User Management</h3>
+            <p>Create accounts, assign operational scope, and control exactly what each user can do.</p>
+            <div class="admin-form">
+              <input id="adminUserName" class="admin-input" placeholder="Full name">
+              <div class="admin-form-row"><input id="adminUsername" class="admin-input" placeholder="Username"><input id="adminUserPassword" class="admin-input" type="password" placeholder="Temporary password"></div>
+              <div class="admin-form-row"><input id="adminUserJobTitle" class="admin-input" placeholder="Rank / job title"><input id="adminUserDepartment" class="admin-input" placeholder="Department / unit"></div>
+              <div class="admin-form-row"><select id="adminUserRole" class="admin-select"><option value="admin">Admin</option><option value="commander">Commander</option><option value="dispatcher">Dispatcher</option><option value="officer">Officer</option><option value="analyst">Analyst</option><option value="viewer">Viewer</option></select><select id="adminPermissionProfile" class="admin-select" onchange="applyPermissionProfile(this.value)"><option value="super_admin">Super Admin</option><option value="command_lead">Command Lead</option><option value="dispatcher">Dispatcher</option><option value="field_officer">Field Officer</option><option value="analyst">Crime Analyst</option><option value="viewer">Viewer</option><option value="custom">Custom</option></select></div>
+              <select id="adminUserStation" class="admin-select"><option value="">No station assignment</option></select>
+              <div class="admin-form-row"><input id="adminUserPhone" class="admin-input" placeholder="Phone"><input id="adminUserEmail" class="admin-input" placeholder="Email"></div>
+              <textarea id="adminUserNotes" class="admin-textarea" placeholder="Access notes, appointment authority, or restrictions"></textarea>
+              <div class="admin-form-row"><label class="map-toggle"><input id="adminUserActive" type="checkbox" checked> Account active</label><label class="map-toggle"><input id="adminUserMfa" type="checkbox"> MFA required</label></div>
+              <div class="map-control-label">Granular permissions</div>
+              <div id="permissionMatrix" class="permission-grid"></div>
+              <button class="admin-action-btn" onclick="saveAdminUser()">Save User</button>
+            </div>
+          </section>
+          <section class="enterprise-card">
+            <h3>User Directory & Access Control</h3>
+            <p>Monitor account status, permissions, assigned station, and operational role.</p>
+            <div class="user-metrics" id="userMetrics"></div>
+            <div class="user-directory-tools"><input id="userSearch" class="admin-input" placeholder="Search users, role, station" oninput="renderUserDirectory()"><select id="userRoleFilter" class="admin-select" onchange="renderUserDirectory()"><option value="">All roles</option><option value="admin">Admin</option><option value="commander">Commander</option><option value="dispatcher">Dispatcher</option><option value="officer">Officer</option><option value="analyst">Analyst</option><option value="viewer">Viewer</option></select><select id="userStatusFilter" class="admin-select" onchange="renderUserDirectory()"><option value="">All status</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+            <div id="adminUsersList" class="user-directory"></div>
+          </section>
+        </div>
       </section>
-
       <section class="module-section" data-module="stations">
         <section class="management-card">
           <h3>Police Station/Post Management</h3>
@@ -1854,6 +1983,33 @@ var adminHtml = `<!DOCTYPE html>
     let policeCommands = [];
     let provinces = [];
     let districts = [];
+    let editingAdminUserId = null;
+    const PERMISSION_CATALOG = [
+      ["reports.read", "View Reports", "Read submitted reports and evidence metadata"],
+      ["reports.create", "Create Reports", "Submit reports on behalf of citizens"],
+      ["reports.update_status", "Update Status", "Move reports through workflow states"],
+      ["reports.delete", "Delete Reports", "Remove wrong submissions with audit reasons"],
+      ["reports.assign", "Assign Officers", "Send reports to field officers or stations"],
+      ["map.view", "View Map", "Use operational map intelligence"],
+      ["map.export", "Export Map", "Export map or planning data"],
+      ["users.read", "View Users", "Read user directory and access settings"],
+      ["users.manage", "Manage Users", "Create, edit, disable, and reset accounts"],
+      ["stations.read", "View Stations", "Read station and command records"],
+      ["stations.manage", "Manage Stations", "Create and edit stations/posts"],
+      ["locations.manage", "Manage Locations", "Maintain command, province, district cascade"],
+      ["notifications.send", "Send Notifications", "Notify stations, officers, or command users"],
+      ["audit.read", "View Audit", "Read deletion and access audit history"],
+      ["settings.manage", "Manage Settings", "Control platform configuration"],
+    ];
+    const PERMISSION_PROFILES = {
+      super_admin: PERMISSION_CATALOG.map(function(item) { return item[0]; }),
+      command_lead: ["reports.read", "reports.update_status", "reports.assign", "map.view", "map.export", "users.read", "stations.read", "notifications.send", "audit.read"],
+      dispatcher: ["reports.read", "reports.create", "reports.update_status", "reports.assign", "map.view", "stations.read", "notifications.send"],
+      field_officer: ["reports.read", "reports.update_status", "map.view"],
+      analyst: ["reports.read", "map.view", "map.export", "audit.read"],
+      viewer: ["reports.read", "map.view"],
+      custom: [],
+    };
 
     async function loadAdminManagement() {
       try {
@@ -1898,11 +2054,8 @@ var adminHtml = `<!DOCTYPE html>
       if (stationCommand) stationCommand.innerHTML = optionList(policeCommands, 'Select command / region', stationCommand.value);
       refreshStationCascade();
 
-      document.getElementById('adminUsersList').innerHTML = adminUsers.length ? adminUsers.map(function(user) {
-        const station = policeStations.find(function(item) { return item.id === user.stationId; });
-        return '<div class="admin-list-item"><div class="admin-list-title">' + user.name + ' | ' + user.role + '</div>'
-          + '<div>' + user.username + '</div><div>' + (station?.name || 'No station') + '</div><div>' + (user.phone || '-') + ' | ' + (user.email || '-') + '</div></div>';
-      }).join('') : '<div class="admin-list-item">No users configured.</div>';
+      renderPermissionMatrix();
+      renderUserDirectory();
 
       document.getElementById('policeStationsList').innerHTML = policeStations.length ? policeStations.map(function(station) {
         return '<div class="admin-list-item"><div class="admin-list-title">' + station.name + '</div>'
@@ -1917,22 +2070,70 @@ var adminHtml = `<!DOCTYPE html>
       }).join('') : '<div class="admin-list-item">No notifications sent yet.</div>';
     }
 
-    async function saveAdminUser() {
-      await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: document.getElementById('adminUserName').value,
-          username: document.getElementById('adminUsername').value,
-          role: document.getElementById('adminUserRole').value,
-          stationId: document.getElementById('adminUserStation').value || null,
-          phone: document.getElementById('adminUserPhone').value || null,
-          email: document.getElementById('adminUserEmail').value || null,
-        }),
-      });
-      await loadAdminManagement();
+    function selectedPermissions() {
+      return Array.from(document.querySelectorAll('.permission-checkbox:checked')).map(function(input) { return input.value; });
     }
 
+    function renderPermissionMatrix(selected) {
+      const matrix = document.getElementById('permissionMatrix');
+      if (!matrix) return;
+      const profileEl = document.getElementById('adminPermissionProfile');
+      const active = selected || PERMISSION_PROFILES[profileEl ? profileEl.value : 'viewer'] || [];
+      matrix.innerHTML = PERMISSION_CATALOG.map(function(item) {
+        return '<label class="permission-item"><input class="permission-checkbox" type="checkbox" value="' + item[0] + '" ' + (active.includes(item[0]) ? 'checked' : '') + ' onchange="document.getElementById('adminPermissionProfile').value='custom'"><span><strong>' + item[1] + '</strong>' + item[2] + '</span></label>';
+      }).join('');
+    }
+
+    function applyPermissionProfile(profile) { renderPermissionMatrix(PERMISSION_PROFILES[profile] || []); }
+    function userStationName(user) { const station = policeStations.find(function(item) { return item.id === user.stationId; }); return station ? station.name : 'No station assignment'; }
+
+    function renderUserMetrics(filtered) {
+      const el = document.getElementById('userMetrics'); if (!el) return;
+      const users = filtered || adminUsers;
+      const active = users.filter(function(user) { return user.isActive; }).length;
+      const officers = users.filter(function(user) { return user.role === 'officer'; }).length;
+      const privileged = users.filter(function(user) { return (user.permissions || []).includes('users.manage') || user.role === 'admin'; }).length;
+      el.innerHTML = '<div class="user-metric"><strong>' + users.length + '</strong><span>Total users</span></div>' + '<div class="user-metric"><strong>' + active + '</strong><span>Active</span></div>' + '<div class="user-metric"><strong>' + officers + '</strong><span>Officers</span></div>' + '<div class="user-metric"><strong>' + privileged + '</strong><span>Privileged</span></div>';
+    }
+
+    function renderUserDirectory() {
+      const list = document.getElementById('adminUsersList'); if (!list) return;
+      const searchEl = document.getElementById('userSearch'); const roleEl = document.getElementById('userRoleFilter'); const statusEl = document.getElementById('userStatusFilter');
+      const search = String(searchEl ? searchEl.value : '').toLowerCase(); const role = roleEl ? roleEl.value : ''; const status = statusEl ? statusEl.value : '';
+      const filtered = adminUsers.filter(function(user) { const haystack = [user.name, user.username, user.role, user.jobTitle, user.department, userStationName(user), user.email, user.phone].join(' ').toLowerCase(); return (!search || haystack.includes(search)) && (!role || user.role === role) && (!status || (status === 'active' ? user.isActive : !user.isActive)); });
+      renderUserMetrics(filtered);
+      list.innerHTML = filtered.length ? filtered.map(function(user) {
+        const permissions = user.permissions || [];
+        return '<article class="user-card"><div class="user-card-head"><div><strong>' + (user.name || '-') + '</strong><span>@' + (user.username || '-') + ' | ' + (user.jobTitle || user.role || '-') + '</span></div><span class="user-badge ' + (user.isActive ? 'active' : 'inactive') + '">' + (user.isActive ? 'Active' : 'Inactive') + '</span></div>' + '<div class="user-card-grid"><div><strong>Role</strong><br>' + (user.role || '-') + '</div><div><strong>Station</strong><br>' + userStationName(user) + '</div><div><strong>Contact</strong><br>' + (user.phone || '-') + '<br>' + (user.email || '-') + '</div><div><strong>Department</strong><br>' + (user.department || '-') + '</div><div><strong>Profile</strong><br>' + (user.permissionProfile || 'viewer') + '</div><div><strong>MFA</strong><br>' + (user.mfaRequired ? 'Required' : 'Not required') + '</div></div>' + '<div class="user-permissions">' + (permissions.length ? permissions.slice(0, 8).map(function(permission) { return '<span class="permission-chip">' + permission + '</span>'; }).join('') : '<span class="permission-chip">No permissions</span>') + (permissions.length > 8 ? '<span class="permission-chip">+' + (permissions.length - 8) + '</span>' : '') + '</div>' + '<div class="user-card-actions"><button class="mini-btn primary" onclick="editAdminUser('' + user.id + '')">Edit</button><button class="mini-btn" onclick="toggleAdminUser('' + user.id + '')">' + (user.isActive ? 'Disable' : 'Activate') + '</button><button class="mini-btn" onclick="preparePasswordReset('' + user.id + '')">Reset password</button></div></article>';
+      }).join('') : '<div class="admin-list-item">No users match this filter.</div>';
+    }
+
+    function resetAdminUserForm() {
+      editingAdminUserId = null; ['adminUserName','adminUsername','adminUserPassword','adminUserJobTitle','adminUserDepartment','adminUserPhone','adminUserEmail','adminUserNotes'].forEach(function(id) { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('adminUserRole').value = 'dispatcher'; document.getElementById('adminPermissionProfile').value = 'dispatcher'; document.getElementById('adminUserStation').value = ''; document.getElementById('adminUserActive').checked = true; document.getElementById('adminUserMfa').checked = false; document.getElementById('adminUsername').disabled = false; renderPermissionMatrix(PERMISSION_PROFILES.dispatcher);
+    }
+
+    function editAdminUser(id) {
+      const user = adminUsers.find(function(item) { return item.id === id; }); if (!user) return; editingAdminUserId = id;
+      document.getElementById('adminUserName').value = user.name || ''; document.getElementById('adminUsername').value = user.username || ''; document.getElementById('adminUsername').disabled = true; document.getElementById('adminUserPassword').value = ''; document.getElementById('adminUserJobTitle').value = user.jobTitle || ''; document.getElementById('adminUserDepartment').value = user.department || ''; document.getElementById('adminUserRole').value = user.role || 'viewer'; document.getElementById('adminPermissionProfile').value = user.permissionProfile || 'custom'; document.getElementById('adminUserStation').value = user.stationId || ''; document.getElementById('adminUserPhone').value = user.phone || ''; document.getElementById('adminUserEmail').value = user.email || ''; document.getElementById('adminUserNotes').value = user.notes || ''; document.getElementById('adminUserActive').checked = !!user.isActive; document.getElementById('adminUserMfa').checked = !!user.mfaRequired; renderPermissionMatrix(user.permissions || []); document.getElementById('adminUserName').focus();
+    }
+
+    function preparePasswordReset(id) { editAdminUser(id); document.getElementById('adminUserPassword').focus(); }
+
+    async function toggleAdminUser(id) {
+      const user = adminUsers.find(function(item) { return item.id === id; }); if (!user) return;
+      const payload = Object.assign({}, user, { isActive: !user.isActive }); delete payload.id; delete payload.createdAt; delete payload.updatedAt; delete payload.lastLoginAt;
+      await fetch('/api/admin/users/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await loadAdminManagement();
+    }
+
+    async function saveAdminUser() {
+      const payload = { name: document.getElementById('adminUserName').value.trim(), username: document.getElementById('adminUsername').value.trim(), password: document.getElementById('adminUserPassword').value, role: document.getElementById('adminUserRole').value, jobTitle: document.getElementById('adminUserJobTitle').value || null, department: document.getElementById('adminUserDepartment').value || null, permissionProfile: document.getElementById('adminPermissionProfile').value, permissions: selectedPermissions(), stationId: document.getElementById('adminUserStation').value || null, phone: document.getElementById('adminUserPhone').value || null, email: document.getElementById('adminUserEmail').value || null, notes: document.getElementById('adminUserNotes').value || null, isActive: document.getElementById('adminUserActive').checked, mfaRequired: document.getElementById('adminUserMfa').checked };
+      if (!payload.name || !payload.username) { alert('Full name and username are required.'); return; }
+      if (editingAdminUserId && !payload.password) delete payload.password;
+      const res = await fetch(editingAdminUserId ? '/api/admin/users/' + editingAdminUserId : '/api/admin/users', { method: editingAdminUserId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) { alert('User could not be saved.'); return; }
+      resetAdminUserForm(); await loadAdminManagement();
+    }
     async function savePoliceStation() {
       await fetch('/api/admin/police-stations', {
         method: 'POST',
@@ -2750,7 +2951,13 @@ var ADMIN_COOKIE_VALUE = (0, import_node_crypto.createHash)("sha256").update(ADM
 var PASSWORD_ITERATIONS = 21e4;
 function hashPassword(password) {
   const salt = (0, import_node_crypto.randomBytes)(16).toString("hex");
-  const hash = (0, import_node_crypto.pbkdf2Sync)(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
+  const hash = (0, import_node_crypto.pbkdf2Sync)(
+    password,
+    salt,
+    PASSWORD_ITERATIONS,
+    32,
+    "sha256"
+  ).toString("hex");
   return `pbkdf2:${PASSWORD_ITERATIONS}:${salt}:${hash}`;
 }
 function verifyPassword(password, stored) {
@@ -2774,7 +2981,93 @@ function sanitizeAdminUser(user) {
   return safeUser;
 }
 var uploadsDir = path2.resolve(process.cwd(), "uploads");
-var productionReportsCachePath = path2.resolve(process.cwd(), "server", "cache", "production-reports.json");
+var productionReportsCachePath = path2.resolve(
+  process.cwd(),
+  "server",
+  "cache",
+  "production-reports.json"
+);
+var PERMISSION_CATALOG = [
+  "reports.read",
+  "reports.create",
+  "reports.update_status",
+  "reports.delete",
+  "reports.assign",
+  "map.view",
+  "map.export",
+  "users.read",
+  "users.manage",
+  "stations.read",
+  "stations.manage",
+  "locations.manage",
+  "notifications.send",
+  "audit.read",
+  "settings.manage"
+];
+var PERMISSION_PROFILES = {
+  super_admin: [...PERMISSION_CATALOG],
+  command_lead: [
+    "reports.read",
+    "reports.update_status",
+    "reports.assign",
+    "map.view",
+    "map.export",
+    "users.read",
+    "stations.read",
+    "notifications.send",
+    "audit.read"
+  ],
+  dispatcher: [
+    "reports.read",
+    "reports.create",
+    "reports.update_status",
+    "reports.assign",
+    "map.view",
+    "stations.read",
+    "notifications.send"
+  ],
+  field_officer: ["reports.read", "reports.update_status", "map.view"],
+  analyst: ["reports.read", "map.view", "map.export", "audit.read"],
+  viewer: ["reports.read", "map.view"],
+  custom: []
+};
+function permissionsForProfile(profile, explicitPermissions) {
+  if (Array.isArray(explicitPermissions)) {
+    return explicitPermissions.map(String).filter((permission) => PERMISSION_CATALOG.includes(permission));
+  }
+  return PERMISSION_PROFILES[profile] || PERMISSION_PROFILES.viewer;
+}
+function normalizeAdminUserForResponse(user) {
+  const roleProfile = user.role === "admin" ? "super_admin" : user.role === "commander" ? "command_lead" : user.role === "dispatcher" ? "dispatcher" : user.role === "officer" ? "field_officer" : "viewer";
+  const permissionProfile = user.permissionProfile || roleProfile;
+  const permissions = Array.isArray(user.permissions) && user.permissions.length ? user.permissions : permissionsForProfile(permissionProfile);
+  return { ...user, permissionProfile, permissions };
+}
+function buildAdminUserPayload(body, passwordHash) {
+  const permissionProfile = String(
+    body.permissionProfile || body.permission_profile || "viewer"
+  );
+  const payload = {
+    name: String(body.name || "").trim(),
+    username: String(body.username || "").trim(),
+    role: String(body.role || "viewer"),
+    jobTitle: body.jobTitle || null,
+    department: body.department || null,
+    permissionProfile,
+    permissions: permissionsForProfile(permissionProfile, body.permissions),
+    commandId: body.commandId || null,
+    provinceId: body.provinceId || null,
+    districtId: body.districtId || null,
+    stationId: body.stationId || null,
+    phone: body.phone || null,
+    email: body.email || null,
+    isActive: body.isActive === void 0 ? true : Boolean(body.isActive),
+    mfaRequired: Boolean(body.mfaRequired),
+    notes: body.notes || null
+  };
+  if (passwordHash) payload.passwordHash = passwordHash;
+  return payload;
+}
 if (!fs2.existsSync(uploadsDir)) {
   fs2.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -2783,7 +3076,10 @@ var upload = (0, import_multer.default)({
     destination: uploadsDir,
     filename: (_req, file, cb) => {
       const ext = path2.extname(file.originalname) || getExtByMime(file.mimetype);
-      cb(null, `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`);
+      cb(
+        null,
+        `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`
+      );
     }
   }),
   limits: { fileSize: 200 * 1024 * 1024 }
@@ -2814,7 +3110,12 @@ async function findNearestDbPoliceStation(latitude, longitude) {
   try {
     const stations = await storage.listPoliceStations({ activeOnly: true });
     const nearest = stations.map((station) => {
-      const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+      const distance = distanceKm(
+        latitude,
+        longitude,
+        station.latitude,
+        station.longitude
+      );
       return {
         ...station,
         province: "",
@@ -2854,22 +3155,33 @@ async function fetchProductionReports() {
     }
     const reports = await response.json();
     fs2.mkdirSync(path2.dirname(productionReportsCachePath), { recursive: true });
-    fs2.writeFileSync(productionReportsCachePath, JSON.stringify(reports, null, 2));
+    fs2.writeFileSync(
+      productionReportsCachePath,
+      JSON.stringify(reports, null, 2)
+    );
     return reports;
   } catch (error) {
     if (fs2.existsSync(productionReportsCachePath)) {
-      console.warn("Using cached production reports because live fetch failed:", error);
-      return JSON.parse(fs2.readFileSync(productionReportsCachePath, "utf-8"));
+      console.warn(
+        "Using cached production reports because live fetch failed:",
+        error
+      );
+      return JSON.parse(
+        fs2.readFileSync(productionReportsCachePath, "utf-8")
+      );
     }
     throw error;
   }
 }
 async function patchProductionReportStatus(id, status) {
-  const response = await fetch(`https://${PRODUCTION_DOMAIN}/api/reports/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status })
-  });
+  const response = await fetch(
+    `https://${PRODUCTION_DOMAIN}/api/reports/${id}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status })
+    }
+  );
   if (!response.ok) {
     throw new Error(`Production status update failed: ${response.status}`);
   }
@@ -3003,10 +3315,13 @@ async function forwardFileToProduction(filePath, mimeType, originalName) {
     const blob = new Blob([fileBuffer], { type: mimeType });
     const formData = new FormData();
     formData.append("file", blob, originalName);
-    const prodResponse = await fetch(`https://${PRODUCTION_DOMAIN}/api/upload`, {
-      method: "POST",
-      body: formData
-    });
+    const prodResponse = await fetch(
+      `https://${PRODUCTION_DOMAIN}/api/upload`,
+      {
+        method: "POST",
+        body: formData
+      }
+    );
     if (prodResponse.ok) {
       const data = await prodResponse.json();
       return data.fileUrl;
@@ -3110,7 +3425,10 @@ async function registerRoutes(app2) {
     if (isProductionServer(req)) {
       return res.status(404).send("File not found on production server");
     }
-    res.redirect(302, `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`);
+    res.redirect(
+      302,
+      `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`
+    );
   });
   app2.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
@@ -3150,7 +3468,12 @@ async function registerRoutes(app2) {
           const officers = await storage.listOfficerProfiles();
           for (const officer of officers) {
             if (officer.isActive) {
-              const dist = distanceKm(latitude, longitude, officer.latitude, officer.longitude);
+              const dist = distanceKm(
+                latitude,
+                longitude,
+                officer.latitude,
+                officer.longitude
+              );
               if (dist <= officer.radiusKm) {
                 await storage.createReportAssignment({
                   reportId: report.id,
@@ -3160,7 +3483,9 @@ async function registerRoutes(app2) {
                   matchedAreaName: officer.responsibilityAreaName,
                   status: "Sent to Officer"
                 });
-                console.log(`Automatically assigned report ${report.id} to officer ${officer.userId}`);
+                console.log(
+                  `Automatically assigned report ${report.id} to officer ${officer.userId}`
+                );
               }
             }
           }
@@ -3226,44 +3551,89 @@ async function registerRoutes(app2) {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listPoliceCommands());
   });
-  app2.post("/api/admin/location/commands", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createPoliceCommand(req.body));
-  });
+  app2.post(
+    "/api/admin/location/commands",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createPoliceCommand(req.body));
+    }
+  );
   app2.get("/api/admin/location/provinces", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listProvinces(req.query.commandId));
+    res.json(
+      await storage.listProvinces(req.query.commandId)
+    );
   });
-  app2.post("/api/admin/location/provinces", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createProvince(req.body));
-  });
+  app2.post(
+    "/api/admin/location/provinces",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createProvince(req.body));
+    }
+  );
   app2.get("/api/admin/location/districts", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listDistricts(req.query.provinceId));
+    res.json(
+      await storage.listDistricts(req.query.provinceId)
+    );
   });
-  app2.post("/api/admin/location/districts", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createDistrict(req.body));
-  });
+  app2.post(
+    "/api/admin/location/districts",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createDistrict(req.body));
+    }
+  );
   app2.get("/api/admin/users", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     const users2 = await storage.listAdminUsers();
-    res.json(users2.map(sanitizeAdminUser));
+    res.json(
+      users2.map(function(user) {
+        return sanitizeAdminUser(normalizeAdminUserForResponse(user));
+      })
+    );
   });
   app2.post("/api/admin/users", requireAdminWrite, async (req, res) => {
-    const password = String(req.body?.password || req.body?.passwordHash || defaultUserPassword(String(req.body?.username || "user")));
-    const created = await storage.createAdminUser({ ...req.body, passwordHash: hashPassword(password) });
-    res.status(201).json(sanitizeAdminUser(created));
+    const password = String(
+      req.body?.password || defaultUserPassword(String(req.body?.username || "user"))
+    );
+    const payload = buildAdminUserPayload(req.body, hashPassword(password));
+    if (!payload.name || !payload.username) {
+      return res.status(400).json({ message: "Name and username are required." });
+    }
+    const created = await storage.createAdminUser(payload);
+    res.status(201).json(sanitizeAdminUser(normalizeAdminUserForResponse(created)));
+  });
+  app2.patch("/api/admin/users/:id", requireAdminWrite, async (req, res) => {
+    const password = String(req.body?.password || "").trim();
+    const payload = buildAdminUserPayload(
+      req.body,
+      password ? hashPassword(password) : void 0
+    );
+    delete payload.username;
+    const updated = await storage.updateAdminUser(req.params.id, payload);
+    if (!updated) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    res.json(sanitizeAdminUser(normalizeAdminUserForResponse(updated)));
   });
   app2.get("/api/admin/police-stations", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listPoliceStations({
-      commandId: req.query.commandId,
-      provinceId: req.query.provinceId,
-      districtId: req.query.districtId
-    }));
+    res.json(
+      await storage.listPoliceStations({
+        commandId: req.query.commandId,
+        provinceId: req.query.provinceId,
+        districtId: req.query.districtId
+      })
+    );
   });
-  app2.post("/api/admin/police-stations", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createPoliceStation(req.body));
-  });
+  app2.post(
+    "/api/admin/police-stations",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createPoliceStation(req.body));
+    }
+  );
   app2.get("/api/admin/deleted-reports", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json(await storage.listDeletedReportAudits());
@@ -3302,7 +3672,9 @@ async function registerRoutes(app2) {
       }
       if (!isProductionServer()) {
         const productionReports = await fetchProductionReports();
-        const productionReport = productionReports.find((item) => item.id === req.params.id);
+        const productionReport = productionReports.find(
+          (item) => item.id === req.params.id
+        );
         if (productionReport) {
           return res.json(withReferenceNumber(productionReport));
         }
@@ -3315,7 +3687,9 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
     try {
-      const list = await storage.listReportAssignments({ reportId: req.params.id });
+      const list = await storage.listReportAssignments({
+        reportId: req.params.id
+      });
       const detailed = [];
       const usersList = await storage.listAdminUsers();
       for (const assignment of list) {
@@ -3331,23 +3705,27 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch assignments." });
     }
   });
-  app2.post("/api/admin/reports/:id/assign", requireAdminWrite, async (req, res) => {
-    const { id } = req.params;
-    const { officerUserId } = req.body;
-    try {
-      const assignment = await storage.createReportAssignment({
-        reportId: id,
-        officerUserId,
-        assignmentType: "manual",
-        assignmentReason: "Assigned manually by dispatcher.",
-        status: "Sent to Officer"
-      });
-      res.status(201).json(assignment);
-    } catch (error) {
-      console.error("Error manual assigning:", error);
-      res.status(500).json({ message: "Failed to assign officer." });
+  app2.post(
+    "/api/admin/reports/:id/assign",
+    requireAdminWrite,
+    async (req, res) => {
+      const { id } = req.params;
+      const { officerUserId } = req.body;
+      try {
+        const assignment = await storage.createReportAssignment({
+          reportId: id,
+          officerUserId,
+          assignmentType: "manual",
+          assignmentReason: "Assigned manually by dispatcher.",
+          status: "Sent to Officer"
+        });
+        res.status(201).json(assignment);
+      } catch (error) {
+        console.error("Error manual assigning:", error);
+        res.status(500).json({ message: "Failed to assign officer." });
+      }
     }
-  });
+  );
   app2.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
       const reason = String(req.body?.reason || "").trim();
@@ -3356,7 +3734,9 @@ async function registerRoutes(app2) {
       }
       const report = await storage.getEvidenceReportById(req.params.id);
       if (!report) {
-        return res.status(404).json({ message: "Report not found or cannot be deleted from this environment." });
+        return res.status(404).json({
+          message: "Report not found or cannot be deleted from this environment."
+        });
       }
       const audit = await storage.deleteEvidenceReportWithAudit(req.params.id, {
         reason,
@@ -3443,10 +3823,14 @@ async function registerRoutes(app2) {
       if (assignment) {
         let reportStatus = "Pending";
         if (status === "Resolved") reportStatus = "Resolved";
-        else if (status === "Rejected" || status === "Failed") reportStatus = "Rejected";
+        else if (status === "Rejected" || status === "Failed")
+          reportStatus = "Rejected";
         else if (status === "Acknowledged") reportStatus = "Pending";
         else if (status === "On Route") reportStatus = "Pending";
-        await storage.updateEvidenceReportStatus(assignment.reportId, reportStatus);
+        await storage.updateEvidenceReportStatus(
+          assignment.reportId,
+          reportStatus
+        );
       }
       res.json({ success: true, message: "Assignment status updated." });
     } catch (error) {

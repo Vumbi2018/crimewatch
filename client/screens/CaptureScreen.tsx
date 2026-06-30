@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -17,7 +17,13 @@ import {
   useCameraPermissions,
   useMicrophonePermissions,
 } from "expo-camera";
-import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
+import {
+  useAudioRecorder,
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+} from "expo-audio";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { Feather } from "@expo/vector-icons";
@@ -44,8 +50,6 @@ import {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type CaptureMode = "photo" | "video" | "audio";
-
-const WAVEFORM_BARS = 7;
 
 export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
@@ -76,6 +80,7 @@ export default function CaptureScreen() {
 
   const pulseScale = useSharedValue(1);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const videoStopRequestedRef = useRef(false);
 
   const waveBar0 = useSharedValue(0.3);
   const waveBar1 = useSharedValue(0.3);
@@ -233,7 +238,10 @@ export default function CaptureScreen() {
       };
     } catch (error) {
       if (__DEV__) {
-        console.log("Location unavailable; saving evidence without GPS.", error);
+        console.log(
+          "Location unavailable; saving evidence without GPS.",
+          error,
+        );
       }
       return { latitude: null, longitude: null, address: null };
     }
@@ -294,6 +302,14 @@ export default function CaptureScreen() {
     }
 
     try {
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        shouldPlayInBackground: false,
+        shouldRouteThroughEarpiece: false,
+        interruptionMode: "doNotMix",
+        interruptionModeAndroid: "doNotMix",
+      });
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
       setIsRecording(true);
@@ -306,46 +322,53 @@ export default function CaptureScreen() {
       );
     }
   };
-
   const handleStopAudioRecording = async () => {
     try {
       await audioRecorder.stop();
       setIsRecording(false);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const uri = audioRecorder.uri;
-      if (uri) {
-        const locationData = await getCurrentLocation();
-        const evidence: Evidence = {
-          id: generateEvidenceId(),
-          type: "audio",
-          uri,
-          timestamp: Date.now(),
-          latitude: locationData.latitude,
-          longitude: locationData.longitude,
-          address: locationData.address,
-          incidentType: null,
-          description: null,
-          tags: [],
-          submissionStatus: "draft",
-          submittedAt: null,
-        };
-        await saveEvidence(evidence);
-        setLastCapturedUri(uri);
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
+      const status = audioRecorder.getStatus();
+      const uri = audioRecorder.uri || status.url || null;
+      if (!uri) {
+        Alert.alert(
+          "Audio not saved",
+          "The recording stopped, but the audio file was not available. Please try again.",
         );
+        return;
       }
+
+      const locationData = await getCurrentLocation();
+      const evidence: Evidence = {
+        id: generateEvidenceId(),
+        type: "audio",
+        uri,
+        timestamp: Date.now(),
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        address: locationData.address,
+        incidentType: null,
+        description: null,
+        tags: [],
+        submissionStatus: "draft",
+        submittedAt: null,
+      };
+      await saveEvidence(evidence);
+      setLastCapturedUri(uri);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error("Error stopping audio recording:", error);
       setIsRecording(false);
+      Alert.alert("Error", "Failed to save audio. Please try again.");
+    } finally {
+      await setIsAudioActiveAsync(false).catch(() => undefined);
     }
   };
-
   const handleCapture = async () => {
     if (mode === "video" && isRecording) {
       if (cameraRef.current) {
         try {
+          videoStopRequestedRef.current = true;
           cameraRef.current.stopRecording();
         } catch (err) {
           console.error("Error stopping video recording:", err);
@@ -421,9 +444,27 @@ export default function CaptureScreen() {
         }
         setIsRecording(true);
         setIsCapturing(false); // Enable the capture button so the user can tap STOP!
-        const video = await cameraRef.current.recordAsync({
-          maxDuration: 60,
-        });
+        videoStopRequestedRef.current = false;
+        let video: { uri: string } | undefined;
+        try {
+          video = await cameraRef.current.recordAsync({
+            maxDuration: 60,
+          });
+        } catch (recordError) {
+          if (videoStopRequestedRef.current) {
+            if (__DEV__) {
+              console.log(
+                "Video recording stopped before a URI was returned.",
+                recordError,
+              );
+            }
+            return;
+          }
+          throw recordError;
+        } finally {
+          videoStopRequestedRef.current = false;
+          setIsRecording(false);
+        }
 
         if (video?.uri) {
           const locationData = await getCurrentLocation();
@@ -448,8 +489,12 @@ export default function CaptureScreen() {
           await Haptics.notificationAsync(
             Haptics.NotificationFeedbackType.Success,
           );
+        } else {
+          Alert.alert(
+            "Video not saved",
+            "The recording stopped, but the video file was not available. Please try again.",
+          );
         }
-        setIsRecording(false);
       }
     } catch (error) {
       console.error("Capture error:", error);
@@ -473,7 +518,7 @@ export default function CaptureScreen() {
     if (Platform.OS !== "web") {
       try {
         await Linking.openSettings();
-      } catch (error) {
+      } catch {
         console.log("Could not open settings");
       }
     }
@@ -655,8 +700,9 @@ export default function CaptureScreen() {
         style={styles.camera}
         facing={facing}
         flash={flash}
+        mode={mode === "video" ? "video" : "picture"}
+        videoQuality="720p"
       />
-
       <View style={[styles.overlay, { paddingTop: insets.top + Spacing.lg }]}>
         <View style={styles.topControls}>
           <Pressable
@@ -691,10 +737,7 @@ export default function CaptureScreen() {
       </View>
 
       <View
-        style={[
-          styles.bottomControls,
-          { paddingBottom: insets.bottom + 100 },
-        ]}
+        style={[styles.bottomControls, { paddingBottom: insets.bottom + 100 }]}
       >
         <Pressable
           style={styles.galleryThumbnail}

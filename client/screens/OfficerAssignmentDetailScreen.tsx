@@ -12,8 +12,9 @@ import {
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { getApiUrl } from "@/lib/query-client";
+import { Spacing, BorderRadius } from "@/constants/theme";
+import { apiUrl, readJsonResponse } from "@/lib/query-client";
+import { getOfficerProfile } from "@/lib/storage";
 
 interface Note {
   id: string;
@@ -39,9 +40,17 @@ export default function OfficerAssignmentDetailScreen() {
 
   const fetchDetails = async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/api/officer/assignments`);
+      const officerProfile = await getOfficerProfile();
+      if (!officerProfile?.userId) {
+        throw new Error("Officer profile missing. Please log in again.");
+      }
+      const response = await fetch(
+        apiUrl(
+          `/api/officer/assignments?officerUserId=${encodeURIComponent(officerProfile.userId)}`,
+        ),
+      );
       if (!response.ok) throw new Error("Failed to fetch assignments");
-      const list = await response.json();
+      const list = await readJsonResponse<any[]>(response);
       const match = list.find((a: any) => a.id === assignmentId);
       if (!match) {
         Alert.alert("Error", "Assignment not found.");
@@ -52,9 +61,11 @@ export default function OfficerAssignmentDetailScreen() {
       setSelectedStatus(match.status);
 
       // Fetch notes for the report
-      const notesRes = await fetch(`${getApiUrl()}/api/reports/${match.reportId}/notes`);
+      const notesRes = await fetch(
+        apiUrl(`/api/reports/${match.reportId}/notes`),
+      );
       if (notesRes.ok) {
-        const notesData = await notesRes.json();
+        const notesData = await readJsonResponse<Note[]>(notesRes);
         setNotes(notesData);
       }
     } catch (error) {
@@ -71,11 +82,14 @@ export default function OfficerAssignmentDetailScreen() {
   const handleUpdateStatus = async (status: string) => {
     setSubmittingStatus(true);
     try {
-      const res = await fetch(`${getApiUrl()}/api/officer/assignments/${assignmentId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(
+        apiUrl(`/api/officer/assignments/${assignmentId}/status`),
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        },
+      );
       if (!res.ok) throw new Error("Failed to update status.");
       Alert.alert("Success", "Status updated successfully.");
       setSelectedStatus(status);
@@ -93,11 +107,14 @@ export default function OfficerAssignmentDetailScreen() {
 
     setSubmittingNote(true);
     try {
-      const res = await fetch(`${getApiUrl()}/api/officer/assignments/${assignmentId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: trimmedNote }),
-      });
+      const res = await fetch(
+        apiUrl(`/api/officer/assignments/${assignmentId}/notes`),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: trimmedNote }),
+        },
+      );
       if (!res.ok) throw new Error("Failed to add note.");
       setNewNote("");
       fetchDetails();
@@ -124,9 +141,21 @@ export default function OfficerAssignmentDetailScreen() {
         {/* Title Block */}
         <View style={styles.section}>
           <View style={styles.row}>
-            <ThemedText style={styles.title}>{report.referenceNumber}</ThemedText>
-            <View style={[styles.badge, { backgroundColor: report.priority === "High" ? "#EF4444" : "#FBBF24" }]}>
-              <ThemedText style={styles.badgeText}>{report.priority} Priority</ThemedText>
+            <ThemedText style={styles.title}>
+              {report.referenceNumber}
+            </ThemedText>
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor:
+                    report.priority === "High" ? "#EF4444" : "#FBBF24",
+                },
+              ]}
+            >
+              <ThemedText style={styles.badgeText}>
+                {report.priority} Priority
+              </ThemedText>
             </View>
           </View>
           <ThemedText style={styles.metaText}>
@@ -140,7 +169,9 @@ export default function OfficerAssignmentDetailScreen() {
         {/* Description & Location */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Incident Location</ThemedText>
-          <ThemedText style={styles.bodyText}>📍 {report.address || "No address provided."}</ThemedText>
+          <ThemedText style={styles.bodyText}>
+            📍 {report.address || "No address provided."}
+          </ThemedText>
           <ThemedText style={styles.coordsText}>
             Coordinates: {report.latitude}, {report.longitude}
           </ThemedText>
@@ -148,28 +179,42 @@ export default function OfficerAssignmentDetailScreen() {
 
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Description</ThemedText>
-          <ThemedText style={styles.bodyText}>{report.description || "No description provided."}</ThemedText>
+          <ThemedText style={styles.bodyText}>
+            {report.description || "No description provided."}
+          </ThemedText>
         </View>
 
         {/* Behalf Reporting Info */}
         {report.isBehalfReport && (
           <View style={[styles.section, styles.behalfSection]}>
-            <ThemedText style={styles.behalfTitle}>Reported on Behalf of Someone Else</ThemedText>
+            <ThemedText style={styles.behalfTitle}>
+              Reported on Behalf of Someone Else
+            </ThemedText>
             <View style={styles.detailRow}>
               <ThemedText style={styles.detailLabel}>Victim Name:</ThemedText>
-              <ThemedText style={styles.detailValue}>{report.behalfName || "Anonymous"}</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {report.behalfName || "Anonymous"}
+              </ThemedText>
             </View>
             <View style={styles.detailRow}>
               <ThemedText style={styles.detailLabel}>Contact Info:</ThemedText>
-              <ThemedText style={styles.detailValue}>{report.behalfContact || "None Provided"}</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {report.behalfContact || "None Provided"}
+              </ThemedText>
             </View>
             <View style={styles.detailRow}>
               <ThemedText style={styles.detailLabel}>Relationship:</ThemedText>
-              <ThemedText style={styles.detailValue}>{report.behalfRelationship || "Not Stated"}</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {report.behalfRelationship || "Not Stated"}
+              </ThemedText>
             </View>
             <View style={styles.detailRow}>
-              <ThemedText style={styles.detailLabel}>Consent Obtained:</ThemedText>
-              <ThemedText style={styles.detailValue}>{report.behalfConsent ? "Yes ✅" : "No ❌"}</ThemedText>
+              <ThemedText style={styles.detailLabel}>
+                Consent Obtained:
+              </ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {report.behalfConsent ? "Yes ✅" : "No ❌"}
+              </ThemedText>
             </View>
           </View>
         )}
@@ -177,18 +222,26 @@ export default function OfficerAssignmentDetailScreen() {
         {/* Reporter Info if not anonymous */}
         {!report.isAnonymous && (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Reporter Details</ThemedText>
+            <ThemedText style={styles.sectionTitle}>
+              Reporter Details
+            </ThemedText>
             <View style={styles.detailRow}>
               <ThemedText style={styles.detailLabel}>Name:</ThemedText>
-              <ThemedText style={styles.detailValue}>{report.reporterName || "N/A"}</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {report.reporterName || "N/A"}
+              </ThemedText>
             </View>
             {report.contactPhone && (
               <Pressable
                 style={styles.detailRow}
                 onPress={() => Linking.openURL(`tel:${report.contactPhone}`)}
               >
-                <ThemedText style={styles.detailLabel}>Phone (Tap to Call):</ThemedText>
-                <ThemedText style={[styles.detailValue, styles.linkText]}>{report.contactPhone}</ThemedText>
+                <ThemedText style={styles.detailLabel}>
+                  Phone (Tap to Call):
+                </ThemedText>
+                <ThemedText style={[styles.detailValue, styles.linkText]}>
+                  {report.contactPhone}
+                </ThemedText>
               </Pressable>
             )}
             {report.contactEmail && (
@@ -196,8 +249,12 @@ export default function OfficerAssignmentDetailScreen() {
                 style={styles.detailRow}
                 onPress={() => Linking.openURL(`mailto:${report.contactEmail}`)}
               >
-                <ThemedText style={styles.detailLabel}>Email (Tap to Write):</ThemedText>
-                <ThemedText style={[styles.detailValue, styles.linkText]}>{report.contactEmail}</ThemedText>
+                <ThemedText style={styles.detailLabel}>
+                  Email (Tap to Write):
+                </ThemedText>
+                <ThemedText style={[styles.detailValue, styles.linkText]}>
+                  {report.contactEmail}
+                </ThemedText>
               </Pressable>
             )}
           </View>
@@ -207,31 +264,42 @@ export default function OfficerAssignmentDetailScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Update Status</ThemedText>
           <View style={styles.statusButtons}>
-            {["Acknowledged", "On Route", "Resolved", "Failed"].map((status) => {
-              const active = selectedStatus === status;
-              return (
-                <Pressable
-                  key={status}
-                  style={[
-                    styles.statusBtn,
-                    active && styles.statusBtnActive,
-                    submittingStatus && styles.statusBtnDisabled,
-                  ]}
-                  onPress={() => !submittingStatus && handleUpdateStatus(status)}
-                  disabled={submittingStatus}
-                >
-                  <ThemedText style={[styles.statusBtnText, active && styles.statusBtnTextActive]}>
-                    {status}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
+            {["Acknowledged", "On Route", "Resolved", "Failed"].map(
+              (status) => {
+                const active = selectedStatus === status;
+                return (
+                  <Pressable
+                    key={status}
+                    style={[
+                      styles.statusBtn,
+                      active && styles.statusBtnActive,
+                      submittingStatus && styles.statusBtnDisabled,
+                    ]}
+                    onPress={() =>
+                      !submittingStatus && handleUpdateStatus(status)
+                    }
+                    disabled={submittingStatus}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.statusBtnText,
+                        active && styles.statusBtnTextActive,
+                      ]}
+                    >
+                      {status}
+                    </ThemedText>
+                  </Pressable>
+                );
+              },
+            )}
           </View>
         </View>
 
         {/* Notes log */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Officer Activity Notes</ThemedText>
+          <ThemedText style={styles.sectionTitle}>
+            Officer Activity Notes
+          </ThemedText>
           <View style={styles.noteInputContainer}>
             <TextInput
               style={styles.noteInput}
@@ -262,7 +330,9 @@ export default function OfficerAssignmentDetailScreen() {
             {notes.map((n) => (
               <View key={n.id} style={styles.noteCard}>
                 <View style={styles.noteHeader}>
-                  <ThemedText style={styles.noteAuthor}>{n.createdBy.toUpperCase()}</ThemedText>
+                  <ThemedText style={styles.noteAuthor}>
+                    {n.createdBy.toUpperCase()}
+                  </ThemedText>
                   <ThemedText style={styles.noteTime}>
                     {new Date(n.createdAt).toLocaleTimeString()}
                   </ThemedText>

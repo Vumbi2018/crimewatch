@@ -1,5 +1,10 @@
 import type { Express, NextFunction, Request, Response } from "express";
-import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  pbkdf2Sync,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { createServer, type Server } from "node:http";
 import multer from "multer";
 import * as path from "path";
@@ -8,7 +13,10 @@ import { storage } from "./storage";
 import { adminHtml } from "./admin-html";
 import { adminStore, distanceKm } from "./admin-store";
 
-const PRODUCTION_DOMAIN = process.env.PRODUCTION_DOMAIN || process.env.EXPO_PUBLIC_DOMAIN || "crimewatch.lamtoninvestments.com";
+const PRODUCTION_DOMAIN =
+  process.env.PRODUCTION_DOMAIN ||
+  process.env.EXPO_PUBLIC_DOMAIN ||
+  "crimewatch.lamtoninvestments.com";
 const ADMIN_COOKIE_NAME = "cpng_admin";
 const ADMIN_PASSWORD =
   process.env.ADMIN_PASSWORD || process.env.CPNG_ADMIN_PASSWORD || "admin123";
@@ -19,11 +27,20 @@ const PASSWORD_ITERATIONS = 210000;
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
-  const hash = pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256").toString("hex");
+  const hash = pbkdf2Sync(
+    password,
+    salt,
+    PASSWORD_ITERATIONS,
+    32,
+    "sha256",
+  ).toString("hex");
   return `pbkdf2:${PASSWORD_ITERATIONS}:${salt}:${hash}`;
 }
 
-function verifyPassword(password: string, stored: string | null | undefined): boolean {
+function verifyPassword(
+  password: string,
+  stored: string | null | undefined,
+): boolean {
   if (!stored) return false;
   if (!stored.startsWith("pbkdf2:")) {
     return stored === password;
@@ -40,16 +57,134 @@ function verifyPassword(password: string, stored: string | null | undefined): bo
 
 function defaultUserPassword(username: string): string {
   const envKey = `CRIMEWATCH_${username.toUpperCase()}_PASSWORD`;
-  return process.env[envKey] || (username === "admin" ? ADMIN_PASSWORD : `${username}123`);
+  return (
+    process.env[envKey] ||
+    (username === "admin" ? ADMIN_PASSWORD : `${username}123`)
+  );
 }
 
-function sanitizeAdminUser<T extends { passwordHash?: string | null }>(user: T): Omit<T, "passwordHash"> {
+function sanitizeAdminUser<T extends { passwordHash?: string | null }>(
+  user: T,
+): Omit<T, "passwordHash"> {
   const { passwordHash: _passwordHash, ...safeUser } = user;
   return safeUser;
 }
 
 const uploadsDir = path.resolve(process.cwd(), "uploads");
-const productionReportsCachePath = path.resolve(process.cwd(), "server", "cache", "production-reports.json");
+const productionReportsCachePath = path.resolve(
+  process.cwd(),
+  "server",
+  "cache",
+  "production-reports.json",
+);
+const PERMISSION_CATALOG = [
+  "reports.read",
+  "reports.create",
+  "reports.update_status",
+  "reports.delete",
+  "reports.assign",
+  "map.view",
+  "map.export",
+  "users.read",
+  "users.manage",
+  "stations.read",
+  "stations.manage",
+  "locations.manage",
+  "notifications.send",
+  "audit.read",
+  "settings.manage",
+] as const;
+
+const PERMISSION_PROFILES: Record<string, string[]> = {
+  super_admin: [...PERMISSION_CATALOG],
+  command_lead: [
+    "reports.read",
+    "reports.update_status",
+    "reports.assign",
+    "map.view",
+    "map.export",
+    "users.read",
+    "stations.read",
+    "notifications.send",
+    "audit.read",
+  ],
+  dispatcher: [
+    "reports.read",
+    "reports.create",
+    "reports.update_status",
+    "reports.assign",
+    "map.view",
+    "stations.read",
+    "notifications.send",
+  ],
+  field_officer: ["reports.read", "reports.update_status", "map.view"],
+  analyst: ["reports.read", "map.view", "map.export", "audit.read"],
+  viewer: ["reports.read", "map.view"],
+  custom: [],
+};
+
+function permissionsForProfile(
+  profile: string,
+  explicitPermissions?: unknown,
+): string[] {
+  if (Array.isArray(explicitPermissions)) {
+    return explicitPermissions
+      .map(String)
+      .filter((permission) => PERMISSION_CATALOG.includes(permission as any));
+  }
+  return PERMISSION_PROFILES[profile] || PERMISSION_PROFILES.viewer;
+}
+
+function normalizeAdminUserForResponse<
+  T extends {
+    role?: string | null;
+    permissionProfile?: string | null;
+    permissions?: string[] | null;
+  },
+>(user: T): T {
+  const roleProfile =
+    user.role === "admin"
+      ? "super_admin"
+      : user.role === "commander"
+        ? "command_lead"
+        : user.role === "dispatcher"
+          ? "dispatcher"
+          : user.role === "officer"
+            ? "field_officer"
+            : "viewer";
+  const permissionProfile = user.permissionProfile || roleProfile;
+  const permissions =
+    Array.isArray(user.permissions) && user.permissions.length
+      ? user.permissions
+      : permissionsForProfile(permissionProfile);
+  return { ...user, permissionProfile, permissions };
+}
+function buildAdminUserPayload(body: any, passwordHash?: string) {
+  const permissionProfile = String(
+    body.permissionProfile || body.permission_profile || "viewer",
+  );
+  const payload: any = {
+    name: String(body.name || "").trim(),
+    username: String(body.username || "").trim(),
+    role: String(body.role || "viewer"),
+    jobTitle: body.jobTitle || null,
+    department: body.department || null,
+    permissionProfile,
+    permissions: permissionsForProfile(permissionProfile, body.permissions),
+    commandId: body.commandId || null,
+    provinceId: body.provinceId || null,
+    districtId: body.districtId || null,
+    stationId: body.stationId || null,
+    phone: body.phone || null,
+    email: body.email || null,
+    isActive: body.isActive === undefined ? true : Boolean(body.isActive),
+    mfaRequired: Boolean(body.mfaRequired),
+    notes: body.notes || null,
+  };
+  if (passwordHash) payload.passwordHash = passwordHash;
+  return payload;
+}
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -58,8 +193,12 @@ const upload = multer({
   storage: multer.diskStorage({
     destination: uploadsDir,
     filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname) || getExtByMime(file.mimetype);
-      cb(null, `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`);
+      const ext =
+        path.extname(file.originalname) || getExtByMime(file.mimetype);
+      cb(
+        null,
+        `${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`,
+      );
     },
   }),
   limits: { fileSize: 200 * 1024 * 1024 },
@@ -72,8 +211,13 @@ function getExtByMime(mime: string): string {
   return ".bin";
 }
 
-function buildReferenceNumber(report: { id: string; submittedAt?: Date | string | null }): string {
-  const submittedAt = report.submittedAt ? new Date(report.submittedAt) : new Date();
+function buildReferenceNumber(report: {
+  id: string;
+  submittedAt?: Date | string | null;
+}): string {
+  const submittedAt = report.submittedAt
+    ? new Date(report.submittedAt)
+    : new Date();
   const year = Number.isNaN(submittedAt.getTime())
     ? new Date().getUTCFullYear()
     : submittedAt.getUTCFullYear();
@@ -81,7 +225,14 @@ function buildReferenceNumber(report: { id: string; submittedAt?: Date | string 
   return `CPNG-${year}-${shortId}`;
 }
 
-function withReferenceNumber<T extends { id: string; submittedAt?: Date | string | null; fileUrl?: string | null; tags?: unknown }>(report: T) {
+function withReferenceNumber<
+  T extends {
+    id: string;
+    submittedAt?: Date | string | null;
+    fileUrl?: string | null;
+    tags?: unknown;
+  },
+>(report: T) {
   const fileUrl = report.fileUrl?.startsWith("/uploads/")
     ? `https://${PRODUCTION_DOMAIN}${report.fileUrl}`
     : report.fileUrl;
@@ -99,13 +250,17 @@ function withReferenceNumber<T extends { id: string; submittedAt?: Date | string
   };
 }
 
-
 async function findNearestDbPoliceStation(latitude: number, longitude: number) {
   try {
     const stations = await storage.listPoliceStations({ activeOnly: true });
     const nearest = stations
       .map((station) => {
-        const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+        const distance = distanceKm(
+          latitude,
+          longitude,
+          station.latitude,
+          station.longitude,
+        );
         return {
           ...station,
           province: "",
@@ -131,7 +286,11 @@ function isProductionServer(req?: Request): boolean {
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) return true;
   if (req) {
     const host = req.get("host");
-    if (host && (host.includes(PRODUCTION_DOMAIN) || host.includes("lamtoninvestments.com"))) {
+    if (
+      host &&
+      (host.includes(PRODUCTION_DOMAIN) ||
+        host.includes("lamtoninvestments.com"))
+    ) {
       return true;
     }
   }
@@ -155,12 +314,20 @@ async function fetchProductionReports() {
     }>;
 
     fs.mkdirSync(path.dirname(productionReportsCachePath), { recursive: true });
-    fs.writeFileSync(productionReportsCachePath, JSON.stringify(reports, null, 2));
+    fs.writeFileSync(
+      productionReportsCachePath,
+      JSON.stringify(reports, null, 2),
+    );
     return reports;
   } catch (error) {
     if (fs.existsSync(productionReportsCachePath)) {
-      console.warn("Using cached production reports because live fetch failed:", error);
-      return JSON.parse(fs.readFileSync(productionReportsCachePath, "utf-8")) as Array<{
+      console.warn(
+        "Using cached production reports because live fetch failed:",
+        error,
+      );
+      return JSON.parse(
+        fs.readFileSync(productionReportsCachePath, "utf-8"),
+      ) as Array<{
         id: string;
         submittedAt?: string | null;
         fileUrl?: string | null;
@@ -173,11 +340,14 @@ async function fetchProductionReports() {
 }
 
 async function patchProductionReportStatus(id: string, status: string) {
-  const response = await fetch(`https://${PRODUCTION_DOMAIN}/api/reports/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
+  const response = await fetch(
+    `https://${PRODUCTION_DOMAIN}/api/reports/${id}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Production status update failed: ${response.status}`);
@@ -223,15 +393,15 @@ function requireAdminWrite(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ message: "Admin login required" });
   }
   if (session.role !== "admin") {
-    return res.status(403).json({ message: "Access denied. Admin role required." });
+    return res
+      .status(403)
+      .json({ message: "Access denied. Admin role required." });
   }
   next();
 }
 
 function adminLoginHtml(errorMessage = ""): string {
-  const error = errorMessage
-    ? `<p class="error">${errorMessage}</p>`
-    : "";
+  const error = errorMessage ? `<p class="error">${errorMessage}</p>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -323,7 +493,11 @@ async function forwardToProduction(reportData: any) {
   }
 }
 
-async function forwardFileToProduction(filePath: string, mimeType: string, originalName: string): Promise<string | null> {
+async function forwardFileToProduction(
+  filePath: string,
+  mimeType: string,
+  originalName: string,
+): Promise<string | null> {
   try {
     const fileBuffer = fs.readFileSync(filePath);
     const blob = new Blob([fileBuffer], { type: mimeType });
@@ -331,13 +505,16 @@ async function forwardFileToProduction(filePath: string, mimeType: string, origi
     const formData = new FormData();
     formData.append("file", blob, originalName);
 
-    const prodResponse = await fetch(`https://${PRODUCTION_DOMAIN}/api/upload`, {
-      method: "POST",
-      body: formData,
-    });
+    const prodResponse = await fetch(
+      `https://${PRODUCTION_DOMAIN}/api/upload`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
 
     if (prodResponse.ok) {
-      const data = await prodResponse.json() as { fileUrl: string };
+      const data = (await prodResponse.json()) as { fileUrl: string };
       return data.fileUrl;
     }
     console.error("Failed to forward file to production:", prodResponse.status);
@@ -413,7 +590,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (username) {
       const user = await storage.getAdminUserByUsername(username);
-      if (user && user.isActive && verifyPassword(password, user.passwordHash)) {
+      if (
+        user &&
+        user.isActive &&
+        verifyPassword(password, user.passwordHash)
+      ) {
         res.setHeader(
           "Set-Cookie",
           `${ADMIN_COOKIE_NAME}=${encodeURIComponent(signSession(user.username, user.role))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
@@ -431,7 +612,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(401).send(adminLoginHtml("Incorrect credentials. Please try again."));
+    return res
+      .status(401)
+      .send(adminLoginHtml("Incorrect credentials. Please try again."));
   });
 
   app.post("/api/admin/logout", (_req, res) => {
@@ -442,12 +625,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect("/admin");
   });
 
-
   app.get("/uploads/:filename", (req, res) => {
     if (isProductionServer(req)) {
       return res.status(404).send("File not found on production server");
     }
-    res.redirect(302, `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`);
+    res.redirect(
+      302,
+      `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`,
+    );
   });
   app.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
@@ -460,9 +645,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const prodFileUrl = await forwardFileToProduction(
         req.file.path,
         req.file.mimetype,
-        req.file.originalname || `upload${path.extname(req.file.path)}`
+        req.file.originalname || `upload${path.extname(req.file.path)}`,
       );
-      try { fs.unlinkSync(req.file.path); } catch {}
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {}
       if (prodFileUrl) {
         return res.json({ fileUrl: prodFileUrl });
       }
@@ -474,11 +661,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reports", async (req, res) => {
     try {
-      const latitude = req.body?.latitude !== null && req.body?.latitude !== undefined ? Number(req.body.latitude) : NaN;
-      const longitude = req.body?.longitude !== null && req.body?.longitude !== undefined ? Number(req.body.longitude) : NaN;
-      const nearestStation = Number.isFinite(latitude) && Number.isFinite(longitude)
-        ? await findNearestDbPoliceStation(latitude, longitude)
-        : null;
+      const latitude =
+        req.body?.latitude !== null && req.body?.latitude !== undefined
+          ? Number(req.body.latitude)
+          : NaN;
+      const longitude =
+        req.body?.longitude !== null && req.body?.longitude !== undefined
+          ? Number(req.body.longitude)
+          : NaN;
+      const nearestStation =
+        Number.isFinite(latitude) && Number.isFinite(longitude)
+          ? await findNearestDbPoliceStation(latitude, longitude)
+          : null;
       const reportData = {
         ...req.body,
         agency: nearestStation?.name || req.body.agency,
@@ -491,7 +685,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const officers = await storage.listOfficerProfiles();
           for (const officer of officers) {
             if (officer.isActive) {
-              const dist = distanceKm(latitude, longitude, officer.latitude, officer.longitude);
+              const dist = distanceKm(
+                latitude,
+                longitude,
+                officer.latitude,
+                officer.longitude,
+              );
               if (dist <= officer.radiusKm) {
                 await storage.createReportAssignment({
                   reportId: report.id,
@@ -501,7 +700,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   matchedAreaName: officer.responsibilityAreaName,
                   status: "Sent to Officer",
                 });
-                console.log(`Automatically assigned report ${report.id} to officer ${officer.userId}`);
+                console.log(
+                  `Automatically assigned report ${report.id} to officer ${officer.userId}`,
+                );
               }
             }
           }
@@ -522,9 +723,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stationId: nearestStation.id,
             reportId: report.id,
             title: "Immediate crime report dispatch",
-            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+            message:
+              "New " +
+              report.priority +
+              " priority " +
+              report.evidenceType +
+              " report near " +
+              nearestStation.name +
+              " (" +
+              nearestStation.distanceKm +
+              " km). Reference: " +
+              buildReferenceNumber(report),
             channel: "console",
-            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name,
+            recipient:
+              nearestStation.commandEmail ||
+              nearestStation.commandPhone ||
+              nearestStation.name,
             status: "sent",
           });
         } catch (notificationError) {
@@ -532,9 +746,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stationId: nearestStation.id,
             reportId: report.id,
             title: "Immediate crime report dispatch",
-            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+            message:
+              "New " +
+              report.priority +
+              " priority " +
+              report.evidenceType +
+              " report near " +
+              nearestStation.name +
+              " (" +
+              nearestStation.distanceKm +
+              " km). Reference: " +
+              buildReferenceNumber(report),
             channel: "console",
-            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name,
+            recipient:
+              nearestStation.commandEmail ||
+              nearestStation.commandPhone ||
+              nearestStation.name,
           });
         }
       }
@@ -561,7 +788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const latitude = Number(req.query.latitude);
     const longitude = Number(req.query.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return res.status(400).json({ message: "Valid latitude and longitude are required" });
+      return res
+        .status(400)
+        .json({ message: "Valid latitude and longitude are required" });
     }
     res.json(await findNearestDbPoliceStation(latitude, longitude));
   });
@@ -571,52 +800,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(await storage.listPoliceCommands());
   });
 
-  app.post("/api/admin/location/commands", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createPoliceCommand(req.body));
-  });
+  app.post(
+    "/api/admin/location/commands",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createPoliceCommand(req.body));
+    },
+  );
 
   app.get("/api/admin/location/provinces", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listProvinces(req.query.commandId as string | undefined));
+    res.json(
+      await storage.listProvinces(req.query.commandId as string | undefined),
+    );
   });
 
-  app.post("/api/admin/location/provinces", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createProvince(req.body));
-  });
+  app.post(
+    "/api/admin/location/provinces",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createProvince(req.body));
+    },
+  );
 
   app.get("/api/admin/location/districts", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listDistricts(req.query.provinceId as string | undefined));
+    res.json(
+      await storage.listDistricts(req.query.provinceId as string | undefined),
+    );
   });
 
-  app.post("/api/admin/location/districts", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createDistrict(req.body));
-  });
+  app.post(
+    "/api/admin/location/districts",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createDistrict(req.body));
+    },
+  );
 
   app.get("/api/admin/users", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     const users = await storage.listAdminUsers();
-    res.json(users.map(sanitizeAdminUser));
+    res.json(
+      users.map(function (user) {
+        return sanitizeAdminUser(normalizeAdminUserForResponse(user));
+      }),
+    );
   });
 
   app.post("/api/admin/users", requireAdminWrite, async (req, res) => {
-    const password = String(req.body?.password || req.body?.passwordHash || defaultUserPassword(String(req.body?.username || 'user')));
-    const created = await storage.createAdminUser({ ...req.body, passwordHash: hashPassword(password) });
-    res.status(201).json(sanitizeAdminUser(created));
+    const password = String(
+      req.body?.password ||
+        defaultUserPassword(String(req.body?.username || "user")),
+    );
+    const payload = buildAdminUserPayload(req.body, hashPassword(password));
+    if (!payload.name || !payload.username) {
+      return res
+        .status(400)
+        .json({ message: "Name and username are required." });
+    }
+    const created = await storage.createAdminUser(payload);
+    res
+      .status(201)
+      .json(sanitizeAdminUser(normalizeAdminUserForResponse(created)));
+  });
+
+  app.patch("/api/admin/users/:id", requireAdminWrite, async (req, res) => {
+    const password = String(req.body?.password || "").trim();
+    const payload = buildAdminUserPayload(
+      req.body,
+      password ? hashPassword(password) : undefined,
+    );
+    delete payload.username;
+    const updated = await storage.updateAdminUser(req.params.id, payload);
+    if (!updated) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    res.json(sanitizeAdminUser(normalizeAdminUserForResponse(updated)));
   });
 
   app.get("/api/admin/police-stations", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json(await storage.listPoliceStations({
-      commandId: req.query.commandId as string | undefined,
-      provinceId: req.query.provinceId as string | undefined,
-      districtId: req.query.districtId as string | undefined,
-    }));
+    res.json(
+      await storage.listPoliceStations({
+        commandId: req.query.commandId as string | undefined,
+        provinceId: req.query.provinceId as string | undefined,
+        districtId: req.query.districtId as string | undefined,
+      }),
+    );
   });
 
-  app.post("/api/admin/police-stations", requireAdminWrite, async (req, res) => {
-    res.status(201).json(await storage.createPoliceStation(req.body));
-  });
+  app.post(
+    "/api/admin/police-stations",
+    requireAdminWrite,
+    async (req, res) => {
+      res.status(201).json(await storage.createPoliceStation(req.body));
+    },
+  );
 
   app.get("/api/admin/deleted-reports", requireAdmin, async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
@@ -663,7 +943,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!isProductionServer()) {
         const productionReports = await fetchProductionReports();
-        const productionReport = productionReports.find((item) => item.id === req.params.id);
+        const productionReport = productionReports.find(
+          (item) => item.id === req.params.id,
+        );
         if (productionReport) {
           return res.json(withReferenceNumber(productionReport));
         }
@@ -678,7 +960,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
     try {
-      const list = await storage.listReportAssignments({ reportId: req.params.id });
+      const list = await storage.listReportAssignments({
+        reportId: req.params.id,
+      });
       const detailed = [];
       const usersList = await storage.listAdminUsers();
       for (const assignment of list) {
@@ -695,34 +979,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/reports/:id/assign", requireAdminWrite, async (req, res) => {
-    const { id } = req.params;
-    const { officerUserId } = req.body;
-    try {
-      const assignment = await storage.createReportAssignment({
-        reportId: id,
-        officerUserId,
-        assignmentType: "manual",
-        assignmentReason: "Assigned manually by dispatcher.",
-        status: "Sent to Officer",
-      });
-      res.status(201).json(assignment);
-    } catch (error) {
-      console.error("Error manual assigning:", error);
-      res.status(500).json({ message: "Failed to assign officer." });
-    }
-  });
+  app.post(
+    "/api/admin/reports/:id/assign",
+    requireAdminWrite,
+    async (req, res) => {
+      const { id } = req.params;
+      const { officerUserId } = req.body;
+      try {
+        const assignment = await storage.createReportAssignment({
+          reportId: id,
+          officerUserId,
+          assignmentType: "manual",
+          assignmentReason: "Assigned manually by dispatcher.",
+          status: "Sent to Officer",
+        });
+        res.status(201).json(assignment);
+      } catch (error) {
+        console.error("Error manual assigning:", error);
+        res.status(500).json({ message: "Failed to assign officer." });
+      }
+    },
+  );
 
   app.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
       const reason = String(req.body?.reason || "").trim();
       if (reason.length < 8) {
-        return res.status(400).json({ message: "Deletion reason must be at least 8 characters." });
+        return res
+          .status(400)
+          .json({ message: "Deletion reason must be at least 8 characters." });
       }
 
       const report = await storage.getEvidenceReportById(req.params.id);
       if (!report) {
-        return res.status(404).json({ message: "Report not found or cannot be deleted from this environment." });
+        return res.status(404).json({
+          message:
+            "Report not found or cannot be deleted from this environment.",
+        });
       }
 
       const audit = await storage.deleteEvidenceReportWithAudit(req.params.id, {
@@ -760,12 +1053,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const password = String(req.body?.password || "").trim();
 
     const user = await storage.getAdminUserByUsername(username);
-    if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ success: false, message: "Invalid credentials." });
+    if (
+      !user ||
+      !user.isActive ||
+      !verifyPassword(password, user.passwordHash)
+    ) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials." });
     }
 
     if (user.role !== "officer" && user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "User is not a police officer." });
+      return res
+        .status(403)
+        .json({ success: false, message: "User is not a police officer." });
     }
 
     const profile = await storage.getOfficerProfileByUserId(user.id);
@@ -777,11 +1078,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         role: user.role,
         rank: profile?.rank || "Officer",
-        responsibilityAreaName: profile?.responsibilityAreaName || "General Coverage Area",
+        responsibilityAreaName:
+          profile?.responsibilityAreaName || "General Coverage Area",
         latitude: profile?.latitude || -9.4438,
         longitude: profile?.longitude || 147.1803,
         radiusKm: profile?.radiusKm || 10,
-      }
+      },
     });
   });
 
@@ -820,11 +1122,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (assignment) {
         let reportStatus = "Pending";
         if (status === "Resolved") reportStatus = "Resolved";
-        else if (status === "Rejected" || status === "Failed") reportStatus = "Rejected";
+        else if (status === "Rejected" || status === "Failed")
+          reportStatus = "Rejected";
         else if (status === "Acknowledged") reportStatus = "Pending";
         else if (status === "On Route") reportStatus = "Pending";
 
-        await storage.updateEvidenceReportStatus(assignment.reportId, reportStatus);
+        await storage.updateEvidenceReportStatus(
+          assignment.reportId,
+          reportStatus,
+        );
       }
       res.json({ success: true, message: "Assignment status updated." });
     } catch (error) {

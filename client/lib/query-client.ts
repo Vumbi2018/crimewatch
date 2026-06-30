@@ -13,11 +13,40 @@ export function getApiUrl(): string {
     return new URL(host).href;
   }
 
-  const useHttp = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("10.0.2.2") || host.startsWith("169.254");
+  const useHttp =
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    host.includes("10.0.2.2") ||
+    host.startsWith("169.254");
   const protocol = useHttp ? "http" : "https";
   return new URL(`${protocol}://${host}`).href;
 }
 
+export function apiUrl(route: string): string {
+  return new URL(route, getApiUrl()).toString();
+}
+
+export async function readJsonResponse<T = any>(res: Response): Promise<T> {
+  const text = await res.text();
+  const contentType = res.headers.get("content-type") || "";
+
+  if (!text) {
+    return null as never;
+  }
+
+  if (!contentType.includes("application/json")) {
+    const preview = text.replace(/\s+/g, " ").slice(0, 140);
+    throw new Error(
+      `Server returned ${contentType || "non-JSON"} from ${res.url}. ${preview}`,
+    );
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Server returned invalid JSON from ${res.url}.`);
+  }
+}
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -30,8 +59,7 @@ export async function apiRequest(
   route: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const baseUrl = getApiUrl();
-  const url = new URL(route, baseUrl);
+  const url = apiUrl(route);
 
   const res = await fetch(url, {
     method,
@@ -50,19 +78,18 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const baseUrl = getApiUrl();
-    const url = new URL(queryKey.join("/") as string, baseUrl);
+    const url = apiUrl(queryKey.join("/") as string);
 
     const res = await fetch(url, {
       credentials: "include",
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      return null as never;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    return await readJsonResponse(res);
   };
 
 export const queryClient = new QueryClient({

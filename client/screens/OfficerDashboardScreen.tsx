@@ -11,8 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { getApiUrl } from "@/lib/query-client";
+import { Spacing, BorderRadius } from "@/constants/theme";
+import { apiUrl, readJsonResponse } from "@/lib/query-client";
 import { getOfficerProfile, clearOfficerProfile } from "@/lib/storage";
 
 type OfficerDashboardNavigationProp = NativeStackNavigationProp<any>;
@@ -39,7 +39,11 @@ interface Assignment {
   };
 }
 
-export default function OfficerDashboardScreen({ onLogout }: { onLogout: () => void }) {
+export default function OfficerDashboardScreen({
+  onLogout,
+}: {
+  onLogout: () => void;
+}) {
   const navigation = useNavigation<OfficerDashboardNavigationProp>();
   const [profile, setProfile] = useState<any | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -57,12 +61,14 @@ export default function OfficerDashboardScreen({ onLogout }: { onLogout: () => v
       setProfile(stored);
 
       const response = await fetch(
-        `${getApiUrl()}/api/officer/assignments?officerUserId=${stored.userId}`,
+        apiUrl(
+          `/api/officer/assignments?officerUserId=${encodeURIComponent(stored.userId)}`,
+        ),
       );
       if (!response.ok) {
         throw new Error("Failed to fetch assignments");
       }
-      const data = await response.json();
+      const data = await readJsonResponse<Assignment[]>(response);
       setAssignments(data);
     } catch (error) {
       console.error("Dashboard data fetch error:", error);
@@ -79,7 +85,7 @@ export default function OfficerDashboardScreen({ onLogout }: { onLogout: () => v
   useFocusEffect(
     useCallback(() => {
       fetchProfileAndAssignments(false);
-    }, [])
+    }, []),
   );
 
   const handleRefresh = () => {
@@ -98,8 +104,15 @@ export default function OfficerDashboardScreen({ onLogout }: { onLogout: () => v
     const color = isHigh ? "#EF4444" : isLow ? "#10B981" : "#FBBF24";
 
     return (
-      <View style={[styles.badge, { backgroundColor: color + "20", borderColor: color }]}>
-        <ThemedText style={[styles.badgeText, { color }]}>{priority}</ThemedText>
+      <View
+        style={[
+          styles.badge,
+          { backgroundColor: color + "20", borderColor: color },
+        ]}
+      >
+        <ThemedText style={[styles.badgeText, { color }]}>
+          {priority}
+        </ThemedText>
       </View>
     );
   };
@@ -142,30 +155,44 @@ export default function OfficerDashboardScreen({ onLogout }: { onLogout: () => v
       </View>
 
       <View style={styles.sectionHeader}>
-        <ThemedText style={styles.sectionTitle}>Assigned Incident Reports</ThemedText>
-        <ThemedText style={styles.countText}>{assignments.length} Total</ThemedText>
+        <ThemedText style={styles.sectionTitle}>
+          Assigned Incident Reports
+        </ThemedText>
+        <ThemedText style={styles.countText}>
+          {assignments.length} Total
+        </ThemedText>
       </View>
 
       <FlatList
         data={assignments}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#3B82F6" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#3B82F6"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>No reports assigned to you.</ThemedText>
+            <ThemedText style={styles.emptyText}>
+              No reports assigned to you.
+            </ThemedText>
           </View>
         }
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
             onPress={() =>
-              navigation.navigate("OfficerAssignmentDetail", { assignmentId: item.id })
+              navigation.navigate("OfficerAssignmentDetail", {
+                assignmentId: item.id,
+              })
             }
           >
             <View style={styles.cardHeader}>
-              <ThemedText style={styles.refNumber}>{item.report.referenceNumber}</ThemedText>
+              <ThemedText style={styles.refNumber}>
+                {item.report.referenceNumber}
+              </ThemedText>
               {renderPriorityBadge(item.report.priority)}
             </View>
 

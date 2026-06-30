@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, real } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  integer,
+  timestamp,
+  jsonb,
+  boolean,
+  real,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -37,7 +46,9 @@ export const evidenceReports = pgTable("evidence_reports", {
   behalfRelationship: text("behalf_relationship"),
   behalfConsent: boolean("behalf_consent").notNull().default(false),
   behalfSource: text("behalf_source"),
-  attachments: jsonb("attachments").$type<{ fileUrl: string; fileType: string }[]>().default([]),
+  attachments: jsonb("attachments")
+    .$type<{ fileUrl: string; fileType: string }[]>()
+    .default([]),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
@@ -109,6 +120,10 @@ export const adminUsers = pgTable("admin_users", {
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash"),
   role: text("role").notNull().default("viewer"),
+  jobTitle: text("job_title"),
+  department: text("department"),
+  permissionProfile: text("permission_profile").notNull().default("viewer"),
+  permissions: jsonb("permissions").$type<string[]>().default([]),
   commandId: varchar("command_id"),
   provinceId: varchar("province_id"),
   districtId: varchar("district_id"),
@@ -116,7 +131,11 @@ export const adminUsers = pgTable("admin_users", {
   phone: text("phone"),
   email: text("email"),
   isActive: boolean("is_active").notNull().default(true),
+  mfaRequired: boolean("mfa_required").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const notificationLogs = pgTable("notification_logs", {
@@ -143,7 +162,9 @@ export const reportDispatches = pgTable("report_dispatches", {
   reportId: varchar("report_id").notNull(),
   stationId: varchar("station_id").notNull(),
   distanceKm: real("distance_km"),
-  withinResponseRadius: boolean("within_response_radius").notNull().default(false),
+  withinResponseRadius: boolean("within_response_radius")
+    .notNull()
+    .default(false),
   status: text("status").notNull().default("notified"),
   notifiedAt: timestamp("notified_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -157,7 +178,9 @@ export const deletedReportAudits = pgTable("deleted_report_audits", {
   referenceNumber: text("reference_number"),
   reason: text("reason").notNull(),
   deletedBy: text("deleted_by").notNull().default("admin"),
-  reportSnapshot: jsonb("report_snapshot").$type<Record<string, unknown>>().notNull(),
+  reportSnapshot: jsonb("report_snapshot")
+    .$type<Record<string, unknown>>()
+    .notNull(),
   deletedAt: timestamp("deleted_at").defaultNow().notNull(),
 });
 
@@ -210,22 +233,50 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
-export const insertEvidenceReportSchema = createInsertSchema(evidenceReports).omit({
+export const insertEvidenceReportSchema = createInsertSchema(
+  evidenceReports,
+).omit({
   id: true,
   submittedAt: true,
 });
 
-export const insertPoliceCommandSchema = createInsertSchema(policeCommands).omit({ id: true, createdAt: true });
-export const insertProvinceSchema = createInsertSchema(provinces).omit({ id: true, createdAt: true });
-export const insertDistrictSchema = createInsertSchema(districts).omit({ id: true, createdAt: true });
-export const insertPoliceStationSchema = createInsertSchema(policeStations).omit({ id: true, createdAt: true });
-export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({ id: true, createdAt: true });
-export const insertNotificationLogSchema = createInsertSchema(notificationLogs).omit({ id: true, createdAt: true });
-export const insertReportDispatchSchema = createInsertSchema(reportDispatches).omit({ id: true, createdAt: true });
-export const insertDeletedReportAuditSchema = createInsertSchema(deletedReportAudits).omit({ id: true, deletedAt: true });
-export const insertOfficerProfileSchema = createInsertSchema(officerProfiles).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertReportAssignmentSchema = createInsertSchema(reportAssignments).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertReportNoteSchema = createInsertSchema(reportNotes).omit({ id: true, createdAt: true });
+export const insertPoliceCommandSchema = createInsertSchema(
+  policeCommands,
+).omit({ id: true, createdAt: true });
+export const insertProvinceSchema = createInsertSchema(provinces).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertDistrictSchema = createInsertSchema(districts).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertPoliceStationSchema = createInsertSchema(
+  policeStations,
+).omit({ id: true, createdAt: true });
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertNotificationLogSchema = createInsertSchema(
+  notificationLogs,
+).omit({ id: true, createdAt: true });
+export const insertReportDispatchSchema = createInsertSchema(
+  reportDispatches,
+).omit({ id: true, createdAt: true });
+export const insertDeletedReportAuditSchema = createInsertSchema(
+  deletedReportAudits,
+).omit({ id: true, deletedAt: true });
+export const insertOfficerProfileSchema = createInsertSchema(
+  officerProfiles,
+).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReportAssignmentSchema = createInsertSchema(
+  reportAssignments,
+).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReportNoteSchema = createInsertSchema(reportNotes).omit({
+  id: true,
+  createdAt: true,
+});
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -249,7 +300,11 @@ export type InsertPoliceStation = z.infer<typeof insertPoliceStationSchema>;
 export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 export type InsertNotificationLog = z.infer<typeof insertNotificationLogSchema>;
 export type InsertReportDispatch = z.infer<typeof insertReportDispatchSchema>;
-export type InsertDeletedReportAudit = z.infer<typeof insertDeletedReportAuditSchema>;
+export type InsertDeletedReportAudit = z.infer<
+  typeof insertDeletedReportAuditSchema
+>;
 export type InsertOfficerProfile = z.infer<typeof insertOfficerProfileSchema>;
-export type InsertReportAssignment = z.infer<typeof insertReportAssignmentSchema>;
+export type InsertReportAssignment = z.infer<
+  typeof insertReportAssignmentSchema
+>;
 export type InsertReportNote = z.infer<typeof insertReportNoteSchema>;
