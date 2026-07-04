@@ -2048,6 +2048,31 @@ var adminHtml = `<!DOCTYPE html>
       }).join('');
     }
 
+    function refreshStationCascade() {
+      const cmdEl = document.getElementById('stationCommand');
+      const provEl = document.getElementById('stationProvince');
+      const distEl = document.getElementById('stationDistrict');
+      if (!cmdEl || !provEl || !distEl) return;
+
+      const selectedCmd = cmdEl.value;
+      const filteredProvinces = provinces.filter(function(p) { return !selectedCmd || p.commandId === selectedCmd; });
+      
+      const prevProvVal = provEl.value;
+      provEl.innerHTML = optionList(filteredProvinces, 'Select province', prevProvVal);
+      if (provEl.value !== prevProvVal) {
+        provEl.value = '';
+      }
+      
+      const selectedProv = provEl.value;
+      const filteredDistricts = districts.filter(function(d) { return !selectedProv || d.provinceId === selectedProv; });
+      
+      const prevDistVal = distEl.value;
+      distEl.innerHTML = optionList(filteredDistricts, 'Select district', prevDistVal);
+      if (distEl.value !== prevDistVal) {
+        distEl.value = '';
+      }
+    }
+
     function renderAdminManagement() {
       const userStation = document.getElementById('adminUserStation');
       const notificationStation = document.getElementById('notificationStation');
@@ -2061,7 +2086,15 @@ var adminHtml = `<!DOCTYPE html>
       if (provinceCommand) provinceCommand.innerHTML = optionList(policeCommands, 'Select command for province', provinceCommand.value);
       if (districtProvince) districtProvince.innerHTML = optionList(provinces, 'Select province for district', districtProvince.value);
       if (stationCommand) stationCommand.innerHTML = optionList(policeCommands, 'Select command / region', stationCommand.value);
+      
       refreshStationCascade();
+      if (stationCommand) {
+        stationCommand.onchange = refreshStationCascade;
+      }
+      const stationProvince = document.getElementById('stationProvince');
+      if (stationProvince) {
+        stationProvince.onchange = refreshStationCascade;
+      }
 
       renderPermissionMatrix();
       renderUserDirectory();
@@ -2089,7 +2122,7 @@ var adminHtml = `<!DOCTYPE html>
       const profileEl = document.getElementById('adminPermissionProfile');
       const active = selected || PERMISSION_PROFILES[profileEl ? profileEl.value : 'viewer'] || [];
       matrix.innerHTML = PERMISSION_CATALOG.map(function(item) {
-        return '<label class="permission-item"><input class="permission-checkbox" type="checkbox" value="' + item[0] + '" ' + (active.includes(item[0]) ? 'checked' : '') + ' onchange="document.getElementById('adminPermissionProfile').value='custom'"><span><strong>' + item[1] + '</strong>' + item[2] + '</span></label>';
+        return '<label class="permission-item"><input class="permission-checkbox" type="checkbox" value="' + item[0] + '" ' + (active.includes(item[0]) ? 'checked' : '') + ' onchange="document.getElementById(\\'adminPermissionProfile\\').value=\\'custom\\'"><span><strong>' + item[1] + '</strong>' + item[2] + '</span></label>';
       }).join('');
     }
 
@@ -2113,7 +2146,7 @@ var adminHtml = `<!DOCTYPE html>
       renderUserMetrics(filtered);
       list.innerHTML = filtered.length ? filtered.map(function(user) {
         const permissions = user.permissions || [];
-        return '<article class="user-card"><div class="user-card-head"><div><strong>' + (user.name || '-') + '</strong><span>@' + (user.username || '-') + ' | ' + (user.jobTitle || user.role || '-') + '</span></div><span class="user-badge ' + (user.isActive ? 'active' : 'inactive') + '">' + (user.isActive ? 'Active' : 'Inactive') + '</span></div>' + '<div class="user-card-grid"><div><strong>Role</strong><br>' + (user.role || '-') + '</div><div><strong>Station</strong><br>' + userStationName(user) + '</div><div><strong>Contact</strong><br>' + (user.phone || '-') + '<br>' + (user.email || '-') + '</div><div><strong>Department</strong><br>' + (user.department || '-') + '</div><div><strong>Profile</strong><br>' + (user.permissionProfile || 'viewer') + '</div><div><strong>MFA</strong><br>' + (user.mfaRequired ? 'Required' : 'Not required') + '</div></div>' + '<div class="user-permissions">' + (permissions.length ? permissions.slice(0, 8).map(function(permission) { return '<span class="permission-chip">' + permission + '</span>'; }).join('') : '<span class="permission-chip">No permissions</span>') + (permissions.length > 8 ? '<span class="permission-chip">+' + (permissions.length - 8) + '</span>' : '') + '</div>' + '<div class="user-card-actions"><button class="mini-btn primary" onclick="editAdminUser('' + user.id + '')">Edit</button><button class="mini-btn" onclick="toggleAdminUser('' + user.id + '')">' + (user.isActive ? 'Disable' : 'Activate') + '</button><button class="mini-btn" onclick="preparePasswordReset('' + user.id + '')">Reset password</button></div></article>';
+        return '<article class="user-card"><div class="user-card-head"><div><strong>' + (user.name || '-') + '</strong><span>@' + (user.username || '-') + ' | ' + (user.jobTitle || user.role || '-') + '</span></div><span class="user-badge ' + (user.isActive ? 'active' : 'inactive') + '">' + (user.isActive ? 'Active' : 'Inactive') + '</span></div>' + '<div class="user-card-grid"><div><strong>Role</strong><br>' + (user.role || '-') + '</div><div><strong>Station</strong><br>' + userStationName(user) + '</div><div><strong>Contact</strong><br>' + (user.phone || '-') + '<br>' + (user.email || '-') + '</div><div><strong>Department</strong><br>' + (user.department || '-') + '</div><div><strong>Profile</strong><br>' + (user.permissionProfile || 'viewer') + '</div><div><strong>MFA</strong><br>' + (user.mfaRequired ? 'Required' : 'Not required') + '</div></div>' + '<div class="user-permissions">' + (permissions.length ? permissions.slice(0, 8).map(function(permission) { return '<span class="permission-chip">' + permission + '</span>'; }).join('') : '<span class="permission-chip">No permissions</span>') + (permissions.length > 8 ? '<span class="permission-chip">+' + (permissions.length - 8) + '</span>' : '') + '</div>' + '<div class="user-card-actions"><button class="mini-btn primary" onclick="editAdminUser(\\'' + user.id + '\\')">Edit</button><button class="mini-btn" onclick="toggleAdminUser(\\'' + user.id + '\\')">' + (user.isActive ? 'Disable' : 'Activate') + '</button><button class="mini-btn" onclick="preparePasswordReset(\\'' + user.id + '\\')">Reset password</button></div></article>';
       }).join('') : '<div class="admin-list-item">No users match this filter.</div>';
     }
 
