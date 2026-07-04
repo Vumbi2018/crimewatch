@@ -1279,6 +1279,9 @@ export const adminHtml = `<!DOCTYPE html>
       if (moduleName === 'dashboard' && !document.getElementById('reportsTab')?.classList.contains('active')) {
         showWorkspaceTab('dashboard');
       }
+      if (moduleName === 'users' || moduleName === 'stations' || moduleName === 'notifications') {
+        loadAdminManagement();
+      }
     }
     let allReports = [];
     let currentFilter = 'all';
@@ -1538,6 +1541,12 @@ export const adminHtml = `<!DOCTYPE html>
       }).join('');
     }
 
+    function optionList(items, placeholder, selectedValue) {
+      return '<option value="">' + (placeholder || 'Select...') + '</option>' + (items || []).map(function(item) {
+        return '<option value="' + item.id + '"' + (selectedValue === item.id ? ' selected' : '') + '>' + item.name + '</option>';
+      }).join('');
+    }
+
     function renderAdminManagement() {
       const userStation = document.getElementById('adminUserStation');
       const notificationStation = document.getElementById('notificationStation');
@@ -1630,7 +1639,12 @@ export const adminHtml = `<!DOCTYPE html>
       if (!payload.name || !payload.username) { alert('Full name and username are required.'); return; }
       if (editingAdminUserId && !payload.password) delete payload.password;
       const res = await fetch(editingAdminUserId ? '/api/admin/users/' + editingAdminUserId : '/api/admin/users', { method: editingAdminUserId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) { alert('User could not be saved.'); return; }
+      if (!res.ok) {
+        let errMsg = 'User could not be saved.';
+        try { const errData = await res.json(); errMsg = errData.message || errMsg; } catch (e) {}
+        alert(errMsg);
+        return;
+      }
       resetAdminUserForm(); await loadAdminManagement();
     }
     async function savePoliceStation() {

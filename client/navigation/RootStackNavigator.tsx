@@ -40,7 +40,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
   const screenOptions = useScreenOptions();
-  const appMode = ExpoConstants.expoConfig?.extra?.appMode || "citizen";
+  const appMode =
+    process.env.EXPO_PUBLIC_APP_MODE ||
+    ExpoConstants.expoConfig?.extra?.appMode ||
+    "citizen";
 
   const [loading, setLoading] = useState(appMode === "officer");
   const [isOfficerLoggedIn, setIsOfficerLoggedIn] = useState(false);
@@ -58,7 +61,14 @@ export default function RootStackNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0F172A", justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#0F172A",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
@@ -78,7 +88,10 @@ export default function RootStackNavigator() {
           </Stack.Screen>
         ) : (
           <>
-            <Stack.Screen name="OfficerDashboard" options={{ headerShown: false }}>
+            <Stack.Screen
+              name="OfficerDashboard"
+              options={{ headerShown: false }}
+            >
               {(props) => (
                 <OfficerDashboardScreen
                   {...props}
