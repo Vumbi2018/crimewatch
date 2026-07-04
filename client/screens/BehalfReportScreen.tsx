@@ -228,11 +228,11 @@ export default function BehalfReportScreen() {
       setSubmitProgress("Submitting report to police...");
 
       const payload = {
-        isBehalfReport: 1,
+        isBehalfReport: true,
         behalfName: victimName,
         behalfContact: victimPhone || null,
         behalfRelationship: relationship,
-        behalfConsent: 1,
+        behalfConsent: true,
         behalfSource: "citizen",
         evidenceType: attachment ? (attachment.type.startsWith("image") ? "photo" : attachment.type.startsWith("video") ? "video" : "document") : "witness_statement",
         fileUrl,

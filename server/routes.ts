@@ -675,6 +675,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : null;
       const reportData = {
         ...req.body,
+        isBehalfReport: req.body?.isBehalfReport === true || req.body?.isBehalfReport === 1 || req.body?.isBehalfReport === "1" || String(req.body?.isBehalfReport).toLowerCase() === "true",
+        behalfConsent: req.body?.behalfConsent === true || req.body?.behalfConsent === 1 || req.body?.behalfConsent === "1" || String(req.body?.behalfConsent).toLowerCase() === "true",
         agency: nearestStation?.name || req.body.agency,
       };
       const report = await storage.createEvidenceReport(reportData);

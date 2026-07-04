@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +7,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -194,8 +196,13 @@ export default function EvidenceDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <ScrollView
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
+      <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+        <ScrollView
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 80 },
@@ -416,6 +423,7 @@ export default function EvidenceDetailScreen() {
         </Button>
       </View>
     </View>
+  </KeyboardAvoidingView>
   );
 }
 
