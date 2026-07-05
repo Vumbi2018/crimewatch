@@ -53,7 +53,12 @@ interface AdminStoreData {
   notifications: NotificationLogRecord[];
 }
 
-const storePath = path.resolve(process.cwd(), "server", "data", "admin-management.json");
+const storePath = path.resolve(
+  process.cwd(),
+  "server",
+  "data",
+  "admin-management.json",
+);
 
 const now = () => new Date().toISOString();
 
@@ -120,7 +125,9 @@ function ensureStore(): void {
 
 function readStore(): AdminStoreData {
   ensureStore();
-  const data = JSON.parse(fs.readFileSync(storePath, "utf-8")) as Partial<AdminStoreData>;
+  const data = JSON.parse(
+    fs.readFileSync(storePath, "utf-8"),
+  ) as Partial<AdminStoreData>;
   return {
     users: data.users || [],
     stations: data.stations || [],
@@ -138,7 +145,12 @@ function normalizeNumber(value: unknown, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+export function distanceKm(
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number,
+): number {
   const toRad = (value: number) => (value * Math.PI) / 180;
   const radius = 6371;
   const dLat = toRad(bLat - aLat);
@@ -158,7 +170,9 @@ export const adminStore = {
 
   saveUser(input: Partial<AdminUserRecord>): AdminUserRecord {
     const data = readStore();
-    const existingIndex = input.id ? data.users.findIndex((item) => item.id === input.id) : -1;
+    const existingIndex = input.id
+      ? data.users.findIndex((item) => item.id === input.id)
+      : -1;
     const user: AdminUserRecord = {
       id: input.id || randomUUID(),
       name: String(input.name || "Unnamed User"),
@@ -182,7 +196,9 @@ export const adminStore = {
 
   saveStation(input: Partial<PoliceStationRecord>): PoliceStationRecord {
     const data = readStore();
-    const existingIndex = input.id ? data.stations.findIndex((item) => item.id === input.id) : -1;
+    const existingIndex = input.id
+      ? data.stations.findIndex((item) => item.id === input.id)
+      : -1;
     const station: PoliceStationRecord = {
       id: input.id || randomUUID(),
       name: String(input.name || "Unnamed Police Station"),
@@ -206,11 +222,24 @@ export const adminStore = {
     return station;
   },
 
-  nearestStation(latitude: number, longitude: number): (PoliceStationRecord & { distanceKm: number; withinResponseRadius: boolean }) | null {
+  nearestStation(
+    latitude: number,
+    longitude: number,
+  ):
+    | (PoliceStationRecord & {
+        distanceKm: number;
+        withinResponseRadius: boolean;
+      })
+    | null {
     const stations = readStore().stations.filter((station) => station.isActive);
     const nearest = stations
       .map((station) => {
-        const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+        const distance = distanceKm(
+          latitude,
+          longitude,
+          station.latitude,
+          station.longitude,
+        );
         return {
           ...station,
           distanceKm: Math.round(distance * 10) / 10,
@@ -225,7 +254,9 @@ export const adminStore = {
     return readStore().notifications;
   },
 
-  createNotification(input: Partial<NotificationLogRecord>): NotificationLogRecord {
+  createNotification(
+    input: Partial<NotificationLogRecord>,
+  ): NotificationLogRecord {
     const data = readStore();
     const notification: NotificationLogRecord = {
       id: randomUUID(),

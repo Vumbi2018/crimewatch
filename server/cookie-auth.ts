@@ -1,6 +1,7 @@
 import crypto from "crypto";
 
-const SECRET = process.env.JWT_SECRET || "cpng_crime_reporting_png_secret_key_12345";
+const SECRET =
+  process.env.JWT_SECRET || "cpng_crime_reporting_png_secret_key_12345";
 
 export interface SessionData {
   username: string;
@@ -16,7 +17,9 @@ export function signSession(username: string, role: string): string {
   return `${payload}:${signature}`;
 }
 
-export function verifySession(cookieValue: string | undefined): SessionData | null {
+export function verifySession(
+  cookieValue: string | undefined,
+): SessionData | null {
   if (!cookieValue) return null;
 
   const parts = cookieValue.split(":");
@@ -24,7 +27,7 @@ export function verifySession(cookieValue: string | undefined): SessionData | nu
 
   const [username, role, signature] = parts;
   const payload = `${username}:${role}`;
-  
+
   const expectedSignature = crypto
     .createHmac("sha256", SECRET)
     .update(payload)

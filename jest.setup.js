@@ -1,6 +1,5 @@
-jest.mock(
-  "@react-native-async-storage/async-storage",
-  () => require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
 );
 
 jest.mock("expo-audio", () => ({
@@ -20,19 +19,28 @@ jest.mock("expo-audio", () => ({
 jest.mock("expo-camera", () => {
   const React = require("react");
   const CameraView = React.forwardRef(({ children, ...props }, ref) =>
-    React.createElement("CameraView", { ...props, ref }, children)
+    React.createElement("CameraView", { ...props, ref }, children),
   );
 
   return {
     CameraView,
-    useCameraPermissions: jest.fn(() => [{ granted: true }, jest.fn(async () => ({ granted: true }))]),
-    useMicrophonePermissions: jest.fn(() => [{ granted: true }, jest.fn(async () => ({ granted: true }))]),
+    useCameraPermissions: jest.fn(() => [
+      { granted: true },
+      jest.fn(async () => ({ granted: true })),
+    ]),
+    useMicrophonePermissions: jest.fn(() => [
+      { granted: true },
+      jest.fn(async () => ({ granted: true })),
+    ]),
   };
 });
 
 jest.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
-  useForegroundPermissions: jest.fn(() => [{ granted: true }, jest.fn(async () => ({ granted: true }))]),
+  useForegroundPermissions: jest.fn(() => [
+    { granted: true },
+    jest.fn(async () => ({ granted: true })),
+  ]),
   getCurrentPositionAsync: jest.fn(async () => ({
     coords: { latitude: 0, longitude: 0 },
   })),

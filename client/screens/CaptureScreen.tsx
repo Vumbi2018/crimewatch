@@ -217,11 +217,25 @@ export default function CaptureScreen() {
         (await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         }));
+
+      let lat = location.coords.latitude;
+      let lon = location.coords.longitude;
+
+      // Override default emulator Googleplex coordinates with Port Moresby, PNG for localized testing in DEV mode.
+      if (
+        __DEV__ &&
+        Math.abs(lat - 37.422) < 0.01 &&
+        Math.abs(lon - -122.0841) < 0.01
+      ) {
+        lat = -9.4438;
+        lon = 147.1803;
+      }
+
       let address = null;
       try {
         const [geocode] = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+          latitude: lat,
+          longitude: lon,
         });
         if (geocode) {
           address = [geocode.street, geocode.city, geocode.region]
@@ -232,8 +246,8 @@ export default function CaptureScreen() {
         // geocoding optional
       }
       return {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: lat,
+        longitude: lon,
         address,
       };
     } catch (error) {

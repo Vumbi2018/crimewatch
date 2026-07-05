@@ -42,7 +42,12 @@ export default function ReportTypeSelectionScreen() {
         ]}
         onPress={handleLiveReport}
       >
-        <View style={[styles.iconContainer, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: "rgba(59, 130, 246, 0.15)" },
+          ]}
+        >
           <Feather name="camera" size={32} color="#3b82f6" />
         </View>
         <View style={styles.textContainer}>
@@ -50,7 +55,8 @@ export default function ReportTypeSelectionScreen() {
             Report Live Incident
           </ThemedText>
           <ThemedText style={styles.cardDesc}>
-            Record live video, audio, or capture photos on scene, then submit instantly.
+            Record live video, audio, or capture photos on scene, then submit
+            instantly.
           </ThemedText>
         </View>
         <Feather name="chevron-right" size={24} color={theme.textSecondary} />
@@ -64,7 +70,12 @@ export default function ReportTypeSelectionScreen() {
         ]}
         onPress={handleBehalfReport}
       >
-        <View style={[styles.iconContainer, { backgroundColor: "rgba(168, 85, 247, 0.15)" }]}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: "rgba(168, 85, 247, 0.15)" },
+          ]}
+        >
           <Feather name="users" size={32} color="#c084fc" />
         </View>
         <View style={styles.textContainer}>
@@ -72,7 +83,8 @@ export default function ReportTypeSelectionScreen() {
             Report on Behalf of Someone
           </ThemedText>
           <ThemedText style={styles.cardDesc}>
-            Submit a report for a victim, family member, or friend. Upload existing files from your device.
+            Submit a report for a victim, family member, or friend. Upload
+            existing files from your device.
           </ThemedText>
         </View>
         <Feather name="chevron-right" size={24} color={theme.textSecondary} />

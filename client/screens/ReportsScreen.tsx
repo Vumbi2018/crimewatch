@@ -187,12 +187,17 @@ export default function ReportsScreen() {
               {payload.address || "No address captured"}
             </ThemedText>
             <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-              {payload.agency || "Agency not selected"} | {payload.priority || "Medium"}
+              {payload.agency || "Agency not selected"} |{" "}
+              {payload.priority || "Medium"}
             </ThemedText>
           </View>
 
           {item.item.lastError ? (
-            <ThemedText type="caption" style={styles.errorText} numberOfLines={2}>
+            <ThemedText
+              type="caption"
+              style={styles.errorText}
+              numberOfLines={2}
+            >
               Last error: {item.item.lastError}
             </ThemedText>
           ) : null}
@@ -225,7 +230,11 @@ export default function ReportsScreen() {
       >
         <View style={styles.cardHeader}>
           <View style={[styles.iconBadge, { backgroundColor: "#05966920" }]}>
-            <Feather name="check-circle" size={18} color={Colors.light.success} />
+            <Feather
+              name="check-circle"
+              size={18}
+              color={Colors.light.success}
+            />
           </View>
           <View style={styles.cardTitleWrap}>
             <ThemedText style={styles.cardTitle}>
@@ -246,10 +255,17 @@ export default function ReportsScreen() {
                   <View
                     style={[
                       styles.timelineDot,
-                      { backgroundColor: active ? Colors.light.success : theme.border },
+                      {
+                        backgroundColor: active
+                          ? Colors.light.success
+                          : theme.border,
+                      },
                     ]}
                   />
-                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  <ThemedText
+                    type="caption"
+                    style={{ color: theme.textSecondary }}
+                  >
                     {statusLabel(step as SubmittedReportReceipt["status"])}
                   </ThemedText>
                 </View>
@@ -284,7 +300,9 @@ export default function ReportsScreen() {
           styles.listContent,
           { paddingBottom: tabBarHeight + Spacing.xl },
         ]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+        }
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.emptyState}>
@@ -292,7 +310,9 @@ export default function ReportsScreen() {
               <ThemedText type="h4" style={styles.emptyTitle}>
                 No Reports Yet
               </ThemedText>
-              <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+              <ThemedText
+                style={[styles.emptyText, { color: theme.textSecondary }]}
+              >
                 Submitted reports and saved retries will appear here.
               </ThemedText>
             </View>

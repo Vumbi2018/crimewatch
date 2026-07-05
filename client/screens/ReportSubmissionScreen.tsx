@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   Pressable,
   TextInput,
   Switch,
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -345,7 +345,7 @@ export default function ReportSubmissionScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing.xl },
@@ -692,7 +692,7 @@ export default function ReportSubmissionScreen() {
         >
           {isSubmitting ? "Submitting..." : "Submit Report"}
         </Button>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </View>
   );
 }

@@ -158,7 +158,9 @@ export async function saveUserProfile(
   }
 }
 
-export async function getPendingReportSubmissions(): Promise<PendingReportSubmission[]> {
+export async function getPendingReportSubmissions(): Promise<
+  PendingReportSubmission[]
+> {
   try {
     const data = await AsyncStorage.getItem(PENDING_REPORTS_KEY);
     return data ? JSON.parse(data) : [];
@@ -173,7 +175,9 @@ export async function savePendingReportSubmission(
 ): Promise<void> {
   try {
     const pending = await getPendingReportSubmissions();
-    const existingIndex = pending.findIndex((item) => item.id === submission.id);
+    const existingIndex = pending.findIndex(
+      (item) => item.id === submission.id,
+    );
 
     if (existingIndex >= 0) {
       pending[existingIndex] = submission;
@@ -201,7 +205,9 @@ export async function deletePendingReportSubmission(id: string): Promise<void> {
   }
 }
 
-export async function getSubmittedReportReceipts(): Promise<SubmittedReportReceipt[]> {
+export async function getSubmittedReportReceipts(): Promise<
+  SubmittedReportReceipt[]
+> {
   try {
     const data = await AsyncStorage.getItem(SUBMITTED_REPORTS_KEY);
     return data ? JSON.parse(data) : [];

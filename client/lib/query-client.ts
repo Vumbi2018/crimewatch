@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { Platform } from "react-native";
 
 const DEFAULT_API_DOMAIN = "crimewatch.lamtoninvestments.com";
 
@@ -7,7 +8,10 @@ const DEFAULT_API_DOMAIN = "crimewatch.lamtoninvestments.com";
  * @returns {string} The API base URL
  */
 export function getApiUrl(): string {
-  const host = process.env.EXPO_PUBLIC_DOMAIN || DEFAULT_API_DOMAIN;
+  const defaultDevDomain =
+    Platform.OS === "android" ? "10.0.2.2:5000" : "localhost:5000";
+  const defaultDomain = __DEV__ ? defaultDevDomain : DEFAULT_API_DOMAIN;
+  const host = process.env.EXPO_PUBLIC_DOMAIN || defaultDomain;
 
   if (host.startsWith("http://") || host.startsWith("https://")) {
     return new URL(host).href;

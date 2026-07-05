@@ -1,20 +1,28 @@
 import React from "react";
 import { View, StyleSheet, Platform, Pressable, Linking } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
-import { Colors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
+import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 type RouteType = RouteProp<RootStackParamList, "MapView">;
 
 export default function MapViewScreen() {
-  const insets = useSafeAreaInsets();
   const route = useRoute<RouteType>();
   const { theme } = useTheme();
-  const { latitude, longitude, address } = route.params;
+  let { latitude, longitude, address } = route.params;
+
+  if (
+    __DEV__ &&
+    Math.abs(latitude - 37.422) < 0.01 &&
+    Math.abs(longitude - -122.0841) < 0.01
+  ) {
+    latitude = -9.4438;
+    longitude = 147.1803;
+    address = "Port Moresby, Papua New Guinea";
+  }
 
   const openInMaps = async () => {
     const label = address || "Evidence Location";

@@ -201,229 +201,234 @@ export default function EvidenceDetailScreen() {
       style={{ flex: 1 }}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-      <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-        <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
-        scrollIndicatorInsets={{ bottom: insets.bottom }}
+      <View
+        style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
       >
-        <View style={styles.mediaContainer}>
-          <Image
-            source={{ uri: evidence.uri }}
-            style={styles.media}
-            contentFit="cover"
-          />
-          {evidence.type === "video" ? (
-            <View style={styles.playOverlay}>
-              <Feather name="play-circle" size={48} color="#FFF" />
-            </View>
-          ) : null}
-        </View>
-
-        <View
-          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + 80 },
+          ]}
+          scrollIndicatorInsets={{ bottom: insets.bottom }}
         >
-          <ThemedText type="small" style={styles.sectionLabel}>
-            Captured
-          </ThemedText>
-          <View style={styles.metadataRow}>
-            <Feather name="clock" size={16} color={theme.textSecondary} />
-            <ThemedText style={styles.metadataText}>
-              {formatDateTime(evidence.timestamp)}
-            </ThemedText>
+          <View style={styles.mediaContainer}>
+            <Image
+              source={{ uri: evidence.uri }}
+              style={styles.media}
+              contentFit="cover"
+            />
+            {evidence.type === "video" ? (
+              <View style={styles.playOverlay}>
+                <Feather name="play-circle" size={48} color="#FFF" />
+              </View>
+            ) : null}
           </View>
 
-          {evidence.latitude && evidence.longitude ? (
-            <Pressable
-              style={styles.metadataRow}
-              onPress={() =>
-                navigation.navigate("MapView", {
-                  latitude: evidence.latitude!,
-                  longitude: evidence.longitude!,
-                  address: evidence.address || undefined,
-                })
-              }
-            >
-              <Feather name="map-pin" size={16} color={theme.primary} />
-              <ThemedText
-                style={[styles.metadataText, { color: theme.primary }]}
+          <View
+            style={[styles.section, { backgroundColor: theme.cardBackground }]}
+          >
+            <ThemedText type="small" style={styles.sectionLabel}>
+              Captured
+            </ThemedText>
+            <View style={styles.metadataRow}>
+              <Feather name="clock" size={16} color={theme.textSecondary} />
+              <ThemedText style={styles.metadataText}>
+                {formatDateTime(evidence.timestamp)}
+              </ThemedText>
+            </View>
+
+            {evidence.latitude && evidence.longitude ? (
+              <Pressable
+                style={styles.metadataRow}
+                onPress={() =>
+                  navigation.navigate("MapView", {
+                    latitude: evidence.latitude!,
+                    longitude: evidence.longitude!,
+                    address: evidence.address || undefined,
+                  })
+                }
               >
-                {evidence.address ||
-                  `${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}`}
+                <Feather name="map-pin" size={16} color={theme.primary} />
+                <ThemedText
+                  style={[styles.metadataText, { color: theme.primary }]}
+                >
+                  {evidence.address ||
+                    `${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}`}
+                </ThemedText>
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={theme.textSecondary}
+                />
+              </Pressable>
+            ) : (
+              <View style={styles.metadataRow}>
+                <Feather name="map-pin" size={16} color={theme.textSecondary} />
+                <ThemedText
+                  style={[styles.metadataText, { color: theme.textSecondary }]}
+                >
+                  Location not available
+                </ThemedText>
+              </View>
+            )}
+          </View>
+
+          <View
+            style={[styles.section, { backgroundColor: theme.cardBackground }]}
+          >
+            <ThemedText type="small" style={styles.sectionLabel}>
+              Incident Type
+            </ThemedText>
+            <Pressable
+              style={[styles.pickerButton, { borderColor: theme.border }]}
+              onPress={() => setShowIncidentPicker(!showIncidentPicker)}
+            >
+              <ThemedText
+                style={incidentType ? {} : { color: theme.textSecondary }}
+              >
+                {incidentType || "Select incident type"}
               </ThemedText>
               <Feather
-                name="chevron-right"
-                size={16}
+                name={showIncidentPicker ? "chevron-up" : "chevron-down"}
+                size={20}
                 color={theme.textSecondary}
               />
             </Pressable>
-          ) : (
-            <View style={styles.metadataRow}>
-              <Feather name="map-pin" size={16} color={theme.textSecondary} />
-              <ThemedText
-                style={[styles.metadataText, { color: theme.textSecondary }]}
-              >
-                Location not available
+            {showIncidentPicker ? (
+              <View style={styles.pickerOptions}>
+                {INCIDENT_TYPES.map((type) => (
+                  <Pressable
+                    key={type}
+                    style={[
+                      styles.pickerOption,
+                      incidentType === type && {
+                        backgroundColor: theme.primary + "20",
+                      },
+                    ]}
+                    onPress={() => {
+                      setIncidentType(type);
+                      setShowIncidentPicker(false);
+                      Haptics.selectionAsync();
+                    }}
+                  >
+                    <ThemedText
+                      style={
+                        incidentType === type
+                          ? { color: theme.primary, fontWeight: "600" }
+                          : {}
+                      }
+                    >
+                      {type}
+                    </ThemedText>
+                    {incidentType === type ? (
+                      <Feather name="check" size={18} color={theme.primary} />
+                    ) : null}
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          <View
+            style={[styles.section, { backgroundColor: theme.cardBackground }]}
+          >
+            <View style={styles.sectionHeader}>
+              <ThemedText type="small" style={styles.sectionLabel}>
+                Description
+              </ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                {description.length}/500
               </ThemedText>
             </View>
-          )}
-        </View>
-
-        <View
-          style={[styles.section, { backgroundColor: theme.cardBackground }]}
-        >
-          <ThemedText type="small" style={styles.sectionLabel}>
-            Incident Type
-          </ThemedText>
-          <Pressable
-            style={[styles.pickerButton, { borderColor: theme.border }]}
-            onPress={() => setShowIncidentPicker(!showIncidentPicker)}
-          >
-            <ThemedText
-              style={incidentType ? {} : { color: theme.textSecondary }}
-            >
-              {incidentType || "Select incident type"}
-            </ThemedText>
-            <Feather
-              name={showIncidentPicker ? "chevron-up" : "chevron-down"}
-              size={20}
-              color={theme.textSecondary}
-            />
-          </Pressable>
-          {showIncidentPicker ? (
-            <View style={styles.pickerOptions}>
-              {INCIDENT_TYPES.map((type) => (
-                <Pressable
-                  key={type}
-                  style={[
-                    styles.pickerOption,
-                    incidentType === type && {
-                      backgroundColor: theme.primary + "20",
-                    },
-                  ]}
-                  onPress={() => {
-                    setIncidentType(type);
-                    setShowIncidentPicker(false);
-                    Haptics.selectionAsync();
-                  }}
-                >
-                  <ThemedText
-                    style={
-                      incidentType === type
-                        ? { color: theme.primary, fontWeight: "600" }
-                        : {}
-                    }
-                  >
-                    {type}
-                  </ThemedText>
-                  {incidentType === type ? (
-                    <Feather name="check" size={18} color={theme.primary} />
-                  ) : null}
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </View>
-
-        <View
-          style={[styles.section, { backgroundColor: theme.cardBackground }]}
-        >
-          <View style={styles.sectionHeader}>
-            <ThemedText type="small" style={styles.sectionLabel}>
-              Description
-            </ThemedText>
-            <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-              {description.length}/500
-            </ThemedText>
-          </View>
-          <TextInput
-            style={[
-              styles.descriptionInput,
-              { color: theme.text, borderColor: theme.border },
-            ]}
-            placeholder="Describe the incident..."
-            placeholderTextColor={theme.textSecondary}
-            value={description}
-            onChangeText={(text) => setDescription(text.slice(0, 500))}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <View
-          style={[styles.section, { backgroundColor: theme.cardBackground }]}
-        >
-          <ThemedText type="small" style={styles.sectionLabel}>
-            Tags
-          </ThemedText>
-          <View style={styles.tagInputContainer}>
             <TextInput
               style={[
-                styles.tagInput,
+                styles.descriptionInput,
                 { color: theme.text, borderColor: theme.border },
               ]}
-              placeholder="Add a tag..."
+              placeholder="Describe the incident..."
               placeholderTextColor={theme.textSecondary}
-              value={tagInput}
-              onChangeText={setTagInput}
-              onSubmitEditing={handleAddTag}
-              returnKeyType="done"
+              value={description}
+              onChangeText={(text) => setDescription(text.slice(0, 500))}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
             />
-            <Pressable
-              style={[styles.addTagButton, { backgroundColor: theme.primary }]}
-              onPress={handleAddTag}
-            >
-              <Feather name="plus" size={20} color="#FFF" />
-            </Pressable>
           </View>
-          {tags.length > 0 ? (
-            <View style={styles.tagsContainer}>
-              {tags.map((tag) => (
-                <Pressable
-                  key={tag}
-                  style={[
-                    styles.tag,
-                    { backgroundColor: theme.backgroundSecondary },
-                  ]}
-                  onPress={() => handleRemoveTag(tag)}
-                >
-                  <ThemedText type="small">{tag}</ThemedText>
-                  <Feather name="x" size={14} color={theme.textSecondary} />
-                </Pressable>
-              ))}
+
+          <View
+            style={[styles.section, { backgroundColor: theme.cardBackground }]}
+          >
+            <ThemedText type="small" style={styles.sectionLabel}>
+              Tags
+            </ThemedText>
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={[
+                  styles.tagInput,
+                  { color: theme.text, borderColor: theme.border },
+                ]}
+                placeholder="Add a tag..."
+                placeholderTextColor={theme.textSecondary}
+                value={tagInput}
+                onChangeText={setTagInput}
+                onSubmitEditing={handleAddTag}
+                returnKeyType="done"
+              />
+              <Pressable
+                style={[
+                  styles.addTagButton,
+                  { backgroundColor: theme.primary },
+                ]}
+                onPress={handleAddTag}
+              >
+                <Feather name="plus" size={20} color="#FFF" />
+              </Pressable>
             </View>
-          ) : null}
-        </View>
+            {tags.length > 0 ? (
+              <View style={styles.tagsContainer}>
+                {tags.map((tag) => (
+                  <Pressable
+                    key={tag}
+                    style={[
+                      styles.tag,
+                      { backgroundColor: theme.backgroundSecondary },
+                    ]}
+                    onPress={() => handleRemoveTag(tag)}
+                  >
+                    <ThemedText type="small">{tag}</ThemedText>
+                    <Feather name="x" size={14} color={theme.textSecondary} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
 
-        <Pressable style={styles.saveButton} onPress={handleSave}>
-          <Feather name="save" size={18} color={theme.primary} />
-          <ThemedText style={{ color: theme.primary, fontWeight: "600" }}>
-            Save Changes
-          </ThemedText>
-        </Pressable>
-      </ScrollView>
+          <Pressable style={styles.saveButton} onPress={handleSave}>
+            <Feather name="save" size={18} color={theme.primary} />
+            <ThemedText style={{ color: theme.primary, fontWeight: "600" }}>
+              Save Changes
+            </ThemedText>
+          </Pressable>
+        </ScrollView>
 
-      <View
-        style={[
-          styles.submitContainer,
-          {
-            paddingBottom: insets.bottom + Spacing.lg,
-            backgroundColor: theme.backgroundRoot,
-          },
-        ]}
-      >
-        <Button
-          onPress={handleSubmit}
-          style={{ backgroundColor: Colors.light.primary }}
+        <View
+          style={[
+            styles.submitContainer,
+            {
+              paddingBottom: insets.bottom + Spacing.lg,
+              backgroundColor: theme.backgroundRoot,
+            },
+          ]}
         >
-          Submit to Authorities
-        </Button>
+          <Button
+            onPress={handleSubmit}
+            style={{ backgroundColor: Colors.light.primary }}
+          >
+            Submit to Authorities
+          </Button>
+        </View>
       </View>
-    </View>
-  </KeyboardAvoidingView>
+    </KeyboardAvoidingView>
   );
 }
 

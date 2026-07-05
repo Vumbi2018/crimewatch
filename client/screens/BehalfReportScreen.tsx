@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   TextInput,
   Pressable,
   ActivityIndicator,
   Alert,
   Switch,
 } from "react-native";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
@@ -21,7 +21,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
-import { getApiUrl } from "@/lib/query-client";
+import { apiUrl } from "@/lib/query-client";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -76,12 +76,25 @@ export default function BehalfReportScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      setLatitude(loc.coords.latitude);
-      setLongitude(loc.coords.longitude);
+      let lat = loc.coords.latitude;
+      let lon = loc.coords.longitude;
+
+      // Override default emulator Googleplex coordinates with Port Moresby, PNG for localized testing in DEV mode.
+      if (
+        __DEV__ &&
+        Math.abs(lat - 37.422) < 0.01 &&
+        Math.abs(lon - -122.0841) < 0.01
+      ) {
+        lat = -9.4438;
+        lon = 147.1803;
+      }
+
+      setLatitude(lat);
+      setLongitude(lon);
 
       const [geocode] = await Location.reverseGeocodeAsync({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
+        latitude: lat,
+        longitude: lon,
       });
 
       if (geocode) {
@@ -90,11 +103,15 @@ export default function BehalfReportScreen() {
           .join(", ");
         setLocationText(address);
       } else {
-        setLocationText(`${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`);
+        setLocationText(
+          `${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`,
+        );
       }
     } catch (err) {
       console.error("Location lookup failed:", err);
-      setLocationText("Could not determine location automatically. Enter manually.");
+      setLocationText(
+        "Could not determine location automatically. Enter manually.",
+      );
     } finally {
       setIsLocating(false);
     }
@@ -102,9 +119,13 @@ export default function BehalfReportScreen() {
 
   const handlePickMedia = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Denied", "We need media library permissions to select files.");
+        Alert.alert(
+          "Permission Denied",
+          "We need media library permissions to select files.",
+        );
         return;
       }
 
@@ -117,7 +138,9 @@ export default function BehalfReportScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         const fileSize = asset.fileSize || 0;
-        const name = asset.fileName || `media_${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`;
+        const name =
+          asset.fileName ||
+          `media_${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`;
         const mimeType = asset.type === "video" ? "video/mp4" : "image/jpeg";
 
         setAttachment({
@@ -160,7 +183,9 @@ export default function BehalfReportScreen() {
     return `${mb.toFixed(2)} MB`;
   };
 
-  const isFileSizeTooLarge = attachment ? attachment.size > 10 * 1024 * 1024 : false;
+  const isFileSizeTooLarge = attachment
+    ? attachment.size > 10 * 1024 * 1024
+    : false;
 
   const uploadFile = async (file: Attachment): Promise<string | null> => {
     setSubmitProgress("Uploading attachment evidence...");
@@ -172,7 +197,7 @@ export default function BehalfReportScreen() {
         type: file.type,
       } as any);
 
-      const uploadUrl = `${getApiUrl()}/api/upload`;
+      const uploadUrl = apiUrl("/api/upload");
       const res = await fetch(uploadUrl, {
         method: "POST",
         body: formData,
@@ -195,11 +220,17 @@ export default function BehalfReportScreen() {
       return;
     }
     if (!consent) {
-      Alert.alert("Validation Error", "You must confirm you have obtained consent to submit on their behalf.");
+      Alert.alert(
+        "Validation Error",
+        "You must confirm you have obtained consent to submit on their behalf.",
+      );
       return;
     }
     if (!incidentType.trim()) {
-      Alert.alert("Validation Error", "Please select or type an incident type.");
+      Alert.alert(
+        "Validation Error",
+        "Please select or type an incident type.",
+      );
       return;
     }
     if (!description.trim()) {
@@ -207,7 +238,10 @@ export default function BehalfReportScreen() {
       return;
     }
     if (isFileSizeTooLarge) {
-      Alert.alert("Validation Error", "Selected file exceeds the 10MB limit. Please select a smaller file.");
+      Alert.alert(
+        "Validation Error",
+        "Selected file exceeds the 10MB limit. Please select a smaller file.",
+      );
       return;
     }
 
@@ -219,7 +253,10 @@ export default function BehalfReportScreen() {
       if (attachment) {
         fileUrl = await uploadFile(attachment);
         if (!fileUrl) {
-          Alert.alert("Submission Failed", "Failed to upload evidence file. Please try again.");
+          Alert.alert(
+            "Submission Failed",
+            "Failed to upload evidence file. Please try again.",
+          );
           setIsSubmitting(false);
           return;
         }
@@ -234,7 +271,13 @@ export default function BehalfReportScreen() {
         behalfRelationship: relationship,
         behalfConsent: true,
         behalfSource: "citizen",
-        evidenceType: attachment ? (attachment.type.startsWith("image") ? "photo" : attachment.type.startsWith("video") ? "video" : "document") : "witness_statement",
+        evidenceType: attachment
+          ? attachment.type.startsWith("image")
+            ? "photo"
+            : attachment.type.startsWith("video")
+              ? "video"
+              : "document"
+          : "witness_statement",
         fileUrl,
         incidentType,
         description,
@@ -245,14 +288,23 @@ export default function BehalfReportScreen() {
         isAnonymous: 0,
       };
 
-      const res = await fetch(`${getApiUrl()}/api/reports`, {
+      const res = await fetch(apiUrl("/api/reports"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to submit behalf report.");
+        const errorText = await res.text().catch(() => "No error text");
+        console.error(
+          "Submission failed with status:",
+          res.status,
+          "body:",
+          errorText,
+        );
+        throw new Error(
+          `Failed to submit behalf report. Status: ${res.status}. Error: ${errorText}`,
+        );
       }
 
       const result = await res.json();
@@ -261,11 +313,14 @@ export default function BehalfReportScreen() {
       Alert.alert(
         "Report Submitted Successfully",
         `Incident report filed on behalf of ${victimName}.\n\nReference Code: ${result.referenceNumber || result.id.slice(0, 8).toUpperCase()}`,
-        [{ text: "OK", onPress: () => navigation.popToTop() }]
+        [{ text: "OK", onPress: () => navigation.popToTop() }],
       );
     } catch (err) {
       console.error("Submission failed:", err);
-      Alert.alert("Error", "Could not submit report. Check your network connection and try again.");
+      Alert.alert(
+        "Error",
+        "Could not submit report. Check your network connection and try again.",
+      );
     } finally {
       setIsSubmitting(false);
       setSubmitProgress("");
@@ -273,7 +328,7 @@ export default function BehalfReportScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollViewCompat
       style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -283,12 +338,18 @@ export default function BehalfReportScreen() {
           Report on Behalf of Someone
         </ThemedText>
         <ThemedText style={styles.subtitle}>
-          Use this form to submit reports for victims, friends, or family members.
+          Use this form to submit reports for victims, friends, or family
+          members.
         </ThemedText>
       </View>
 
       {/* Victim Info Section */}
-      <View style={[styles.section, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: theme.cardBackground, borderColor: theme.border },
+        ]}
+      >
         <ThemedText type="h3" style={styles.sectionTitle}>
           1. Victim/Person Details
         </ThemedText>
@@ -296,7 +357,14 @@ export default function BehalfReportScreen() {
         <View style={styles.field}>
           <ThemedText style={styles.label}>Full Name *</ThemedText>
           <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundSecondary }]}
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
+            ]}
             value={victimName}
             onChangeText={setVictimName}
             placeholder="Enter victim's full name"
@@ -307,7 +375,14 @@ export default function BehalfReportScreen() {
         <View style={styles.field}>
           <ThemedText style={styles.label}>Contact Phone Number</ThemedText>
           <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundSecondary }]}
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
+            ]}
             value={victimPhone}
             onChangeText={setVictimPhone}
             placeholder="e.g. +675 7000 0000"
@@ -317,7 +392,9 @@ export default function BehalfReportScreen() {
         </View>
 
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Your Relationship to Them</ThemedText>
+          <ThemedText style={styles.label}>
+            Your Relationship to Them
+          </ThemedText>
           <View style={styles.pillContainer}>
             {relationships.map((rel) => {
               const active = relationship === rel;
@@ -327,11 +404,19 @@ export default function BehalfReportScreen() {
                   style={[
                     styles.pill,
                     { borderColor: theme.border },
-                    active && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    active && {
+                      backgroundColor: theme.primary,
+                      borderColor: theme.primary,
+                    },
                   ]}
                   onPress={() => setRelationship(rel)}
                 >
-                  <ThemedText style={[styles.pillText, active && { color: "#ffffff", fontWeight: "bold" }]}>
+                  <ThemedText
+                    style={[
+                      styles.pillText,
+                      active && { color: "#ffffff", fontWeight: "bold" },
+                    ]}
+                  >
                     {rel}
                   </ThemedText>
                 </Pressable>
@@ -342,17 +427,28 @@ export default function BehalfReportScreen() {
 
         <View style={[styles.field, styles.switchField]}>
           <View style={{ flex: 1, paddingRight: Spacing.sm }}>
-            <ThemedText style={styles.consentLabel}>Consent Obtained *</ThemedText>
+            <ThemedText style={styles.consentLabel}>
+              Consent Obtained *
+            </ThemedText>
             <ThemedText style={styles.consentSub}>
               I confirm the victim gave permission to file this report.
             </ThemedText>
           </View>
-          <Switch value={consent} onValueChange={setConsent} trackColor={{ true: theme.primary }} />
+          <Switch
+            value={consent}
+            onValueChange={setConsent}
+            trackColor={{ true: theme.primary }}
+          />
         </View>
       </View>
 
       {/* Incident Details Section */}
-      <View style={[styles.section, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: theme.cardBackground, borderColor: theme.border },
+        ]}
+      >
         <ThemedText type="h3" style={styles.sectionTitle}>
           2. Incident Details
         </ThemedText>
@@ -360,7 +456,14 @@ export default function BehalfReportScreen() {
         <View style={styles.field}>
           <ThemedText style={styles.label}>Incident Type *</ThemedText>
           <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundSecondary }]}
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
+            ]}
             value={incidentType}
             onChangeText={setIncidentType}
             placeholder="e.g. Theft, Assault, Property Damage"
@@ -369,12 +472,18 @@ export default function BehalfReportScreen() {
         </View>
 
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Description of Incident *</ThemedText>
+          <ThemedText style={styles.label}>
+            Description of Incident *
+          </ThemedText>
           <TextInput
             style={[
               styles.input,
               styles.textArea,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundSecondary },
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
             ]}
             value={description}
             onChangeText={setDescription}
@@ -387,15 +496,28 @@ export default function BehalfReportScreen() {
         </View>
 
         <View style={styles.field}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <ThemedText style={styles.label}>Incident Location</ThemedText>
-            {isLocating && <ActivityIndicator size="small" color={theme.primary} />}
+            {isLocating && (
+              <ActivityIndicator size="small" color={theme.primary} />
+            )}
           </View>
           <View style={styles.locationContainer}>
             <TextInput
               style={[
                 styles.input,
-                { flex: 1, color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundSecondary },
+                {
+                  flex: 1,
+                  color: theme.text,
+                  borderColor: theme.border,
+                  backgroundColor: theme.backgroundSecondary,
+                },
               ]}
               value={locationText}
               onChangeText={setLocationText}
@@ -403,7 +525,13 @@ export default function BehalfReportScreen() {
               placeholderTextColor={theme.textSecondary}
             />
             <Pressable
-              style={[styles.locationBtn, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+              style={[
+                styles.locationBtn,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
               onPress={fetchLocation}
             >
               <Feather name="map-pin" size={18} color={theme.primary} />
@@ -413,25 +541,45 @@ export default function BehalfReportScreen() {
       </View>
 
       {/* Evidence Attachments Section */}
-      <View style={[styles.section, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: theme.cardBackground, borderColor: theme.border },
+        ]}
+      >
         <ThemedText type="h3" style={styles.sectionTitle}>
           3. Media Evidence (Optional)
         </ThemedText>
         <ThemedText style={styles.consentSub}>
-          Select existing pictures, videos, audio clips, or documents from your phone (Max file size: 10MB).
+          Select existing pictures, videos, audio clips, or documents from your
+          phone (Max file size: 10MB).
         </ThemedText>
 
         <View style={styles.attachBtnContainer}>
           <Pressable
-            style={[styles.attachBtn, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+            style={[
+              styles.attachBtn,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.border,
+              },
+            ]}
             onPress={handlePickMedia}
           >
             <Feather name="image" size={22} color={theme.primary} />
-            <ThemedText style={styles.attachBtnText}>Pick Photo/Video</ThemedText>
+            <ThemedText style={styles.attachBtnText}>
+              Pick Photo/Video
+            </ThemedText>
           </Pressable>
 
           <Pressable
-            style={[styles.attachBtn, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+            style={[
+              styles.attachBtn,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.border,
+              },
+            ]}
             onPress={handlePickDocument}
           >
             <Feather name="file" size={22} color={theme.primary} />
@@ -440,16 +588,36 @@ export default function BehalfReportScreen() {
         </View>
 
         {attachment && (
-          <View style={[styles.attachmentPreview, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.attachmentPreview,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.border,
+              },
+            ]}
+          >
             <View style={{ flex: 1 }}>
               <ThemedText style={styles.attachmentName} numberOfLines={1}>
                 {attachment.name}
               </ThemedText>
-              <ThemedText style={[styles.attachmentSize, isFileSizeTooLarge && { color: theme.accent, fontWeight: "bold" }]}>
-                {formatFileSize(attachment.size)} {isFileSizeTooLarge ? "(EXCEEDS 10MB LIMIT)" : ""}
+              <ThemedText
+                style={[
+                  styles.attachmentSize,
+                  isFileSizeTooLarge && {
+                    color: theme.accent,
+                    fontWeight: "bold",
+                  },
+                ]}
+              >
+                {formatFileSize(attachment.size)}{" "}
+                {isFileSizeTooLarge ? "(EXCEEDS 10MB LIMIT)" : ""}
               </ThemedText>
             </View>
-            <Pressable style={styles.clearAttachment} onPress={() => setAttachment(null)}>
+            <Pressable
+              style={styles.clearAttachment}
+              onPress={() => setAttachment(null)}
+            >
               <Feather name="trash-2" size={18} color={theme.accent} />
             </Pressable>
           </View>
@@ -460,21 +628,40 @@ export default function BehalfReportScreen() {
       <Pressable
         style={[
           styles.submitBtn,
-          { backgroundColor: consent && victimName && incidentType && description && !isFileSizeTooLarge ? theme.primary : theme.border },
+          {
+            backgroundColor:
+              consent &&
+              victimName &&
+              incidentType &&
+              description &&
+              !isFileSizeTooLarge
+                ? theme.primary
+                : theme.border,
+          },
         ]}
         onPress={handleSubmit}
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: Spacing.sm,
+            }}
+          >
             <ActivityIndicator size="small" color="#ffffff" />
-            <ThemedText style={styles.submitBtnText}>{submitProgress || "Submitting..."}</ThemedText>
+            <ThemedText style={styles.submitBtnText}>
+              {submitProgress || "Submitting..."}
+            </ThemedText>
           </View>
         ) : (
-          <ThemedText style={styles.submitBtnText}>Submit Incident Report</ThemedText>
+          <ThemedText style={styles.submitBtnText}>
+            Submit Incident Report
+          </ThemedText>
         )}
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollViewCompat>
   );
 }
 
