@@ -297,7 +297,9 @@ var import_node_postgres = require("drizzle-orm/node-postgres");
 var import_ws = __toESM(require("ws"));
 (0, import_dotenv.config)();
 if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
 }
 var databaseUrl = process.env.DATABASE_URL;
 var isLocalPostgres = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("host.docker.internal");
@@ -575,6 +577,50 @@ var adminHtml = `<!DOCTYPE html>
     }
 
     .header-actions { display:flex; align-items:center; gap:12px; }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 12px;
+      background: var(--bg-card-strong);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .user-profile .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+    .user-profile .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.25;
+    }
+    .user-profile .user-info .username {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+    .user-profile .user-info .role-badge {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+    body.light-theme .user-profile {
+      background: #f8fafc;
+      border-color: #cbd8e6;
+    }
     .theme-toggle label { color:var(--text-muted); font-size:13px; font-weight:700; }
     body.light-theme .header { background: #ffffff; box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06); }
     body.light-theme .sidebar { box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04); }
@@ -1516,6 +1562,13 @@ var adminHtml = `<!DOCTYPE html>
     </div>
     <div class="header-actions">
       <div class="theme-toggle"><label for="themeSelect">Theme</label><select id="themeSelect" class="theme-select" onchange="setTheme(this.value)"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+      <div class="user-profile" id="userProfileWidget">
+        <div class="avatar" id="avatarCircle">A</div>
+        <div class="user-info">
+          <span class="username" id="profileUsername">admin</span>
+          <span class="role-badge" id="profileRole">admin</span>
+        </div>
+      </div>
       <form method="POST" action="/api/admin/logout">
         <button class="logout-btn" type="submit">Log out</button>
       </form>
@@ -2769,6 +2822,16 @@ var adminHtml = `<!DOCTYPE html>
 
     function initRoleRestrictions() {
       const user = window.currentUser || { username: 'admin', role: 'admin' };
+      
+      const usernameEl = document.getElementById('profileUsername');
+      const roleEl = document.getElementById('profileRole');
+      const avatarEl = document.getElementById('avatarCircle');
+      if (usernameEl && roleEl && avatarEl) {
+        usernameEl.textContent = user.username;
+        roleEl.textContent = user.role === 'admin' ? 'Administrator' : user.role === 'officer' ? 'Officer' : user.role === 'viewer' ? 'Viewer' : user.role;
+        avatarEl.textContent = user.username.charAt(0).toUpperCase();
+      }
+
       if (user.role === 'viewer') {
         document.body.classList.add('role-viewer');
         document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
@@ -2792,7 +2855,12 @@ var adminHtml = `<!DOCTYPE html>
 var fs = __toESM(require("fs"));
 var path = __toESM(require("path"));
 var import_crypto2 = require("crypto");
-var storePath = path.resolve(process.cwd(), "server", "data", "admin-management.json");
+var storePath = path.resolve(
+  process.cwd(),
+  "server",
+  "data",
+  "admin-management.json"
+);
 var now = () => (/* @__PURE__ */ new Date()).toISOString();
 var defaultStations = [
   {
@@ -2854,7 +2922,9 @@ function ensureStore() {
 }
 function readStore() {
   ensureStore();
-  const data = JSON.parse(fs.readFileSync(storePath, "utf-8"));
+  const data = JSON.parse(
+    fs.readFileSync(storePath, "utf-8")
+  );
   return {
     users: data.users || [],
     stations: data.stations || [],
@@ -2933,7 +3003,12 @@ var adminStore = {
   nearestStation(latitude, longitude) {
     const stations = readStore().stations.filter((station) => station.isActive);
     const nearest = stations.map((station) => {
-      const distance = distanceKm(latitude, longitude, station.latitude, station.longitude);
+      const distance = distanceKm(
+        latitude,
+        longitude,
+        station.latitude,
+        station.longitude
+      );
       return {
         ...station,
         distanceKm: Math.round(distance * 10) / 10,
@@ -3382,40 +3457,105 @@ async function forwardFileToProduction(filePath, mimeType, originalName) {
 }
 async function seedDefaultUsers() {
   try {
-    const admin = await storage.getAdminUserByUsername("admin");
-    if (!admin) {
-      await storage.createAdminUser({
-        name: "Administrator",
-        username: "admin",
-        passwordHash: hashPassword(defaultUserPassword("admin")),
-        role: "admin",
-        isActive: true
-      });
-      console.log("Seeded admin user.");
-    }
-    const viewer = await storage.getAdminUserByUsername("viewer");
-    if (!viewer) {
-      await storage.createAdminUser({
-        name: "Viewer",
-        username: "viewer",
-        passwordHash: hashPassword(defaultUserPassword("viewer")),
-        role: "viewer",
-        isActive: true
-      });
-      console.log("Seeded viewer user.");
-    }
-    const officer = await storage.getAdminUserByUsername("officer");
-    let officerUser = officer;
-    if (!officer) {
-      officerUser = await storage.createAdminUser({
-        name: "Officer",
-        username: "officer",
-        passwordHash: hashPassword(defaultUserPassword("officer")),
-        role: "officer",
-        isActive: true
-      });
-      console.log("Seeded officer user.");
-    }
+    const command = await storage.createPoliceCommand({
+      id: "command_ncd",
+      name: "NCD Command Centre",
+      code: "NCD",
+      isActive: true
+    });
+    console.log("Upserted default NCD Command.");
+    const provinceNcd = await storage.createProvince({
+      id: "province_ncd",
+      commandId: command.id,
+      name: "National Capital District",
+      code: "NCD_PROV",
+      isActive: true
+    });
+    const provincePng = await storage.createProvince({
+      id: "province_png",
+      commandId: command.id,
+      name: "Papua New Guinea",
+      code: "PNG_PROV",
+      isActive: true
+    });
+    console.log("Upserted default Provinces.");
+    const districtPom = await storage.createDistrict({
+      id: "district_pom",
+      provinceId: provinceNcd.id,
+      name: "Port Moresby",
+      code: "POM_DIST",
+      isActive: true
+    });
+    const districtLocal = await storage.createDistrict({
+      id: "district_local",
+      provinceId: provincePng.id,
+      name: "Local District",
+      code: "LOCAL_DIST",
+      isActive: true
+    });
+    console.log("Upserted default Districts.");
+    await storage.createPoliceStation({
+      id: "station_boroko",
+      commandId: command.id,
+      provinceId: provinceNcd.id,
+      districtId: districtPom.id,
+      name: "Boroko Police Station",
+      code: "station_boroko",
+      address: "Boroko, Port Moresby, National Capital District",
+      latitude: -9.4672,
+      longitude: 147.1957,
+      commandPhone: "+675 0000 0001",
+      commandEmail: "boroko.command@example.gov.pg",
+      commanderName: "Station Commander",
+      operatingHours: "24/7",
+      responseRadiusKm: 15,
+      isActive: true
+    });
+    await storage.createPoliceStation({
+      id: "station_local",
+      commandId: command.id,
+      provinceId: provincePng.id,
+      districtId: districtLocal.id,
+      name: "Local Police Station",
+      code: "station_local",
+      address: "Nearest local police station",
+      latitude: -6.314993,
+      longitude: 143.95555,
+      commandPhone: "+675 0000 0002",
+      commandEmail: "local.command@example.gov.pg",
+      commanderName: "Duty Commander",
+      operatingHours: "24/7",
+      responseRadiusKm: 25,
+      isActive: true
+    });
+    console.log("Upserted default Police Stations.");
+    await storage.createAdminUser({
+      name: "Administrator",
+      username: "admin",
+      passwordHash: hashPassword(defaultUserPassword("admin")),
+      role: "admin",
+      isActive: true,
+      stationId: "station_boroko"
+    });
+    console.log("Upserted default admin user.");
+    await storage.createAdminUser({
+      name: "Viewer",
+      username: "viewer",
+      passwordHash: hashPassword(defaultUserPassword("viewer")),
+      role: "viewer",
+      isActive: true,
+      stationId: "station_boroko"
+    });
+    console.log("Upserted default viewer user.");
+    const officerUser = await storage.createAdminUser({
+      name: "Officer",
+      username: "officer",
+      passwordHash: hashPassword(defaultUserPassword("officer")),
+      role: "officer",
+      isActive: true,
+      stationId: "station_boroko"
+    });
+    console.log("Upserted default officer user.");
     if (officerUser) {
       const profile = await storage.getOfficerProfileByUserId(officerUser.id);
       if (!profile) {
@@ -3432,7 +3572,7 @@ async function seedDefaultUsers() {
       }
     }
   } catch (err) {
-    console.error("Failed to seed default users:", err);
+    console.error("Failed to seed default users and data:", err);
   }
 }
 async function registerRoutes(app2) {

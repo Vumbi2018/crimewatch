@@ -74,6 +74,50 @@ export const adminHtml = `<!DOCTYPE html>
     }
 
     .header-actions { display:flex; align-items:center; gap:12px; }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 12px;
+      background: var(--bg-card-strong);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .user-profile .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+    .user-profile .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.25;
+    }
+    .user-profile .user-info .username {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+    .user-profile .user-info .role-badge {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+    body.light-theme .user-profile {
+      background: #f8fafc;
+      border-color: #cbd8e6;
+    }
     .theme-toggle label { color:var(--text-muted); font-size:13px; font-weight:700; }
     body.light-theme .header { background: #ffffff; box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06); }
     body.light-theme .sidebar { box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04); }
@@ -1015,6 +1059,13 @@ export const adminHtml = `<!DOCTYPE html>
     </div>
     <div class="header-actions">
       <div class="theme-toggle"><label for="themeSelect">Theme</label><select id="themeSelect" class="theme-select" onchange="setTheme(this.value)"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+      <div class="user-profile" id="userProfileWidget">
+        <div class="avatar" id="avatarCircle">A</div>
+        <div class="user-info">
+          <span class="username" id="profileUsername">admin</span>
+          <span class="role-badge" id="profileRole">admin</span>
+        </div>
+      </div>
       <form method="POST" action="/api/admin/logout">
         <button class="logout-btn" type="submit">Log out</button>
       </form>
@@ -2268,6 +2319,16 @@ export const adminHtml = `<!DOCTYPE html>
 
     function initRoleRestrictions() {
       const user = window.currentUser || { username: 'admin', role: 'admin' };
+      
+      const usernameEl = document.getElementById('profileUsername');
+      const roleEl = document.getElementById('profileRole');
+      const avatarEl = document.getElementById('avatarCircle');
+      if (usernameEl && roleEl && avatarEl) {
+        usernameEl.textContent = user.username;
+        roleEl.textContent = user.role === 'admin' ? 'Administrator' : user.role === 'officer' ? 'Officer' : user.role === 'viewer' ? 'Viewer' : user.role;
+        avatarEl.textContent = user.username.charAt(0).toUpperCase();
+      }
+
       if (user.role === 'viewer') {
         document.body.classList.add('role-viewer');
         document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
