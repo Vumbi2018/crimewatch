@@ -527,12 +527,94 @@ async function forwardFileToProduction(
 
 async function seedDefaultUsers() {
   try {
-    const adminUser = await storage.createAdminUser({
+    // 1. Seed commands
+    const command = await storage.createPoliceCommand({
+      id: "command_ncd",
+      name: "NCD Command Centre",
+      code: "NCD",
+      isActive: true,
+    } as any);
+    console.log("Upserted default NCD Command.");
+
+    // 2. Seed provinces
+    const provinceNcd = await storage.createProvince({
+      id: "province_ncd",
+      commandId: command.id,
+      name: "National Capital District",
+      code: "NCD_PROV",
+      isActive: true,
+    } as any);
+    const provincePng = await storage.createProvince({
+      id: "province_png",
+      commandId: command.id,
+      name: "Papua New Guinea",
+      code: "PNG_PROV",
+      isActive: true,
+    } as any);
+    console.log("Upserted default Provinces.");
+
+    // 3. Seed districts
+    const districtPom = await storage.createDistrict({
+      id: "district_pom",
+      provinceId: provinceNcd.id,
+      name: "Port Moresby",
+      code: "POM_DIST",
+      isActive: true,
+    } as any);
+    const districtLocal = await storage.createDistrict({
+      id: "district_local",
+      provinceId: provincePng.id,
+      name: "Local District",
+      code: "LOCAL_DIST",
+      isActive: true,
+    } as any);
+    console.log("Upserted default Districts.");
+
+    // 4. Seed police stations
+    await storage.createPoliceStation({
+      id: "station_boroko",
+      commandId: command.id,
+      provinceId: provinceNcd.id,
+      districtId: districtPom.id,
+      name: "Boroko Police Station",
+      code: "station_boroko",
+      address: "Boroko, Port Moresby, National Capital District",
+      latitude: -9.4672,
+      longitude: 147.1957,
+      commandPhone: "+675 0000 0001",
+      commandEmail: "boroko.command@example.gov.pg",
+      commanderName: "Station Commander",
+      operatingHours: "24/7",
+      responseRadiusKm: 15,
+      isActive: true,
+    } as any);
+    await storage.createPoliceStation({
+      id: "station_local",
+      commandId: command.id,
+      provinceId: provincePng.id,
+      districtId: districtLocal.id,
+      name: "Local Police Station",
+      code: "station_local",
+      address: "Nearest local police station",
+      latitude: -6.314993,
+      longitude: 143.95555,
+      commandPhone: "+675 0000 0002",
+      commandEmail: "local.command@example.gov.pg",
+      commanderName: "Duty Commander",
+      operatingHours: "24/7",
+      responseRadiusKm: 25,
+      isActive: true,
+    } as any);
+    console.log("Upserted default Police Stations.");
+
+    // 5. Seed admin users
+    await storage.createAdminUser({
       name: "Administrator",
       username: "admin",
       passwordHash: hashPassword(defaultUserPassword("admin")),
       role: "admin",
       isActive: true,
+      stationId: "station_boroko",
     });
     console.log("Upserted default admin user.");
 
@@ -542,6 +624,7 @@ async function seedDefaultUsers() {
       passwordHash: hashPassword(defaultUserPassword("viewer")),
       role: "viewer",
       isActive: true,
+      stationId: "station_boroko",
     });
     console.log("Upserted default viewer user.");
 
@@ -551,6 +634,7 @@ async function seedDefaultUsers() {
       passwordHash: hashPassword(defaultUserPassword("officer")),
       role: "officer",
       isActive: true,
+      stationId: "station_boroko",
     });
     console.log("Upserted default officer user.");
 
@@ -570,7 +654,7 @@ async function seedDefaultUsers() {
       }
     }
   } catch (err) {
-    console.error("Failed to seed default users:", err);
+    console.error("Failed to seed default users and data:", err);
   }
 }
 
