@@ -1095,6 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignmentReason: "Assigned manually by dispatcher.",
           status: "Sent to Officer",
         });
+        await storage.updateEvidenceReportStatus(id, "Pending");
         res.status(201).json(assignment);
       } catch (error) {
         console.error("Error manual assigning:", error);

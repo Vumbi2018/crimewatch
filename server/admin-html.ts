@@ -383,6 +383,45 @@ export const adminHtml = `<!DOCTYPE html>
       transition: background 0.2s;
     }
     .toolbar .refresh-btn:hover { background: #2563eb; }
+    .detail-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .detail-tab:hover {
+      color: var(--text-strong);
+      background: var(--bg-card);
+    }
+    .detail-tab.active {
+      color: #60a5fa;
+      background: rgba(96, 165, 250, 0.1);
+    }
+    body.light-theme .detail-tab.active {
+      color: var(--primary);
+      background: rgba(37, 99, 235, 0.08);
+    }
+    .ai-btn {
+      background: var(--primary);
+      color: #fff;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .ai-btn:hover {
+      background: #2563eb;
+    }
     .logout-btn {
       background: transparent;
       border: 1px solid #334155;
@@ -2244,33 +2283,43 @@ export const adminHtml = `<!DOCTYPE html>
 
       document.getElementById('detailContent').innerHTML = ''
         + '<h3>Report Details <button class="detail-close" onclick="closeDetail()">&times;</button></h3>'
+        + '<div class="detail-tabs" style="display:flex;gap:8px;border-bottom:1px solid var(--border-soft);margin-bottom:16px;padding-bottom:8px">'
+        + '  <button class="detail-tab active" onclick="switchDetailTab(\'evidence\')">Evidence & AI</button>'
+        + '  <button class="detail-tab" onclick="switchDetailTab(\'metadata\')">Metadata & Status</button>'
+        + '  <button class="detail-tab" onclick="switchDetailTab(\'assignments\')">Assignments</button>'
+        + '</div>'
+        + '<div id="detailTab-evidence" class="detail-tab-panel">'
         + buildMediaViewer(r)
-        + '<div class="detail-row"><div class="detail-label">Reference</div><div class="detail-value reference-text">' + (r.referenceNumber || r.id.slice(0, 8).toUpperCase()) + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Report ID</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + r.id + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Submitted</div><div class="detail-value">' + date + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Evidence Type</div><div class="detail-value"><span class="badge badge-' + r.evidenceType + '">' + r.evidenceType + '</span></div></div>'
-        + '<div class="detail-row"><div class="detail-label">Incident Type</div><div class="detail-value">' + (r.incidentType || 'Not provided in submitted report') + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">' + (r.description || 'Not provided in submitted report') + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Location</div><div class="detail-value">' + location + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">GPS Coordinates</div><div class="detail-value">' + coordinates + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
-        + '<div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge badge-' + (r.priority || 'Medium').toLowerCase() + '">' + (r.priority || 'Medium') + '</span></div></div>'
-        + '<div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Contact Phone</div><div class="detail-value">' + (r.contactPhone || '-') + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
-          + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
-        + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
-        + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
-        + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
-        + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
-        + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
-        + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
-        + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Incident Type</div><div class="detail-value">' + (r.incidentType || 'Not provided in submitted report') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">' + (r.description || 'Not provided in submitted report') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge badge-' + (r.priority || 'Medium').toLowerCase() + '">' + (r.priority || 'Medium') + '</span></div></div>'
+        + '  <div id="detailAiAnalysis" style="margin-top:20px;border-top:1px solid var(--border-soft);padding-top:16px">Loading AI analysis...</div>'
+        + '</div>'
+        + '<div id="detailTab-metadata" class="detail-tab-panel" style="display:none">'
+        + '  <div class="detail-row"><div class="detail-label">Reference</div><div class="detail-value reference-text">' + (r.referenceNumber || r.id.slice(0, 8).toUpperCase()) + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Report ID</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + r.id + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Submitted</div><div class="detail-value">' + date + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Location</div><div class="detail-value">' + location + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">GPS Coordinates</div><div class="detail-value">' + coordinates + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Contact Phone</div><div class="detail-value">' + (r.contactPhone || '-') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
+          + '  <select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
+        + '      <option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
+        + '      <option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+        + '      <option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
+        + '      <option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
+        + '      <option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
+        + '      <option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
+        + '    </select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
         + behalfHtml
-        + '<div id="detailAiAnalysis" style="margin-top:20px;border-top:1px solid var(--border-soft);padding-top:16px">Loading AI analysis...</div>'
-        + assignmentsHtml;
+        + '</div>'
+        + '<div id="detailTab-assignments" class="detail-tab-panel" style="display:none">'
+        + assignmentsHtml
+        + '</div>';
 
       document.getElementById('detailModal').classList.add('show');
 
@@ -2370,6 +2419,16 @@ export const adminHtml = `<!DOCTYPE html>
 
     function closeDetail() {
       document.getElementById('detailModal').classList.remove('show');
+    }
+
+    function switchDetailTab(tabName) {
+      document.querySelectorAll('.detail-tab-panel').forEach(function(panel) {
+        panel.style.display = panel.id === 'detailTab-' + tabName ? 'block' : 'none';
+      });
+      document.querySelectorAll('.detail-tab').forEach(function(tab) {
+        const isCurrent = tab.getAttribute('onclick').includes(tabName);
+        tab.classList.toggle('active', isCurrent);
+      });
     }
 
     async function runAiAnalysis(reportId) {
