@@ -844,6 +844,17 @@ var adminHtml = `<!DOCTYPE html>
       padding: 18px 24px;
       flex: 1;
       text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+      border-color: #60a5fa;
+    }
+    body.light-theme .stat-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 6px 16px rgba(15,23,42,0.08);
     }
     .stat-card .number {
       font-size: 30px;
@@ -1640,11 +1651,11 @@ var adminHtml = `<!DOCTYPE html>
         </div>
         <div id="dashboardTab" class="workspace-panel active">
         <div class="stats-bar">
-          <div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
-          <div class="stat-card new"><div class="number" id="newCount">0</div><div class="label">New</div></div>
-          <div class="stat-card pending"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
-          <div class="stat-card reviewed"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
-          <div class="stat-card resolved"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
+          <div class="stat-card" onclick="clickStatCard('all')"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
+          <div class="stat-card new" onclick="clickStatCard('new')"><div class="number" id="newCount">0</div><div class="label">New</div></div>
+          <div class="stat-card pending" onclick="clickStatCard('pending')"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
+          <div class="stat-card reviewed" onclick="clickStatCard('reviewed')"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
+          <div class="stat-card resolved" onclick="clickStatCard('resolved')"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
         </div>
         </div>
 
@@ -2932,6 +2943,20 @@ var adminHtml = `<!DOCTYPE html>
         const isCurrent = tab.getAttribute('onclick').includes(tabName);
         tab.classList.toggle('active', isCurrent);
       });
+    }
+
+    function clickStatCard(filterName) {
+      showModule('dashboard', document.querySelector('[data-module-target="dashboard"]'));
+      showWorkspaceTab('reports');
+      
+      let btn = null;
+      document.querySelectorAll('.filter-btn').forEach(function(b) {
+        if (b.getAttribute('onclick').includes("'" + filterName + "'")) {
+          btn = b;
+        }
+      });
+      
+      filterReports(filterName, btn);
     }
 
     async function runAiAnalysis(reportId) {
