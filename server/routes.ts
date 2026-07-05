@@ -527,40 +527,33 @@ async function forwardFileToProduction(
 
 async function seedDefaultUsers() {
   try {
-    const admin = await storage.getAdminUserByUsername("admin");
-    if (!admin) {
-      await storage.createAdminUser({
-        name: "Administrator",
-        username: "admin",
-        passwordHash: hashPassword(defaultUserPassword("admin")),
-        role: "admin",
-        isActive: true,
-      });
-      console.log("Seeded admin user.");
-    }
-    const viewer = await storage.getAdminUserByUsername("viewer");
-    if (!viewer) {
-      await storage.createAdminUser({
-        name: "Viewer",
-        username: "viewer",
-        passwordHash: hashPassword(defaultUserPassword("viewer")),
-        role: "viewer",
-        isActive: true,
-      });
-      console.log("Seeded viewer user.");
-    }
-    const officer = await storage.getAdminUserByUsername("officer");
-    let officerUser = officer;
-    if (!officer) {
-      officerUser = await storage.createAdminUser({
-        name: "Officer",
-        username: "officer",
-        passwordHash: hashPassword(defaultUserPassword("officer")),
-        role: "officer",
-        isActive: true,
-      });
-      console.log("Seeded officer user.");
-    }
+    const adminUser = await storage.createAdminUser({
+      name: "Administrator",
+      username: "admin",
+      passwordHash: hashPassword(defaultUserPassword("admin")),
+      role: "admin",
+      isActive: true,
+    });
+    console.log("Upserted default admin user.");
+
+    await storage.createAdminUser({
+      name: "Viewer",
+      username: "viewer",
+      passwordHash: hashPassword(defaultUserPassword("viewer")),
+      role: "viewer",
+      isActive: true,
+    });
+    console.log("Upserted default viewer user.");
+
+    const officerUser = await storage.createAdminUser({
+      name: "Officer",
+      username: "officer",
+      passwordHash: hashPassword(defaultUserPassword("officer")),
+      role: "officer",
+      isActive: true,
+    });
+    console.log("Upserted default officer user.");
+
     if (officerUser) {
       const profile = await storage.getOfficerProfileByUserId(officerUser.id);
       if (!profile) {
