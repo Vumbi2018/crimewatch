@@ -613,6 +613,12 @@ async function seedDefaultUsers() {
       username: "admin",
       passwordHash: hashPassword(defaultUserPassword("admin")),
       role: "admin",
+      permissionProfile: "super_admin",
+      permissions: [
+        "reports.read", "reports.create", "reports.update_status", "reports.delete", "reports.assign",
+        "map.view", "map.export", "users.read", "users.manage", "stations.read", "stations.manage",
+        "locations.manage", "notifications.send", "audit.read", "settings.manage"
+      ],
       isActive: true,
       stationId: "station_boroko",
     });
@@ -623,6 +629,8 @@ async function seedDefaultUsers() {
       username: "viewer",
       passwordHash: hashPassword(defaultUserPassword("viewer")),
       role: "viewer",
+      permissionProfile: "viewer",
+      permissions: ["reports.read", "map.view"],
       isActive: true,
       stationId: "station_boroko",
     });
@@ -633,6 +641,8 @@ async function seedDefaultUsers() {
       username: "officer",
       passwordHash: hashPassword(defaultUserPassword("officer")),
       role: "officer",
+      permissionProfile: "field_officer",
+      permissions: ["reports.read", "reports.update_status", "map.view"],
       isActive: true,
       stationId: "station_boroko",
     });
