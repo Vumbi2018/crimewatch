@@ -2798,9 +2798,9 @@ var adminHtml = `<!DOCTYPE html>
       document.getElementById('detailContent').innerHTML = ''
         + '<h3>Report Details <button class="detail-close" onclick="closeDetail()">&times;</button></h3>'
         + '<div class="detail-tabs" style="display:flex;gap:8px;border-bottom:1px solid var(--border-soft);margin-bottom:16px;padding-bottom:8px">'
-        + '  <button class="detail-tab active" onclick="switchDetailTab('evidence')">Evidence & AI</button>'
-        + '  <button class="detail-tab" onclick="switchDetailTab('metadata')">Metadata & Status</button>'
-        + '  <button class="detail-tab" onclick="switchDetailTab('assignments')">Assignments</button>'
+        + '  <button class="detail-tab active" onclick="switchDetailTab(\\'evidence\\')">Evidence & AI</button>'
+        + '  <button class="detail-tab" onclick="switchDetailTab(\\'metadata\\')">Metadata & Status</button>'
+        + '  <button class="detail-tab" onclick="switchDetailTab(\\'assignments\\')">Assignments</button>'
         + '</div>'
         + '<div id="detailTab-evidence" class="detail-tab-panel">'
         + buildMediaViewer(r)
