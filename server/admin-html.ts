@@ -2255,7 +2255,7 @@ export const adminHtml = `<!DOCTYPE html>
         + '<div class="detail-row"><div class="detail-label">GPS Coordinates</div><div class="detail-value">' + coordinates + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
         + '<div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
-        + '<div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge badge-' + r.priority.toLowerCase() + '">' + r.priority + '</span></div></div>'
+        + '<div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge badge-' + (r.priority || 'Medium').toLowerCase() + '">' + (r.priority || 'Medium') + '</span></div></div>'
         + '<div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Contact Phone</div><div class="detail-value">' + (r.contactPhone || '-') + '</div></div>'
         + '<div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
@@ -2276,8 +2276,10 @@ export const adminHtml = `<!DOCTYPE html>
 
       // Fetch report notes to see if there is an AI analysis
       fetch('/api/reports/' + r.id + '/notes')
-        .then(function(res) { return res.json(); })
+        .then(function(res) { return res.ok ? res.json() : []; })
+        .catch(function() { return []; })
         .then(function(notes) {
+          if (!Array.isArray(notes)) notes = [];
           const aiNote = notes.find(function(n) { return n.noteType === 'ai_analysis'; });
           let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
             + '<h4 style="margin:0;display:flex;align-items:center;gap:6px">'
