@@ -708,6 +708,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
+    paddingBottom: 150,
   },
   evidenceCard: {
     flexDirection: "row",

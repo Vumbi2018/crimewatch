@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.md,
-    paddingBottom: 40,
+    paddingBottom: 150,
     gap: Spacing.md,
   },
   header: {
