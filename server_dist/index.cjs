@@ -3608,13 +3608,22 @@ async function registerRoutes(app2) {
     res.redirect("/admin");
   });
   app2.get("/uploads/:filename", (req, res) => {
-    if (isProductionServer(req)) {
-      return res.status(404).send("File not found on production server");
+    const filename = req.params.filename;
+    const filePath = path2.resolve(uploadsDir, filename);
+    if (fs2.existsSync(filePath)) {
+      return res.sendFile(filePath);
     }
-    res.redirect(
-      302,
-      `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`
+    const fallbackPath = path2.resolve(
+      process.cwd(),
+      "assets",
+      "images",
+      "generated",
+      "police_car.png"
     );
+    if (fs2.existsSync(fallbackPath)) {
+      return res.sendFile(fallbackPath);
+    }
+    res.status(404).send("File not found");
   });
   app2.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {

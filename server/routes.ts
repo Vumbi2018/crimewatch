@@ -706,13 +706,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/uploads/:filename", (req, res) => {
-    if (isProductionServer(req)) {
-      return res.status(404).send("File not found on production server");
+    const filename = req.params.filename;
+    const filePath = path.resolve(uploadsDir, filename);
+
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
     }
-    res.redirect(
-      302,
-      `https://${PRODUCTION_DOMAIN}/uploads/${encodeURIComponent(req.params.filename)}`,
+
+    const fallbackPath = path.resolve(
+      process.cwd(),
+      "assets",
+      "images",
+      "generated",
+      "police_car.png",
     );
+    if (fs.existsSync(fallbackPath)) {
+      return res.sendFile(fallbackPath);
+    }
+
+    res.status(404).send("File not found");
   });
   app.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
