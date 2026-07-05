@@ -1059,7 +1059,7 @@ export const adminHtml = `<!DOCTYPE html>
     </div>
     <div class="header-actions">
       <div class="theme-toggle"><label for="themeSelect">Theme</label><select id="themeSelect" class="theme-select" onchange="setTheme(this.value)"><option value="dark">Dark</option><option value="light">Light</option></select></div>
-      <div class="user-profile" id="userProfileWidget">
+      <div class="user-profile" id="userProfileWidget" style="cursor:pointer" onclick="showModule('users', document.querySelector('[data-module-target=users]'))">
         <div class="avatar" id="avatarCircle">A</div>
         <div class="user-info">
           <span class="username" id="profileUsername">admin</span>
