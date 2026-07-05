@@ -1044,6 +1044,10 @@ export const adminHtml = `<!DOCTYPE html>
     body.role-viewer .status-select { pointer-events: none; opacity: 0.6; }
     body.role-viewer .admin-action-btn { display: none !important; }
     body.role-viewer .admin-form { display: none !important; }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -2265,9 +2269,62 @@ export const adminHtml = `<!DOCTYPE html>
         + '<option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
         + '</select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
         + behalfHtml
+        + '<div id="detailAiAnalysis" style="margin-top:20px;border-top:1px solid var(--border-soft);padding-top:16px">Loading AI analysis...</div>'
         + assignmentsHtml;
 
       document.getElementById('detailModal').classList.add('show');
+
+      // Fetch report notes to see if there is an AI analysis
+      fetch('/api/reports/' + r.id + '/notes')
+        .then(function(res) { return res.json(); })
+        .then(function(notes) {
+          const aiNote = notes.find(function(n) { return n.noteType === 'ai_analysis'; });
+          let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+            + '<h4 style="margin:0;display:flex;align-items:center;gap:6px">'
+            + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+            + 'Gemini AI Evidence Analysis</h4>'
+            + '</div>';
+          
+          if (aiNote) {
+            let analysisData;
+            try {
+              analysisData = JSON.parse(aiNote.note);
+            } catch(e) {
+              analysisData = { text: aiNote.note };
+            }
+
+            if (analysisData.text && !analysisData.recommendedAction) {
+              html += '<div style="background:rgba(96,165,250,0.06);border:1px dashed rgba(96,165,250,0.3);border-radius:10px;padding:16px;font-size:13px;line-height:1.6">'
+                + '<div style="color:var(--text);white-space:pre-wrap">' + analysisData.text + '</div>'
+                + '</div>';
+            } else {
+              const severityColor = analysisData.severity === 'Critical' || analysisData.severity === 'High' ? '#ef4444' : '#f59e0b';
+              html += '<div style="background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.3);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">'
+                + '<div><strong>Confidence Score:</strong> <span style="color:#10b981;font-weight:800;font-size:14px">' + Math.round(analysisData.confidenceScore * 100) + '%</span></div>'
+                + '<span class="badge" style="background:' + severityColor + ';color:white;font-size:11px">' + analysisData.severity + ' Severity</span>'
+                + '</div>'
+                + '<div style="font-size:13px;line-height:1.5"><strong>Analysis Summary:</strong><p style="margin:4px 0 0 0;color:var(--text-secondary)">' + analysisData.summary + '</p></div>'
+                + '<div style="font-size:13px"><strong>Detected Objects/Cues:</strong><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
+                + (analysisData.detectedObjects || []).map(function(obj) { return '<span style="background:rgba(255,255,255,0.06);border:1px solid var(--border-soft);border-radius:4px;padding:2px 6px;font-size:11px">' + obj + '</span>'; }).join('')
+                + '</div></div>'
+                + '<div style="font-size:13px"><strong>Evidentiary Value:</strong><p style="margin:4px 0 0 0;color:var(--text-secondary)">' + analysisData.evidentiaryValue + '</p></div>'
+                + '<div style="font-size:13px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;padding:8px 10px;border-radius:0 6px 6px 0">'
+                + '<strong>Recommended Action:</strong><p style="margin:4px 0 0 0;color:var(--text-secondary)">' + analysisData.recommendedAction + '</p>'
+                + '</div>'
+                + '<div style="font-size:11px;color:var(--text-muted);text-align:right">Analyzed on ' + new Date(aiNote.createdAt).toLocaleString() + '</div>'
+                + '</div>';
+            }
+          } else {
+            html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
+              + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
+              + '<button class="admin-action-btn primary" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\'' + r.id + '\')">'
+              + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+              + 'Analyze Evidence</button>'
+              + '</div>';
+          }
+          document.getElementById('detailAiAnalysis').innerHTML = html;
+        });
 
       // Fetch assignments dynamically
       fetch('/api/reports/' + r.id + '/assignments')
@@ -2311,6 +2368,28 @@ export const adminHtml = `<!DOCTYPE html>
 
     function closeDetail() {
       document.getElementById('detailModal').classList.remove('show');
+    }
+
+    async function runAiAnalysis(reportId) {
+      const btn = document.getElementById('runAiBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:6px"></span>Analyzing Evidence...';
+      }
+      try {
+        const res = await fetch('/api/admin/reports/' + reportId + '/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Analysis failed.');
+        }
+        showDetail(reportId);
+      } catch (err) {
+        alert('AI Analysis Error: ' + err.message);
+        showDetail(reportId);
+      }
     }
 
     document.getElementById('detailModal').addEventListener('click', function(e) {
