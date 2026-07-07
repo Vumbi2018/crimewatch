@@ -985,8 +985,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       forwardToProduction(reportData);
 
-      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-        try {
+      const responsePayload = {
+        ...withReferenceNumber(report),
+        nearestStation,
+      };
+
+      setImmediate(async () => {
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          try {
           const officers = await storage.listOfficerProfiles();
           let assigned = false;
           for (const officer of officers) {
@@ -1016,12 +1022,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (assigned) {
             await storage.updateEvidenceReportStatus(report.id, "Assigned");
           }
-        } catch (routingError) {
-          console.error("Failed to automatically route report:", routingError);
+          } catch (routingError) {
+            console.error("Failed to automatically route report:", routingError);
+          }
         }
-      }
-      if (nearestStation) {
-        try {
+        if (nearestStation) {
+          try {
           await storage.createReportDispatch({
             reportId: report.id,
             stationId: nearestStation.id,
@@ -1072,13 +1078,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               nearestStation.commandEmail ||
               nearestStation.commandPhone ||
               nearestStation.name,
-          });
+            });
+          }
         }
-      }
-      res.status(201).json({
-        ...withReferenceNumber(report),
-        nearestStation,
       });
+
+      return res.status(201).json(responsePayload);
     } catch (error) {
       console.error("Error creating report:", error);
       res.status(500).json({ message: "Failed to submit report" });

@@ -4210,74 +4210,77 @@ async function registerRoutes(app2) {
         );
       }
       forwardToProduction(reportData);
-      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-        try {
-          const officers = await storage.listOfficerProfiles();
-          let assigned = false;
-          for (const officer of officers) {
-            if (officer.isActive) {
-              const dist = distanceKm(
-                latitude,
-                longitude,
-                officer.latitude,
-                officer.longitude
-              );
-              if (dist <= officer.radiusKm) {
-                await storage.createReportAssignment({
-                  reportId: report.id,
-                  officerUserId: officer.userId,
-                  assignmentType: "automatic",
-                  assignmentReason: `Report coordinates are within ${dist.toFixed(1)} km of officer's coverage area (${officer.radiusKm} km radius).`,
-                  matchedAreaName: officer.responsibilityAreaName,
-                  status: "Sent to Officer"
-                });
-                assigned = true;
-                console.log(
-                  `Automatically assigned report ${report.id} to officer ${officer.userId}`
-                );
-              }
-            }
-          }
-          if (assigned) {
-            await storage.updateEvidenceReportStatus(report.id, "Assigned");
-          }
-        } catch (routingError) {
-          console.error("Failed to automatically route report:", routingError);
-        }
-      }
-      if (nearestStation) {
-        try {
-          await storage.createReportDispatch({
-            reportId: report.id,
-            stationId: nearestStation.id,
-            distanceKm: nearestStation.distanceKm,
-            withinResponseRadius: nearestStation.withinResponseRadius,
-            status: "notified"
-          });
-          await storage.createNotificationLog({
-            stationId: nearestStation.id,
-            reportId: report.id,
-            title: "Immediate crime report dispatch",
-            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
-            channel: "console",
-            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name,
-            status: "sent"
-          });
-        } catch (notificationError) {
-          adminStore.createNotification({
-            stationId: nearestStation.id,
-            reportId: report.id,
-            title: "Immediate crime report dispatch",
-            message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
-            channel: "console",
-            recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name
-          });
-        }
-      }
-      res.status(201).json({
+      const responsePayload = {
         ...withReferenceNumber(report),
         nearestStation
+      };
+      setImmediate(async () => {
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          try {
+            const officers = await storage.listOfficerProfiles();
+            let assigned = false;
+            for (const officer of officers) {
+              if (officer.isActive) {
+                const dist = distanceKm(
+                  latitude,
+                  longitude,
+                  officer.latitude,
+                  officer.longitude
+                );
+                if (dist <= officer.radiusKm) {
+                  await storage.createReportAssignment({
+                    reportId: report.id,
+                    officerUserId: officer.userId,
+                    assignmentType: "automatic",
+                    assignmentReason: `Report coordinates are within ${dist.toFixed(1)} km of officer's coverage area (${officer.radiusKm} km radius).`,
+                    matchedAreaName: officer.responsibilityAreaName,
+                    status: "Sent to Officer"
+                  });
+                  assigned = true;
+                  console.log(
+                    `Automatically assigned report ${report.id} to officer ${officer.userId}`
+                  );
+                }
+              }
+            }
+            if (assigned) {
+              await storage.updateEvidenceReportStatus(report.id, "Assigned");
+            }
+          } catch (routingError) {
+            console.error("Failed to automatically route report:", routingError);
+          }
+        }
+        if (nearestStation) {
+          try {
+            await storage.createReportDispatch({
+              reportId: report.id,
+              stationId: nearestStation.id,
+              distanceKm: nearestStation.distanceKm,
+              withinResponseRadius: nearestStation.withinResponseRadius,
+              status: "notified"
+            });
+            await storage.createNotificationLog({
+              stationId: nearestStation.id,
+              reportId: report.id,
+              title: "Immediate crime report dispatch",
+              message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+              channel: "console",
+              recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name,
+              status: "sent"
+            });
+          } catch (notificationError) {
+            adminStore.createNotification({
+              stationId: nearestStation.id,
+              reportId: report.id,
+              title: "Immediate crime report dispatch",
+              message: "New " + report.priority + " priority " + report.evidenceType + " report near " + nearestStation.name + " (" + nearestStation.distanceKm + " km). Reference: " + buildReferenceNumber(report),
+              channel: "console",
+              recipient: nearestStation.commandEmail || nearestStation.commandPhone || nearestStation.name
+            });
+          }
+        }
       });
+      return res.status(201).json(responsePayload);
     } catch (error) {
       console.error("Error creating report:", error);
       res.status(500).json({ message: "Failed to submit report" });
