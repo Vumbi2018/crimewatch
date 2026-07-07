@@ -271,30 +271,51 @@ export default function BehalfReportScreen() {
     return `${mb.toFixed(2)} MB`;
   };
 
-  const uploadFile = async (file: Attachment): Promise<string | null> => {
-    try {
-      const formData = new FormData();
-      formData.append("file", {
-        uri: file.uri,
-        name: file.name,
-        type: file.type,
-      } as any);
-
-      const uploadUrl = apiUrl("/api/upload");
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Server rejected evidence file upload.");
-      }
-      const data = await res.json();
-      return data.fileUrl || null;
-    } catch (err) {
-      console.error("Upload failed:", err);
-      return null;
+  const getSubmissionErrorMessage = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("413") || message.includes("Payload Too Large")) {
+      return "The evidence file is too large for the server to accept. Try a shorter video, smaller audio file, or submit fewer files at once.";
     }
+    if (
+      message.includes("502") ||
+      message.includes("503") ||
+      message.includes("504") ||
+      message.toLowerCase().includes("timeout")
+    ) {
+      return "The server took too long to accept the upload. Try again on a stronger connection or submit a shorter recording.";
+    }
+    if (
+      message.includes("Network request failed") ||
+      message.includes("Failed to fetch") ||
+      message.includes("NetworkError")
+    ) {
+      return "We could not reach the reporting server. Check your internet connection and try again.";
+    }
+    return "Could not submit report. Check your network connection and try again.";
+  };
+
+  const uploadFile = async (file: Attachment): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append("file", {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as any);
+
+    const uploadUrl = apiUrl("/api/upload");
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `Upload failed with status ${res.status}${body ? `: ${body}` : ""}`,
+      );
+    }
+    const data = await res.json();
+    return data.fileUrl || null;
   };
 
   const executeSubmission = async () => {
@@ -313,13 +334,7 @@ export default function BehalfReportScreen() {
         );
         const fileUrl = await uploadFile(att);
         if (!fileUrl) {
-          Alert.alert(
-            "Submission Failed",
-            `Failed to upload evidence file: ${att.name}. Please try again.`,
-          );
-          setIsSubmitting(false);
-          setSubmitProgress("");
-          return;
+          throw new Error(`Upload did not return a file URL for ${att.name}.`);
         }
         uploadedUrls.push(fileUrl);
         attachmentsPayload.push({
@@ -406,10 +421,7 @@ export default function BehalfReportScreen() {
       );
     } catch (err) {
       console.error("Submission failed:", err);
-      Alert.alert(
-        "Error",
-        "Could not submit report. Check your network connection and try again.",
-      );
+      Alert.alert("Submission Failed", getSubmissionErrorMessage(err));
     } finally {
       setIsSubmitting(false);
       setSubmitProgress("");

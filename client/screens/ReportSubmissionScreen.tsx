@@ -135,8 +135,17 @@ function getSubmitErrorMessage(error: unknown): string {
     return "We could not reach the reporting server. The report has been saved on this device so it can be retried when the connection is working.";
   }
 
-  if (message.startsWith("413:")) {
-    return "The evidence file is too large to upload. Try submitting a shorter video or smaller file.";
+  if (message.includes("413") || message.includes("Payload Too Large")) {
+    return "The evidence file is too large for the server to accept. Try a shorter video, smaller audio file, or submit fewer files at once.";
+  }
+
+  if (
+    message.includes("502") ||
+    message.includes("503") ||
+    message.includes("504") ||
+    message.toLowerCase().includes("timeout")
+  ) {
+    return "The server took too long to accept the upload. The report has been saved on this device; try again on a stronger connection or submit a shorter recording.";
   }
 
   if (message.startsWith("401:") || message.startsWith("403:")) {
@@ -233,28 +242,26 @@ export default function ReportSubmissionScreen() {
   const uploadEvidenceFile = async (
     evidence: Evidence,
   ): Promise<string | null> => {
-    try {
-      const { extension, mimeType } = getEvidenceUploadMetadata(evidence);
-      const filename = `evidence_${Date.now()}${extension}`;
+    const { extension, mimeType } = getEvidenceUploadMetadata(evidence);
+    const filename = `evidence_${Date.now()}${extension}`;
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri: evidence.uri,
-        name: filename,
-        type: mimeType,
-      } as any);
+    const formData = new FormData();
+    formData.append("file", {
+      uri: evidence.uri,
+      name: filename,
+      type: mimeType,
+    } as any);
 
-      const uploadUrl = new URL("/api/upload", getApiUrl()).toString();
-      const res = await fetch(uploadUrl, { method: "POST", body: formData });
-      if (!res.ok) {
-        throw new Error(`Upload failed with status ${res.status}`);
-      }
-      const data = await res.json();
-      return data.fileUrl || null;
-    } catch (err) {
-      console.error("File upload failed:", err);
-      return null;
+    const uploadUrl = new URL("/api/upload", getApiUrl()).toString();
+    const res = await fetch(uploadUrl, { method: "POST", body: formData });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `Upload failed with status ${res.status}${body ? `: ${body}` : ""}`,
+      );
     }
+    const data = await res.json();
+    return data.fileUrl || null;
   };
 
   const executeSubmission = async () => {
