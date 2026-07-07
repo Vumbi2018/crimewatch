@@ -1490,7 +1490,7 @@ export const adminHtml = `<!DOCTYPE html>
         const status = normalizeStatus(report);
         const incidentName = report.incidentType || 'Unspecified';
         const reportPriority = String(report.priority || '').toLowerCase();
-        const matchesSource = !reportSource || 
+        const matchesSource = !reportSource ||
           (reportSource === 'LIVE_INCIDENT' && report.reportSourceType !== 'ON_BEHALF_OF_SOMEONE') ||
           (reportSource === 'ON_BEHALF_OF_SOMEONE' && report.reportSourceType === 'ON_BEHALF_OF_SOMEONE');
         const attachmentsCount = (report.attachments || []).length || (report.fileUrl ? 1 : 0);
@@ -1692,16 +1692,16 @@ export const adminHtml = `<!DOCTYPE html>
 
       const selectedCmd = cmdEl.value;
       const filteredProvinces = provinces.filter(function(p) { return !selectedCmd || p.commandId === selectedCmd; });
-      
+
       const prevProvVal = provEl.value;
       provEl.innerHTML = optionList(filteredProvinces, 'Select province', prevProvVal);
       if (provEl.value !== prevProvVal) {
         provEl.value = '';
       }
-      
+
       const selectedProv = provEl.value;
       const filteredDistricts = districts.filter(function(d) { return !selectedProv || d.provinceId === selectedProv; });
-      
+
       const prevDistVal = distEl.value;
       distEl.innerHTML = optionList(filteredDistricts, 'Select district', prevDistVal);
       if (distEl.value !== prevDistVal) {
@@ -1722,7 +1722,7 @@ export const adminHtml = `<!DOCTYPE html>
       if (provinceCommand) provinceCommand.innerHTML = optionList(policeCommands, 'Select command for province', provinceCommand.value);
       if (districtProvince) districtProvince.innerHTML = optionList(provinces, 'Select province for district', districtProvince.value);
       if (stationCommand) stationCommand.innerHTML = optionList(policeCommands, 'Select command / region', stationCommand.value);
-      
+
       refreshStationCascade();
       if (stationCommand) {
         stationCommand.onchange = refreshStationCascade;
@@ -2262,7 +2262,7 @@ export const adminHtml = `<!DOCTYPE html>
         mediaHtml = '<div style="display:flex;align-items:center;gap:8px;padding:12px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span style="font-size:13px;color:var(--text)">' + label + '</span></div>';
       }
       return '<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#0a0f1a;padding:12px">'
-        + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">📎 ' + label + '</div>'
+        + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">Attachment: ' + label + '</div>'
         + mediaHtml
         + '<div style="padding:8px 0 0;display:flex;justify-content:flex-end"><a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a></div>'
         + '</div>';
@@ -2341,7 +2341,7 @@ export const adminHtml = `<!DOCTYPE html>
           + '<div class="detail-row"><div class="detail-label">Victim Name</div><div class="detail-value">' + (r.behalfName || 'Anonymous') + '</div></div>'
           + '<div class="detail-row"><div class="detail-label">Contact Info</div><div class="detail-value">' + (r.behalfContact || 'None') + '</div></div>'
           + '<div class="detail-row"><div class="detail-label">Relationship</div><div class="detail-value">' + (r.behalfRelationship || 'Not stated') + '</div></div>'
-          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes ✅' : 'No ❌') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes' : 'No') + '</div></div>'
           + '</div>';
       } else {
         behalfHtml = ''
@@ -2418,7 +2418,7 @@ export const adminHtml = `<!DOCTYPE html>
             + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
             + 'Gemini AI Evidence Analysis</h4>'
             + '</div>';
-          
+
           if (aiNote) {
             let analysisData;
             try {
@@ -2451,7 +2451,7 @@ export const adminHtml = `<!DOCTYPE html>
             }
             if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
               html += '<div style="text-align:center;margin-top:10px">'
-                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:6px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;opacity:0.85" onclick="runAiAnalysis(\'' + r.id + '\')">'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:6px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;opacity:0.85" onclick="runAiAnalysis(\\'' + r.id + '\\')">'
                 + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
                 + 'Re-run AI Analysis</button>'
                 + '</div>';
@@ -2460,7 +2460,7 @@ export const adminHtml = `<!DOCTYPE html>
             if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
               html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
                 + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
-                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\'' + r.id + '\')">'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\'' + r.id + '\\')">'
                 + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
                 + 'Analyze Evidence</button>'
                 + '</div>';
@@ -2534,14 +2534,14 @@ export const adminHtml = `<!DOCTYPE html>
     function clickStatCard(filterName) {
       showModule('dashboard', document.querySelector('[data-module-target="dashboard"]'));
       showWorkspaceTab('reports');
-      
+
       let btn = null;
       document.querySelectorAll('.filter-btn').forEach(function(b) {
         if (b.getAttribute('onclick').includes("'" + filterName + "'")) {
           btn = b;
         }
       });
-      
+
       filterReports(filterName, btn);
     }
 
@@ -2579,7 +2579,7 @@ export const adminHtml = `<!DOCTYPE html>
 
     function initRoleRestrictions() {
       const user = window.currentUser || { username: 'admin', role: 'admin', permissions: [] };
-      
+
       const usernameEl = document.getElementById('profileUsername');
       const roleEl = document.getElementById('profileRole');
       const avatarEl = document.getElementById('avatarCircle');
@@ -2598,7 +2598,7 @@ export const adminHtml = `<!DOCTYPE html>
         else if (target === 'users') allowed = hasPermission('users.read');
         else if (target === 'stations') allowed = hasPermission('stations.read');
         else if (target === 'notifications') allowed = hasPermission('notifications.send');
-        
+
         if (!allowed) {
           btn.style.display = 'none';
         }

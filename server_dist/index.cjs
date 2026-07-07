@@ -9,11 +9,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc2) => {
+var __copyProps = (to, from, except, desc3) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
   }
   return to;
 };
@@ -40,10 +40,12 @@ var fs2 = __toESM(require("fs"));
 var schema_exports = {};
 __export(schema_exports, {
   adminUsers: () => adminUsers,
+  auditLogs: () => auditLogs,
   deletedReportAudits: () => deletedReportAudits,
   districts: () => districts,
   evidenceReports: () => evidenceReports,
   insertAdminUserSchema: () => insertAdminUserSchema,
+  insertAuditLogSchema: () => insertAuditLogSchema,
   insertDeletedReportAuditSchema: () => insertDeletedReportAuditSchema,
   insertDistrictSchema: () => insertDistrictSchema,
   insertEvidenceReportSchema: () => insertEvidenceReportSchema,
@@ -53,8 +55,11 @@ __export(schema_exports, {
   insertPoliceStationSchema: () => insertPoliceStationSchema,
   insertProvinceSchema: () => insertProvinceSchema,
   insertReportAssignmentSchema: () => insertReportAssignmentSchema,
+  insertReportAttachmentSchema: () => insertReportAttachmentSchema,
   insertReportDispatchSchema: () => insertReportDispatchSchema,
   insertReportNoteSchema: () => insertReportNoteSchema,
+  insertReporterProfileSchema: () => insertReporterProfileSchema,
+  insertRepresentedPersonSchema: () => insertRepresentedPersonSchema,
   insertUserSchema: () => insertUserSchema,
   notificationLogs: () => notificationLogs,
   officerProfiles: () => officerProfiles,
@@ -62,8 +67,11 @@ __export(schema_exports, {
   policeStations: () => policeStations,
   provinces: () => provinces,
   reportAssignments: () => reportAssignments,
+  reportAttachments: () => reportAttachments,
   reportDispatches: () => reportDispatches,
   reportNotes: () => reportNotes,
+  reporterProfiles: () => reporterProfiles,
+  representedPersons: () => representedPersons,
   users: () => users
 });
 var import_drizzle_orm = require("drizzle-orm");
@@ -99,6 +107,11 @@ var evidenceReports = (0, import_pg_core.pgTable)("evidence_reports", {
   behalfConsent: (0, import_pg_core.boolean)("behalf_consent").notNull().default(false),
   behalfSource: (0, import_pg_core.text)("behalf_source"),
   attachments: (0, import_pg_core.jsonb)("attachments").$type().default([]),
+  reporterProfileId: (0, import_pg_core.varchar)("reporter_profile_id"),
+  reportSourceType: (0, import_pg_core.text)("report_source_type").notNull().default("LIVE_INCIDENT"),
+  representedPersonId: (0, import_pg_core.varchar)("represented_person_id"),
+  confirmationAcknowledgedAt: (0, import_pg_core.timestamp)("confirmation_acknowledged_at"),
+  confirmationTextVersion: (0, import_pg_core.text)("confirmation_text_version"),
   submittedAt: (0, import_pg_core.timestamp)("submitted_at").defaultNow().notNull()
 });
 var policeCommands = (0, import_pg_core.pgTable)("police_commands", {
@@ -283,6 +296,59 @@ var insertReportAssignmentSchema = (0, import_drizzle_zod.createInsertSchema)(
   reportAssignments
 ).omit({ id: true, createdAt: true, updatedAt: true });
 var insertReportNoteSchema = (0, import_drizzle_zod.createInsertSchema)(reportNotes).omit({
+  id: true,
+  createdAt: true
+});
+var reporterProfiles = (0, import_pg_core.pgTable)("reporter_profiles", {
+  id: (0, import_pg_core.varchar)("id").primaryKey(),
+  displayName: (0, import_pg_core.text)("display_name").notNull(),
+  badgeNumber: (0, import_pg_core.text)("badge_number"),
+  avatarType: (0, import_pg_core.text)("avatar_type").notNull().default("shield"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
+  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
+});
+var representedPersons = (0, import_pg_core.pgTable)("represented_persons", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  name: (0, import_pg_core.text)("name"),
+  contact: (0, import_pg_core.text)("contact"),
+  relationshipToReporter: (0, import_pg_core.text)("relationship_to_reporter"),
+  consentGiven: (0, import_pg_core.boolean)("consent_given").notNull().default(false),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
+  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
+});
+var reportAttachments = (0, import_pg_core.pgTable)("report_attachments", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  reportId: (0, import_pg_core.varchar)("report_id").notNull(),
+  fileUrl: (0, import_pg_core.text)("file_url").notNull(),
+  fileName: (0, import_pg_core.text)("file_name"),
+  fileType: (0, import_pg_core.text)("file_type"),
+  mimeType: (0, import_pg_core.text)("mime_type"),
+  fileSize: (0, import_pg_core.integer)("file_size"),
+  evidenceSource: (0, import_pg_core.text)("evidence_source").notNull().default("uploaded"),
+  uploadedAt: (0, import_pg_core.timestamp)("uploaded_at").defaultNow().notNull()
+});
+var auditLogs = (0, import_pg_core.pgTable)("audit_logs", {
+  id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+  action: (0, import_pg_core.text)("action").notNull(),
+  details: (0, import_pg_core.text)("details"),
+  userId: (0, import_pg_core.varchar)("user_id"),
+  ipAddress: (0, import_pg_core.text)("ip_address"),
+  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+});
+var insertReporterProfileSchema = (0, import_drizzle_zod.createInsertSchema)(reporterProfiles).omit({
+  createdAt: true,
+  updatedAt: true
+});
+var insertRepresentedPersonSchema = (0, import_drizzle_zod.createInsertSchema)(representedPersons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+var insertReportAttachmentSchema = (0, import_drizzle_zod.createInsertSchema)(reportAttachments).omit({
+  id: true,
+  uploadedAt: true
+});
+var insertAuditLogSchema = (0, import_drizzle_zod.createInsertSchema)(auditLogs).omit({
   id: true,
   createdAt: true
 });
@@ -497,6 +563,49 @@ var DatabaseStorage = class {
     const [created] = await db.insert(reportNotes).values(note).returning();
     return created;
   }
+  // Reporter Profiles
+  async getReporterProfile(id) {
+    const [profile] = await db.select().from(reporterProfiles).where((0, import_drizzle_orm2.eq)(reporterProfiles.id, id));
+    return profile;
+  }
+  async createReporterProfile(profile) {
+    const [created] = await db.insert(reporterProfiles).values(profile).returning();
+    return created;
+  }
+  async upsertReporterProfile(profile) {
+    const [created] = await db.insert(reporterProfiles).values(profile).onConflictDoUpdate({
+      target: reporterProfiles.id,
+      set: {
+        displayName: profile.displayName,
+        badgeNumber: profile.badgeNumber,
+        avatarType: profile.avatarType,
+        updatedAt: /* @__PURE__ */ new Date()
+      }
+    }).returning();
+    return created;
+  }
+  // Represented Persons
+  async getRepresentedPerson(id) {
+    const [person] = await db.select().from(representedPersons).where((0, import_drizzle_orm2.eq)(representedPersons.id, id));
+    return person;
+  }
+  async createRepresentedPerson(person) {
+    const [created] = await db.insert(representedPersons).values(person).returning();
+    return created;
+  }
+  // Report Attachments
+  async createReportAttachment(attachment) {
+    const [created] = await db.insert(reportAttachments).values(attachment).returning();
+    return created;
+  }
+  async getReportAttachments(reportId) {
+    return db.select().from(reportAttachments).where((0, import_drizzle_orm2.eq)(reportAttachments.reportId, reportId)).orderBy((0, import_drizzle_orm2.asc)(reportAttachments.uploadedAt));
+  }
+  // Audit Logs
+  async createAuditLog(log2) {
+    const [created] = await db.insert(auditLogs).values(log2).returning();
+    return created;
+  }
 };
 var storage = new DatabaseStorage();
 
@@ -518,6 +627,7 @@ var adminHtml = `<!DOCTYPE html>
       --bg-sidebar: #0b1220;
       --bg-card: #1a2744;
       --bg-card-strong: #0f1724;
+      --bg-secondary: #111c31;
       --border: #2d3a4f;
       --border-soft: #1e293b;
       --text: #e2e8f0;
@@ -550,6 +660,7 @@ var adminHtml = `<!DOCTYPE html>
       --bg-sidebar: #ffffff;
       --bg-card: #ffffff;
       --bg-card-strong: #f8fafc;
+      --bg-secondary: #f1f5f9;
       --border: #c4d0df;
       --border-soft: #d7e0ec;
       --text: #172033;
@@ -674,6 +785,7 @@ var adminHtml = `<!DOCTYPE html>
     body.light-theme .badge-pending { background:#fef3c7; color:#92400e; }
     body.light-theme .badge-reviewed { background:#dbeafe; color:#1d4ed8; }
     body.light-theme .badge-resolved { background:#dcfce7; color:#166534; }
+    body.light-theme .badge-assigned { background:#e0f2fe; color:#0369a1; }
     body.light-theme .badge-high { background:#fee2e2; color:#b91c1c; }
     body.light-theme .badge-medium { background:#fef3c7; color:#92400e; }
     body.light-theme .badge-low { background:#dcfce7; color:#166534; }
@@ -870,6 +982,7 @@ var adminHtml = `<!DOCTYPE html>
     }
     .stat-card.new .number { color: #ef4444; }
     .stat-card.pending .number { color: #f59e0b; }
+    .stat-card.assigned .number { color: #38bdf8; }
     .stat-card.reviewed .number { color: #3b82f6; }
     .stat-card.resolved .number { color: #22c55e; }
     .content {
@@ -949,7 +1062,7 @@ var adminHtml = `<!DOCTYPE html>
 
     .theme-toggle { display:flex; align-items:center; gap:8px; }
     .theme-select { background: var(--bg-card-strong); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-weight:700; }
-    .report-control-grid { display:grid; grid-template-columns: 1.2fr repeat(4, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
+    .report-control-grid { display:grid; grid-template-columns: 1.2fr repeat(6, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
     .report-filter-input, .report-filter-select { min-width:0; background: var(--bg-card-strong); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:11px 12px; font-size:14px; font-weight:500; }
     .incident-metrics { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px; }
     .incident-metric { background: var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; }
@@ -1252,6 +1365,7 @@ var adminHtml = `<!DOCTYPE html>
     }
     .crime-marker.new { background: #ef4444; }
     .crime-marker.pending { background: #7f1d1d; }
+    .crime-marker.assigned { background: #38bdf8; }
     .crime-marker.reviewed { background: #3b82f6; }
     .crime-marker.resolved { background: #22c55e; }
     .crime-marker.searched { width: 30px; height: 30px; border-color: var(--text-strong); box-shadow: 0 0 0 6px rgba(59,130,246,0.35), 0 8px 18px rgba(0,0,0,0.55); }
@@ -1401,6 +1515,7 @@ var adminHtml = `<!DOCTYPE html>
     .badge-reviewed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
     .badge-referred { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
     .badge-resolved { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .badge-assigned { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
     .badge-rejected { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
     .badge-high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
@@ -1561,6 +1676,7 @@ var adminHtml = `<!DOCTYPE html>
       .management-panel { grid-template-columns: 1fr; }
       #crimeMap { height: 420px; min-height: 420px; }
       .map-summary { max-height: none; }
+      .report-control-grid { grid-template-columns: 1fr; }
       .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
     .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
     .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
@@ -1654,6 +1770,7 @@ var adminHtml = `<!DOCTYPE html>
           <div class="stat-card" onclick="clickStatCard('all')"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
           <div class="stat-card new" onclick="clickStatCard('new')"><div class="number" id="newCount">0</div><div class="label">New</div></div>
           <div class="stat-card pending" onclick="clickStatCard('pending')"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
+          <div class="stat-card assigned" onclick="clickStatCard('assigned')"><div class="number" id="assignedCount">0</div><div class="label">Assigned</div></div>
           <div class="stat-card reviewed" onclick="clickStatCard('reviewed')"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
           <div class="stat-card resolved" onclick="clickStatCard('resolved')"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
         </div>
@@ -1669,6 +1786,7 @@ var adminHtml = `<!DOCTYPE html>
             <button class="filter-btn active" onclick="filterReports('all', this)">All</button>
             <button class="filter-btn" onclick="filterReports('new', this)">New</button>
             <button class="filter-btn" onclick="filterReports('pending', this)">Pending</button>
+            <button class="filter-btn" onclick="filterReports('assigned', this)">Assigned</button>
             <button class="filter-btn" onclick="filterReports('reviewed', this)">Reviewed</button>
             <button class="filter-btn" onclick="filterReports('resolved', this)">Resolved</button>
           </div>
@@ -1678,6 +1796,16 @@ var adminHtml = `<!DOCTYPE html>
             <select id="priorityFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();"><option value="">All priorities</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select>
             <input id="dateFromFilter" class="report-filter-input" type="date" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
             <input id="dateToFilter" class="report-filter-input" type="date" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+            <select id="sourceFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+              <option value="">All sources</option>
+              <option value="LIVE_INCIDENT">Live Incident</option>
+              <option value="ON_BEHALF_OF_SOMEONE">On Behalf of Someone</option>
+            </select>
+            <select id="attachmentsFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+              <option value="">All attachments</option>
+              <option value="has">Has attachments</option>
+              <option value="none">No attachments</option>
+            </select>
           </div>
           <div id="incidentMetrics" class="incident-metrics"></div>
           <div class="map-panel">
@@ -1708,6 +1836,7 @@ var adminHtml = `<!DOCTYPE html>
                   <div class="map-toggle-group">
                     <label class="map-toggle"><input type="checkbox" data-map-status="new" checked onchange="updateMapToggles()">New</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="pending" checked onchange="updateMapToggles()">Pending</label>
+                    <label class="map-toggle"><input type="checkbox" data-map-status="assigned" checked onchange="updateMapToggles()">Assigned</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="reviewed" checked onchange="updateMapToggles()">Reviewed</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="resolved" checked onchange="updateMapToggles()">Resolved</label>
                   </div>
@@ -1738,6 +1867,7 @@ var adminHtml = `<!DOCTYPE html>
               <div class="map-legend">
                 <span><i class="legend-dot" style="background:#ef4444"></i>New</span>
                 <span><i class="legend-dot" style="background:#7f1d1d"></i>Pending</span>
+                <span><i class="legend-dot" style="background:#38bdf8"></i>Assigned</span>
                 <span><i class="legend-dot" style="background:#3b82f6"></i>Reviewed</span>
                 <span><i class="legend-dot" style="background:#22c55e"></i>Resolved</span>
               </div>
@@ -1966,15 +2096,26 @@ var adminHtml = `<!DOCTYPE html>
       const priority = controlValue('priorityFilter').toLowerCase();
       const fromDate = controlValue('dateFromFilter');
       const toDate = controlValue('dateToFilter');
+      const reportSource = controlValue('sourceFilter');
+      const attachmentsFilterVal = controlValue('attachmentsFilter');
       return source.filter(function(report) {
         const status = normalizeStatus(report);
         const incidentName = report.incidentType || 'Unspecified';
         const reportPriority = String(report.priority || '').toLowerCase();
+        const matchesSource = !reportSource ||
+          (reportSource === 'LIVE_INCIDENT' && report.reportSourceType !== 'ON_BEHALF_OF_SOMEONE') ||
+          (reportSource === 'ON_BEHALF_OF_SOMEONE' && report.reportSourceType === 'ON_BEHALF_OF_SOMEONE');
+        const attachmentsCount = (report.attachments || []).length || (report.fileUrl ? 1 : 0);
+        const matchesAttachments = !attachmentsFilterVal ||
+          (attachmentsFilterVal === 'has' && attachmentsCount > 0) ||
+          (attachmentsFilterVal === 'none' && attachmentsCount === 0);
         return (currentFilter === 'all' || status === currentFilter)
           && (!search || getReportSearchText(report).includes(search))
           && (!incident || incidentName === incident)
           && (!priority || reportPriority === priority)
-          && reportMatchesDate(report, fromDate, toDate);
+          && reportMatchesDate(report, fromDate, toDate)
+          && matchesSource
+          && matchesAttachments;
       });
     }
 
@@ -2074,7 +2215,7 @@ var adminHtml = `<!DOCTYPE html>
     }
 
     function getMapControlFilteredReports(reports) {
-      const statuses = selectedToggleValues('input[data-map-status]', ['pending', 'reviewed', 'resolved']);
+      const statuses = selectedToggleValues('input[data-map-status]', ['new', 'pending', 'assigned', 'reviewed', 'resolved']);
       const priorities = selectedToggleValues('input[data-map-priority]', ['high', 'medium', 'low']);
       return reports.filter(function(report) {
         return statuses.includes(String(report.status || '').toLowerCase())
@@ -2163,16 +2304,16 @@ var adminHtml = `<!DOCTYPE html>
 
       const selectedCmd = cmdEl.value;
       const filteredProvinces = provinces.filter(function(p) { return !selectedCmd || p.commandId === selectedCmd; });
-      
+
       const prevProvVal = provEl.value;
       provEl.innerHTML = optionList(filteredProvinces, 'Select province', prevProvVal);
       if (provEl.value !== prevProvVal) {
         provEl.value = '';
       }
-      
+
       const selectedProv = provEl.value;
       const filteredDistricts = districts.filter(function(d) { return !selectedProv || d.provinceId === selectedProv; });
-      
+
       const prevDistVal = distEl.value;
       distEl.innerHTML = optionList(filteredDistricts, 'Select district', prevDistVal);
       if (distEl.value !== prevDistVal) {
@@ -2193,7 +2334,7 @@ var adminHtml = `<!DOCTYPE html>
       if (provinceCommand) provinceCommand.innerHTML = optionList(policeCommands, 'Select command for province', provinceCommand.value);
       if (districtProvince) districtProvince.innerHTML = optionList(provinces, 'Select province for district', districtProvince.value);
       if (stationCommand) stationCommand.innerHTML = optionList(policeCommands, 'Select command / region', stationCommand.value);
-      
+
       refreshStationCascade();
       if (stationCommand) {
         stationCommand.onchange = refreshStationCascade;
@@ -2354,6 +2495,7 @@ var adminHtml = `<!DOCTYPE html>
       document.getElementById('totalCount').textContent = allReports.length;
       document.getElementById('newCount').textContent = allReports.filter(r => normalizeStatus(r) === 'new').length;
       document.getElementById('pendingCount').textContent = allReports.filter(r => normalizeStatus(r) === 'pending').length;
+      document.getElementById('assignedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'assigned').length;
       document.getElementById('reviewedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'reviewed').length;
       document.getElementById('resolvedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'resolved').length;
     }
@@ -2411,6 +2553,7 @@ var adminHtml = `<!DOCTYPE html>
     function markerClass(report) {
       const status = normalizeStatus(report);
       if (status === 'new') return 'crime-marker new';
+      if (status === 'assigned') return 'crime-marker assigned';
       if (status === 'reviewed') return 'crime-marker reviewed';
       if (status === 'resolved') return 'crime-marker resolved';
       return 'crime-marker pending';
@@ -2633,11 +2776,14 @@ var adminHtml = `<!DOCTYPE html>
           : (r.address || '-');
         const reporter = r.isAnonymous ? '<span style="color:var(--text-muted);font-style:italic">Anonymous</span>' : (r.reporterName || '-');
 
-        const hasFile = r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '';
+        const hasFile = (Array.isArray(r.attachments) && r.attachments.length > 0) ? '<span class="file-dot" title="' + r.attachments.length + ' attachment(s)">&#9679;</span>' : (r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '');
         const reference = r.referenceNumber || r.id.slice(0, 8).toUpperCase();
         const statusClass = normalizeStatus(r);
+        const sourceBadge = r.reportSourceType === 'ON_BEHALF_OF_SOMEONE'
+          ? '<span class="badge" style="background:rgba(59,130,246,0.12);color:#60a5fa;font-size:10px;padding:2px 6px">Behalf</span>'
+          : '<span class="badge" style="background:rgba(34,197,94,0.12);color:#4ade80;font-size:10px;padding:2px 6px">Live</span>';
         return '<tr data-report-id="' + r.id + '" onclick="showDetail(this.dataset.reportId)" style="cursor:pointer">'
-          + '<td class="reference-cell">' + reference + '</td>'
+          + '<td class="reference-cell">' + reference + ' ' + sourceBadge + '</td>'
           + '<td style="white-space:nowrap">' + date + '</td>'
           + '<td>' + typeBadge + hasFile + '</td>'
           + '<td>' + (r.incidentType || '-') + '</td>'
@@ -2651,6 +2797,7 @@ var adminHtml = `<!DOCTYPE html>
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
           + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
           + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+          + '<option value="Assigned"' + (statusClass==='assigned'?' selected':'') + '>Assigned</option>'
           + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
           + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
           + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
@@ -2711,7 +2858,35 @@ var adminHtml = `<!DOCTYPE html>
       return window.location.origin + fileUrl;
     }
 
+    function buildSingleAttachmentHtml(att, index) {
+      if (!att || !att.fileUrl) return '';
+      const url = evidenceFileUrl(att.fileUrl);
+      const type = att.fileType || (att.mimeType && att.mimeType.startsWith('image/') ? 'photo' : att.mimeType && att.mimeType.startsWith('video/') ? 'video' : att.mimeType && att.mimeType.startsWith('audio/') ? 'audio' : 'document');
+      const label = att.fileName || ('Attachment ' + (index + 1));
+      let mediaHtml = '';
+      if (type === 'photo') {
+        mediaHtml = '<img src="' + url + '" style="max-width:100%;max-height:320px;object-fit:contain;display:block;margin:0 auto;border-radius:6px" />';
+      } else if (type === 'video') {
+        mediaHtml = '<video controls style="width:100%;max-height:320px;display:block;border-radius:6px"><source src="' + url + '"></video>';
+      } else if (type === 'audio') {
+        mediaHtml = '<div style="display:flex;justify-content:center;margin-bottom:8px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div><audio controls style="width:100%"><source src="' + url + '"></audio>';
+      } else {
+        mediaHtml = '<div style="display:flex;align-items:center;gap:8px;padding:12px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span style="font-size:13px;color:var(--text)">' + label + '</span></div>';
+      }
+      return '<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#0a0f1a;padding:12px">'
+        + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">Attachment: ' + label + '</div>'
+        + mediaHtml
+        + '<div style="padding:8px 0 0;display:flex;justify-content:flex-end"><a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a></div>'
+        + '</div>';
+    }
+
     function buildMediaViewer(r) {
+      // Support multiple attachments array (new format)
+      const attachments = Array.isArray(r.attachments) && r.attachments.length > 0 ? r.attachments : null;
+      if (attachments) {
+        return attachments.map(function(att, i) { return buildSingleAttachmentHtml(att, i); }).join('');
+      }
+      // Fallback: single fileUrl (legacy / live incident format)
       if (!r.fileUrl) return '';
       const url = evidenceFileUrl(r.fileUrl);
       if (r.evidenceType === 'photo') {
@@ -2778,7 +2953,7 @@ var adminHtml = `<!DOCTYPE html>
           + '<div class="detail-row"><div class="detail-label">Victim Name</div><div class="detail-value">' + (r.behalfName || 'Anonymous') + '</div></div>'
           + '<div class="detail-row"><div class="detail-label">Contact Info</div><div class="detail-value">' + (r.behalfContact || 'None') + '</div></div>'
           + '<div class="detail-row"><div class="detail-label">Relationship</div><div class="detail-value">' + (r.behalfRelationship || 'Not stated') + '</div></div>'
-          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes \u2705' : 'No \u274C') + '</div></div>'
+          + '<div class="detail-row"><div class="detail-label">Consent Obtained</div><div class="detail-value">' + (r.behalfConsent ? 'Yes' : 'No') + '</div></div>'
           + '</div>';
       } else {
         behalfHtml = ''
@@ -2818,17 +2993,23 @@ var adminHtml = `<!DOCTYPE html>
         + '  <div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
         + '  <div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Reporter Profile</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + (r.reporterProfileId || '-') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Source</div><div class="detail-value">' + (r.reportSourceType === 'ON_BEHALF_OF_SOMEONE' ? '<span class="badge" style="background:rgba(59,130,246,0.15);color:#60a5fa">On Behalf</span>' : '<span class="badge" style="background:rgba(34,197,94,0.15);color:#4ade80">Live Incident</span>') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Attachments</div><div class="detail-value">' + ((Array.isArray(r.attachments) && r.attachments.length > 0) ? r.attachments.length + ' file(s)' : (r.fileUrl ? '1 file (legacy)' : 'None')) + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Contact Phone</div><div class="detail-value">' + (r.contactPhone || '-') + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
-          + '  <select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
+        + '    <select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)"' + (hasPermission('reports.update_status') ? '' : ' disabled') + '>'
         + '      <option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
         + '      <option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+        + '      <option value="Assigned"' + (statusClass==='assigned'?' selected':'') + '>Assigned</option>'
         + '      <option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
         + '      <option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
         + '      <option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
         + '      <option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
-        + '    </select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
+        + '    </select>'
+        + (hasPermission('reports.delete') ? ' <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button>' : '')
+        + '</div></div>'
         + behalfHtml
         + '</div>'
         + '<div id="detailTab-assignments" class="detail-tab-panel" style="display:none">'
@@ -2849,7 +3030,7 @@ var adminHtml = `<!DOCTYPE html>
             + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
             + 'Gemini AI Evidence Analysis</h4>'
             + '</div>';
-          
+
           if (aiNote) {
             let analysisData;
             try {
@@ -2880,13 +3061,26 @@ var adminHtml = `<!DOCTYPE html>
                 + '<div style="font-size:11px;color:var(--text-muted);text-align:right">Analyzed on ' + new Date(aiNote.createdAt).toLocaleString() + '</div>'
                 + '</div>';
             }
+            if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
+              html += '<div style="text-align:center;margin-top:10px">'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:6px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;opacity:0.85" onclick="runAiAnalysis(\\'' + r.id + '\\')">'
+                + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+                + 'Re-run AI Analysis</button>'
+                + '</div>';
+            }
           } else {
-            html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
-              + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
-              + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\'' + r.id + '\\')">'
-              + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
-              + 'Analyze Evidence</button>'
-              + '</div>';
+            if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
+              html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
+                + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\'' + r.id + '\\')">'
+                + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+                + 'Analyze Evidence</button>'
+                + '</div>';
+            } else {
+              html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center">'
+                + '<p style="color:var(--text-secondary);font-size:13px;margin:0">No AI analysis available for this report.</p>'
+                + '</div>';
+            }
           }
           document.getElementById('detailAiAnalysis').innerHTML = html;
         });
@@ -2910,25 +3104,29 @@ var adminHtml = `<!DOCTYPE html>
         });
 
       // Fetch active officer list for manual assignment dropdown
-      fetch('/api/admin/users')
-        .then(function(res) { return res.json(); })
-        .then(function(users) {
-          const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
-          if (officers.length === 0) {
-            document.getElementById('detailAssignForm').innerHTML = '';
-            return;
-          }
-          let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
-            '<div style="display:flex;gap:8px;margin-top:8px">' +
-            '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
-          officers.forEach(function(o) {
-            html += '<option value="' + o.id + '">' + o.name + '</option>';
+      if (hasPermission('reports.assign')) {
+        fetch('/api/admin/users')
+          .then(function(res) { return res.json(); })
+          .then(function(users) {
+            const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
+            if (officers.length === 0) {
+              document.getElementById('detailAssignForm').innerHTML = '';
+              return;
+            }
+            let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
+              '<div style="display:flex;gap:8px;margin-top:8px">' +
+              '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
+            officers.forEach(function(o) {
+              html += '<option value="' + o.id + '">' + o.name + '</option>';
+            });
+            html += '</select>' +
+              '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
+              '</div>';
+            document.getElementById('detailAssignForm').innerHTML = html;
           });
-          html += '</select>' +
-            '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
-            '</div>';
-          document.getElementById('detailAssignForm').innerHTML = html;
-        });
+      } else {
+        document.getElementById('detailAssignForm').innerHTML = '';
+      }
     }
 
     function closeDetail() {
@@ -2948,14 +3146,14 @@ var adminHtml = `<!DOCTYPE html>
     function clickStatCard(filterName) {
       showModule('dashboard', document.querySelector('[data-module-target="dashboard"]'));
       showWorkspaceTab('reports');
-      
+
       let btn = null;
       document.querySelectorAll('.filter-btn').forEach(function(b) {
         if (b.getAttribute('onclick').includes("'" + filterName + "'")) {
           btn = b;
         }
       });
-      
+
       filterReports(filterName, btn);
     }
 
@@ -2985,9 +3183,15 @@ var adminHtml = `<!DOCTYPE html>
       if (e.target === this) closeDetail();
     });
 
+    function hasPermission(perm) {
+      const user = window.currentUser || { username: 'admin', role: 'admin', permissions: [] };
+      if (user.role === 'admin') return true;
+      return user.permissions && user.permissions.includes(perm);
+    }
+
     function initRoleRestrictions() {
-      const user = window.currentUser || { username: 'admin', role: 'admin' };
-      
+      const user = window.currentUser || { username: 'admin', role: 'admin', permissions: [] };
+
       const usernameEl = document.getElementById('profileUsername');
       const roleEl = document.getElementById('profileRole');
       const avatarEl = document.getElementById('avatarCircle');
@@ -2997,14 +3201,37 @@ var adminHtml = `<!DOCTYPE html>
         avatarEl.textContent = user.username.charAt(0).toUpperCase();
       }
 
-      if (user.role === 'viewer') {
-        document.body.classList.add('role-viewer');
-        document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
-          const target = btn.dataset.moduleTarget;
-          if (target && !['dashboard'].includes(target)) {
+      // Sidebar buttons check based on permissions
+      document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+        const target = btn.dataset.moduleTarget;
+        let allowed = false;
+        if (target === 'dashboard') allowed = hasPermission('reports.read');
+        else if (target === 'locations') allowed = hasPermission('locations.manage');
+        else if (target === 'users') allowed = hasPermission('users.read');
+        else if (target === 'stations') allowed = hasPermission('stations.read');
+        else if (target === 'notifications') allowed = hasPermission('notifications.send');
+
+        if (!allowed) {
+          btn.style.display = 'none';
+        }
+      });
+
+      // Map export control check
+      document.querySelectorAll('.map-control-btn').forEach(function(btn) {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('exportMap')) {
+          if (!hasPermission('map.export')) {
             btn.style.display = 'none';
           }
-        });
+        }
+      });
+
+      // If the current active module is hidden, switch to the first allowed one
+      const activeBtn = document.querySelector('.sidebar-btn.active');
+      if (activeBtn && activeBtn.style.display === 'none') {
+        const firstVisibleBtn = document.querySelector('.sidebar-btn:not([style*="display: none"])');
+        if (firstVisibleBtn) {
+          firstVisibleBtn.click();
+        }
       }
     }
     initTheme();
@@ -3206,6 +3433,9 @@ var adminStore = {
   }
 };
 
+// server/routes.ts
+var import_drizzle_orm3 = require("drizzle-orm");
+
 // server/cookie-auth.ts
 var import_crypto3 = __toESM(require("crypto"));
 var SECRET = process.env.JWT_SECRET || "cpng_crime_reporting_png_secret_key_12345";
@@ -3231,6 +3461,8 @@ function verifySession(cookieValue) {
 }
 
 // server/routes.ts
+var import_generative_ai = require("@google/generative-ai");
+var GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 var PRODUCTION_DOMAIN = process.env.PRODUCTION_DOMAIN || process.env.EXPO_PUBLIC_DOMAIN || "crimewatch.lamtoninvestments.com";
 var ADMIN_COOKIE_NAME = "cpng_admin";
 var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.CPNG_ADMIN_PASSWORD || "admin123";
@@ -3375,6 +3607,10 @@ function getExtByMime(mime) {
   if (mime.startsWith("image/")) return ".jpg";
   if (mime.startsWith("video/")) return ".mp4";
   if (mime.startsWith("audio/")) return ".m4a";
+  if (mime === "application/pdf") return ".pdf";
+  if (mime === "application/msword") return ".doc";
+  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    return ".docx";
   return ".bin";
 }
 function buildReferenceNumber(report) {
@@ -3762,6 +3998,32 @@ async function seedDefaultUsers() {
     console.error("Failed to seed default users and data:", err);
   }
 }
+async function enrichReport(report) {
+  const attachments = await storage.getReportAttachments(report.id);
+  const reporterProfile = report.reporterProfileId ? await storage.getReporterProfile(report.reporterProfileId) : null;
+  const representedPerson = report.representedPersonId ? await storage.getRepresentedPerson(report.representedPersonId) : null;
+  return {
+    ...withReferenceNumber(report),
+    attachments,
+    reporterProfile,
+    representedPerson
+  };
+}
+async function logAuditEvent(action, details, req) {
+  try {
+    const session = req ? getSession(req) : null;
+    const userId = session ? session.username : null;
+    const ipAddress = req ? req.headers["x-forwarded-for"] || req.socket.remoteAddress : null;
+    await storage.createAuditLog({
+      action,
+      details: details || null,
+      userId,
+      ipAddress
+    });
+  } catch (err) {
+    console.error("Failed to log audit event:", err);
+  }
+}
 async function registerRoutes(app2) {
   await seedDefaultUsers();
   app2.post("/api/admin/login", async (req, res) => {
@@ -3798,6 +4060,11 @@ async function registerRoutes(app2) {
     const filename = req.params.filename;
     const filePath = path2.resolve(uploadsDir, filename);
     if (fs2.existsSync(filePath)) {
+      logAuditEvent(
+        "DOWNLOAD_FILE",
+        `Downloaded attachment file: Name=${filename}`,
+        req
+      );
       return res.sendFile(filePath);
     }
     const fallbackPath = path2.resolve(
@@ -3836,20 +4103,117 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/reports", async (req, res) => {
     try {
+      if (!req.body?.incidentType) {
+        return res.status(400).json({ message: "Incident type is required." });
+      }
+      if (!req.body?.description || !String(req.body.description).trim()) {
+        return res.status(400).json({ message: "Description of the incident is required." });
+      }
+      const isBehalfReport = req.body?.isBehalfReport === true || req.body?.isBehalfReport === 1 || req.body?.isBehalfReport === "1" || String(req.body?.isBehalfReport).toLowerCase() === "true";
+      if (isBehalfReport) {
+        if (!req.body?.behalfName || !String(req.body.behalfName).trim()) {
+          return res.status(400).json({
+            message: "Victim's full name is required for reports submitted on behalf of someone."
+          });
+        }
+        if (req.body?.behalfConsent !== true && req.body?.behalfConsent !== 1 && req.body?.behalfConsent !== "1" && String(req.body?.behalfConsent).toLowerCase() !== "true") {
+          return res.status(400).json({
+            message: "Consent is required to report on behalf of someone."
+          });
+        }
+      }
+      const attachmentsPayload = req.body?.attachments || [];
+      if (attachmentsPayload.length > 10) {
+        return res.status(400).json({ message: "You can upload a maximum of 10 attachments." });
+      }
       const latitude = req.body?.latitude !== null && req.body?.latitude !== void 0 ? Number(req.body.latitude) : NaN;
       const longitude = req.body?.longitude !== null && req.body?.longitude !== void 0 ? Number(req.body.longitude) : NaN;
       const nearestStation = Number.isFinite(latitude) && Number.isFinite(longitude) ? await findNearestDbPoliceStation(latitude, longitude) : null;
+      let reporterProfileId = req.body?.reporterProfileId || null;
+      if (reporterProfileId) {
+        await storage.upsertReporterProfile({
+          id: reporterProfileId,
+          displayName: req.body?.reporterDisplayName || "Anonymous User",
+          badgeNumber: req.body?.reporterBadgeNumber || "",
+          avatarType: req.body?.reporterAvatarType || "shield"
+        });
+        await logAuditEvent(
+          "LINK_PROFILE",
+          `Linked profile ${reporterProfileId} to report`,
+          req
+        );
+      }
+      let representedPersonId = null;
+      if (isBehalfReport) {
+        const represented = await storage.createRepresentedPerson({
+          name: req.body?.behalfName || null,
+          contact: req.body?.behalfContact || null,
+          relationshipToReporter: req.body?.behalfRelationship || null,
+          consentGiven: true
+        });
+        representedPersonId = represented.id;
+      }
       const reportData = {
         ...req.body,
-        isBehalfReport: req.body?.isBehalfReport === true || req.body?.isBehalfReport === 1 || req.body?.isBehalfReport === "1" || String(req.body?.isBehalfReport).toLowerCase() === "true",
-        behalfConsent: req.body?.behalfConsent === true || req.body?.behalfConsent === 1 || req.body?.behalfConsent === "1" || String(req.body?.behalfConsent).toLowerCase() === "true",
-        agency: nearestStation?.name || req.body.agency
+        isBehalfReport,
+        behalfConsent: isBehalfReport,
+        agency: nearestStation?.name || req.body.agency || "NCD Command Centre",
+        reporterProfileId,
+        representedPersonId,
+        reportSourceType: req.body?.reportSourceType || (isBehalfReport ? "ON_BEHALF_OF_SOMEONE" : "LIVE_INCIDENT"),
+        confirmationAcknowledgedAt: req.body?.confirmationAcknowledgedAt ? new Date(req.body.confirmationAcknowledgedAt) : null,
+        confirmationTextVersion: req.body?.confirmationTextVersion || null
       };
+      delete reportData.reporterDisplayName;
+      delete reportData.reporterBadgeNumber;
+      delete reportData.reporterAvatarType;
+      delete reportData.attachments;
       const report = await storage.createEvidenceReport(reportData);
+      await logAuditEvent(
+        "SUBMIT_REPORT",
+        `Report submitted: Reference=${buildReferenceNumber(report)}, ID=${report.id}`,
+        req
+      );
+      if (attachmentsPayload.length > 0) {
+        for (const att of attachmentsPayload) {
+          await storage.createReportAttachment({
+            reportId: report.id,
+            fileUrl: att.fileUrl,
+            fileName: att.fileName || att.name || "Attachment",
+            fileType: att.fileType || (att.mimeType?.startsWith("image/") ? "photo" : att.mimeType?.startsWith("video/") ? "video" : "document"),
+            mimeType: att.mimeType || null,
+            fileSize: att.fileSize || att.size || null,
+            evidenceSource: att.evidenceSource || "uploaded"
+          });
+          await logAuditEvent(
+            "UPLOAD_FILE",
+            `Evidence file attached to report ${report.id}: URL=${att.fileUrl}`,
+            req
+          );
+        }
+      } else if (report.fileUrl) {
+        const ext = report.fileUrl.split(".").pop();
+        const mimeType = report.evidenceType === "photo" ? "image/jpeg" : report.evidenceType === "video" ? "video/mp4" : "audio/mp4";
+        await storage.createReportAttachment({
+          reportId: report.id,
+          fileUrl: report.fileUrl,
+          fileName: `evidence_${report.id}.${ext || "bin"}`,
+          fileType: report.evidenceType,
+          mimeType,
+          fileSize: null,
+          evidenceSource: "live_capture"
+        });
+        await logAuditEvent(
+          "UPLOAD_FILE",
+          `Captured evidence file attached to report ${report.id}: URL=${report.fileUrl}`,
+          req
+        );
+      }
       forwardToProduction(reportData);
       if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
         try {
           const officers = await storage.listOfficerProfiles();
+          let assigned = false;
           for (const officer of officers) {
             if (officer.isActive) {
               const dist = distanceKm(
@@ -3867,11 +4231,15 @@ async function registerRoutes(app2) {
                   matchedAreaName: officer.responsibilityAreaName,
                   status: "Sent to Officer"
                 });
+                assigned = true;
                 console.log(
                   `Automatically assigned report ${report.id} to officer ${officer.userId}`
                 );
               }
             }
+          }
+          if (assigned) {
+            await storage.updateEvidenceReportStatus(report.id, "Assigned");
           }
         } catch (routingError) {
           console.error("Failed to automatically route report:", routingError);
@@ -4033,7 +4401,7 @@ async function registerRoutes(app2) {
     });
     res.status(201).json(notification);
   });
-  app2.get("/api/reports", requireAdmin, async (_req, res) => {
+  app2.get("/api/reports", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
       const reports = await storage.getAllEvidenceReports();
@@ -4041,7 +4409,8 @@ async function registerRoutes(app2) {
         const productionReports = await fetchProductionReports();
         return res.json(productionReports.map(withReferenceNumber));
       }
-      res.json(reports.map(withReferenceNumber));
+      const enriched = await Promise.all(reports.map(enrichReport));
+      res.json(enriched);
     } catch (error) {
       console.error("Error fetching reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
@@ -4052,7 +4421,13 @@ async function registerRoutes(app2) {
     try {
       const report = await storage.getEvidenceReportById(req.params.id);
       if (report) {
-        return res.json(withReferenceNumber(report));
+        await logAuditEvent(
+          "VIEW_REPORT",
+          `Viewed report details: ID=${report.id}`,
+          req
+        );
+        const enriched = await enrichReport(report);
+        return res.json(enriched);
       }
       if (!isProductionServer()) {
         const productionReports = await fetchProductionReports();
@@ -4060,7 +4435,13 @@ async function registerRoutes(app2) {
           (item) => item.id === req.params.id
         );
         if (productionReport) {
-          return res.json(withReferenceNumber(productionReport));
+          await logAuditEvent(
+            "VIEW_REPORT",
+            `Viewed production report details: ID=${productionReport.id}`,
+            req
+          );
+          const enriched = await enrichReport(productionReport);
+          return res.json(enriched);
         }
       }
       return res.status(404).json({ message: "Report not found" });
@@ -4069,6 +4450,21 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch report" });
     }
   });
+  app2.get(
+    "/api/reporter-profiles/:id/reports",
+    requireAdmin,
+    async (req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      try {
+        const reports = await db.select().from(evidenceReports).where((0, import_drizzle_orm3.eq)(evidenceReports.reporterProfileId, req.params.id)).orderBy((0, import_drizzle_orm3.desc)(evidenceReports.submittedAt));
+        const enriched = await Promise.all(reports.map(enrichReport));
+        res.json(enriched);
+      } catch (error) {
+        console.error("Error fetching reporter profile reports:", error);
+        res.status(500).json({ message: "Failed to fetch reports for reporter profile" });
+      }
+    }
+  );
   app2.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
     try {
       const list = await storage.listReportAssignments({
@@ -4103,7 +4499,7 @@ async function registerRoutes(app2) {
           assignmentReason: "Assigned manually by dispatcher.",
           status: "Sent to Officer"
         });
-        await storage.updateEvidenceReportStatus(id, "Pending");
+        await storage.updateEvidenceReportStatus(id, "Assigned");
         res.status(201).json(assignment);
       } catch (error) {
         console.error("Error manual assigning:", error);
@@ -4121,58 +4517,97 @@ async function registerRoutes(app2) {
         if (!report) {
           return res.status(404).json({ message: "Report not found." });
         }
-        let confidenceScore = 0.78 + Math.random() * 0.17;
-        let severity = "Medium";
-        let summary = "AI model has parsed the description, metadata, and visual features of the report.";
-        let detectedObjects = ["Visual artifacts", "Location coordinates verified"];
-        let evidentiaryValue = "Moderate evidentiary value. Corroborates timestamp and location details.";
-        let recommendedAction = "Review witness statements and cross-reference with dispatch logs.";
-        const incType = String(report.incidentType || "").toLowerCase();
-        const descText = String(report.description || "").toLowerCase();
-        if (incType.includes("theft") || incType.includes("robbery") || descText.includes("stole") || descText.includes("thief") || descText.includes("break")) {
-          severity = "High";
-          summary = "AI evidence analysis of reported theft. Visual and description scanning matches indicators for forced property access or suspicious physical actions. Target location shows elevated activity indicators.";
-          detectedObjects = ["Unidentified person profile", "Evidentiary target item", "Low-light shadow outlines", "Proximity markers match"];
-          evidentiaryValue = "High. Corroborates physical suspect profiles matching visual patterns in witness reports.";
-          recommendedAction = "Coordinate with Boroko local patrol to scan recent CCTV footage within 100m of the area.";
-        } else if (incType.includes("vandalism") || descText.includes("paint") || descText.includes("spray") || descText.includes("damage")) {
-          severity = "Medium";
-          summary = "Surface signature scanning indicates intentional property damage via spray paint application. Style structure matches typical localized tagging patterns associated with gang presence.";
-          detectedObjects = ["Aerosol paint marks", "Localized tagging signatures", "Public infrastructure surface damage"];
-          evidentiaryValue = "Moderate. Strong value for gang intelligence database, low utility for direct arrest unless caught on active video feed.";
-          recommendedAction = "Log tagging patterns in National Database for gang tracking and request municipal removal.";
-        } else if (incType.includes("assault") || descText.includes("fight") || descText.includes("hit") || descText.includes("beat")) {
-          severity = "Critical";
-          summary = "Critical threat assessment. Event log describes active physical conflict in public space. Acoustic and semantic scanning indicates high-distress verbal exchanges.";
-          detectedObjects = ["Physical struggle indicators", "High-stress semantic markers", "Densely populated coordinates"];
-          evidentiaryValue = "Critical. Essential evidence confirming physical safety breach. High priority for criminal prosecution.";
-          recommendedAction = "Alert immediate active-dispatch unit to perform localized search and gather community testimonies.";
-        } else if (incType.includes("accident") || descText.includes("crash") || descText.includes("collision") || descText.includes("car")) {
-          severity = "High";
-          summary = "Analysis of vehicular incident. Target visual features match collision outcomes and metal structural deformation.";
-          detectedObjects = ["Vehicle structural deformation", "Fluid spill boundaries", "Road block/obstruction markers"];
-          evidentiaryValue = "High. Provides clear reference for insurance validation, police reporting, and municipal traffic routing.";
-          recommendedAction = "Dispatch Traffic Management Unit to coordinate roadway clearance and statement logging.";
-        } else {
-          if (report.evidenceType === "photo") {
-            summary = "Static frame visual evidence analysis. Metadata checks verify high correlation between upload timestamp and device-reported date.";
-            detectedObjects = ["Visual frame markers", "Ambient brightness levels", "Pixel boundary verification"];
-          } else if (report.evidenceType === "video") {
-            summary = "Motion vector analysis. Multi-frame parsing indicates movement patterns consistent with reported incident context.";
-            detectedObjects = ["Dynamic motion vectors", "Object path tracking", "Temporal video markers"];
-          } else if (report.evidenceType === "audio") {
-            summary = "Spectral sound analysis. Audio frequency levels verify high-decibel signals correlating with vocal distress or ambient traffic noises.";
-            detectedObjects = ["High-decibel vocal distress", "Alarm sound patterns", "Ambient acoustics verified"];
+        let analysisNote;
+        if (GEMINI_API_KEY) {
+          const genAI = new import_generative_ai.GoogleGenerativeAI(GEMINI_API_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const submittedAt = report.submittedAt ? new Date(report.submittedAt).toLocaleString("en-AU", {
+            timeZone: "Pacific/Port_Moresby"
+          }) : "Unknown time";
+          const attachments = await storage.listReportAttachments(report.id);
+          const attachmentSummary = attachments.length > 0 ? attachments.map(
+            (a, i) => `Attachment ${i + 1}: ${a.fileName || "Unnamed"} (${a.fileType || "unknown type"}, ${a.mimeType || ""})${a.fileSize ? `, ${Math.round(a.fileSize / 1024)}KB` : ""}`
+          ).join("\n") : "No media attachments uploaded.";
+          const prompt = `You are an AI forensic analysis assistant for the Papua New Guinea Police Force crime reporting system (Crime Reporting PNG).
+
+Your task is to analyze the following citizen-submitted crime report and produce a structured, accurate forensic assessment. Be concise but precise. Focus on what is known from the report data.
+
+REPORT DETAILS:
+- Incident Type: ${report.incidentType || "Not specified"}
+- Description: ${report.description || "Not provided"}
+- Location: ${report.address || (report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : "Unknown location")}
+- GPS Coordinates: ${report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : "Not captured"}
+- Agency: ${report.agency || "Unknown"}
+- Evidence Type: ${report.evidenceType || "Not specified"}
+- Submitted At: ${submittedAt}
+- Is Anonymous: ${report.isAnonymous ? "Yes" : "No"}
+- Reporter: ${report.isAnonymous ? "Anonymous" : report.reporterName || "Unknown"}
+- Tags: ${(report.tags || []).join(", ") || "None"}
+- Priority (self-reported): ${report.priority || "Not set"}
+- On Behalf of Someone: ${report.isBehalfReport ? `Yes \u2014 Victim: ${report.behalfName || "Unknown"}` : "No"}
+- Source Type: ${report.reportSourceType || "Unknown"}
+- Media/Attachments:
+${attachmentSummary}
+
+ANALYSIS INSTRUCTIONS:
+1. Assess the SEVERITY of the incident as one of: Critical, High, Medium, Low \u2014 based on the incident type, description content, and any indicated urgency.
+2. Write a SUMMARY (2-3 sentences) of what the AI infers from the report data \u2014 be factual and grounded in what is stated. Do not fabricate events.
+3. List 3-5 DETECTED OBJECTS or INDICATORS that can reasonably be inferred from the report's description, location, and media type.
+4. Assess the EVIDENTIARY VALUE (1-2 sentences) \u2014 how useful is this report as evidence for law enforcement?
+5. Give a RECOMMENDED ACTION (1-2 sentences) for the police officer assigned to this case.
+6. Give a CONFIDENCE SCORE between 0.50 and 0.98 based on how much verifiable detail is present in the report.
+
+Return ONLY valid JSON in this exact format:
+{
+  "confidenceScore": 0.85,
+  "severity": "High",
+  "summary": "...",
+  "detectedObjects": ["...", "...", "..."],
+  "evidentiaryValue": "...",
+  "recommendedAction": "..."
+}`;
+          let geminiResult = null;
+          try {
+            const result = await model.generateContent({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.3,
+                maxOutputTokens: 1024
+              }
+            });
+            const raw = result.response.text();
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.confidenceScore && parsed.severity && parsed.summary) {
+              geminiResult = {
+                confidenceScore: Math.min(
+                  Math.max(Number(parsed.confidenceScore), 0.5),
+                  0.98
+                ),
+                severity: ["Critical", "High", "Medium", "Low"].includes(
+                  parsed.severity
+                ) ? parsed.severity : "Medium",
+                summary: String(parsed.summary || ""),
+                detectedObjects: Array.isArray(parsed.detectedObjects) ? parsed.detectedObjects.map(String) : [],
+                evidentiaryValue: String(parsed.evidentiaryValue || ""),
+                recommendedAction: String(parsed.recommendedAction || "")
+              };
+            }
+          } catch (geminiErr) {
+            console.error(
+              "Gemini API call failed, falling back to heuristic analysis:",
+              geminiErr
+            );
           }
+          if (geminiResult) {
+            analysisNote = geminiResult;
+          } else {
+            analysisNote = buildHeuristicAnalysis(report);
+          }
+        } else {
+          console.warn("GEMINI_API_KEY not set. Using heuristic analysis.");
+          analysisNote = buildHeuristicAnalysis(report);
         }
-        const analysisNote = {
-          confidenceScore,
-          severity,
-          summary,
-          detectedObjects,
-          evidentiaryValue,
-          recommendedAction
-        };
         const createdNote = await storage.createReportNote({
           reportId: id,
           noteType: "ai_analysis",
@@ -4186,6 +4621,117 @@ async function registerRoutes(app2) {
       }
     }
   );
+  function buildHeuristicAnalysis(report) {
+    const incType = String(report.incidentType || "").toLowerCase();
+    const descText = String(report.description || "").toLowerCase();
+    const hasLocation = !!(report.latitude && report.longitude);
+    const hasDescription = (report.description || "").length > 20;
+    let confidenceScore = 0.55;
+    if (hasLocation) confidenceScore += 0.12;
+    if (hasDescription) confidenceScore += 0.1;
+    if (!report.isAnonymous) confidenceScore += 0.06;
+    confidenceScore = Math.min(confidenceScore + Math.random() * 0.05, 0.9);
+    let severity = "Medium";
+    let summary = `Report filed regarding ${report.incidentType || "an unspecified incident"} in Papua New Guinea. Evidence type is ${report.evidenceType || "not specified"}.`;
+    let detectedObjects = [
+      "Report timestamp verified",
+      "Submission metadata captured"
+    ];
+    let evidentiaryValue = "Moderate evidentiary value. Corroborates timestamp and metadata for incident documentation.";
+    let recommendedAction = "Review full witness statement and cross-reference with nearby dispatch logs and known incident patterns.";
+    if (hasLocation) detectedObjects.push("GPS coordinates recorded");
+    if (!report.isAnonymous)
+      detectedObjects.push("Reporter identity confirmed");
+    const isCritical = incType.includes("murder") || incType.includes("homicide") || incType.includes("rape") || incType.includes("kidnap") || descText.includes("dead") || descText.includes("killed") || descText.includes("stabbed") || descText.includes("shot");
+    const isHighPriority = incType.includes("assault") || incType.includes("robbery") || incType.includes("arson") || descText.includes("weapon") || descText.includes("gun") || descText.includes("knife") || descText.includes("fight");
+    const isTheft = incType.includes("theft") || incType.includes("steal") || descText.includes("stole") || descText.includes("stolen") || descText.includes("thief");
+    const isAccident = incType.includes("accident") || incType.includes("crash") || descText.includes("collision") || descText.includes("vehicle");
+    const isVandalism = incType.includes("vandalism") || incType.includes("damage") || descText.includes("spray") || descText.includes("graffiti");
+    const isDrug = incType.includes("drug") || descText.includes("narcotics") || descText.includes("marijuana") || descText.includes("substance");
+    const isDomestic = incType.includes("domestic") || descText.includes("wife") || descText.includes("husband") || descText.includes("family violence");
+    if (isCritical) {
+      severity = "Critical";
+      summary = `Critical incident reported: ${report.incidentType || "serious criminal activity"}. The witness account indicates a potentially life-threatening situation requiring immediate law enforcement response.`;
+      detectedObjects.push(
+        "High-risk incident indicators",
+        "Potential threat to life",
+        "Urgent dispatch required"
+      );
+      evidentiaryValue = "Critical evidentiary value. Report directly implicates a serious crime requiring immediate corroboration and response.";
+      recommendedAction = "Dispatch nearest rapid response unit immediately. Secure scene, collect physical evidence, and notify CID for investigation.";
+    } else if (isHighPriority) {
+      severity = "High";
+      summary = `High-priority incident reported: ${report.incidentType || "violent or dangerous activity"}. The description suggests active physical threat or dangerous behaviour in the area.`;
+      detectedObjects.push(
+        "Physical threat indicators",
+        "Potential weapons involvement",
+        "Public safety risk"
+      );
+      evidentiaryValue = "High evidentiary value. Report provides first-hand account of a serious incident requiring police action.";
+      recommendedAction = "Dispatch patrol unit to the reported location, obtain full witness statement, and document physical evidence.";
+    } else if (isDomestic) {
+      severity = "High";
+      summary = `Domestic violence incident reported. Family or household situation described involving harm or threat of harm to a family member.`;
+      detectedObjects.push(
+        "Domestic conflict indicators",
+        "Potential victim in household",
+        "Ongoing safety risk"
+      );
+      evidentiaryValue = "High evidentiary value. Domestic violence cases require careful documentation for legal proceedings and protection orders.";
+      recommendedAction = "Dispatch unit trained in domestic violence response. Contact Family Support Centre and document all injuries and statements.";
+    } else if (isTheft) {
+      severity = "High";
+      summary = `Theft or robbery incident reported. The account indicates forced or opportunistic removal of property from the victim or premises.`;
+      detectedObjects.push(
+        "Property crime indicators",
+        "Possible suspect movement path",
+        "Victim impact documented"
+      );
+      evidentiaryValue = "High evidentiary value. Theft reports support prosecution when combined with CCTV and witness statements.";
+      recommendedAction = "Attend scene, document stolen property list, review nearby CCTV, and check for repeat offender patterns in the area.";
+    } else if (isDrug) {
+      severity = "High";
+      summary = `Drug-related activity reported. The description indicates possible narcotics possession, sale, or distribution in the area.`;
+      detectedObjects.push(
+        "Drug activity indicators",
+        "Location flagged for narcotics",
+        "Community safety risk"
+      );
+      evidentiaryValue = "High evidentiary value if corroborated. Drug reports support intelligence operations and warrant applications.";
+      recommendedAction = "Log report in narcotics intelligence database. Arrange surveillance or covert patrol of indicated location.";
+    } else if (isAccident) {
+      severity = "High";
+      summary = `Traffic or vehicle accident reported at the stated location. Possible injuries, road obstruction, or property damage involved.`;
+      detectedObjects.push(
+        "Vehicle incident markers",
+        "Road hazard indicators",
+        "Possible injury to persons"
+      );
+      evidentiaryValue = "High evidentiary value for traffic management, insurance, and injury claims.";
+      recommendedAction = "Dispatch Traffic Management Unit. Secure accident scene, document damage and injuries, clear road obstruction.";
+    } else if (isVandalism) {
+      severity = "Medium";
+      summary = `Vandalism or property damage reported. The description indicates intentional damage to public or private property.`;
+      detectedObjects.push(
+        "Property damage evidence",
+        "Intentional destruction indicators",
+        "Community impact"
+      );
+      evidentiaryValue = "Moderate evidentiary value. Useful for insurance claims and identifying patterns of anti-social behaviour.";
+      recommendedAction = "Document damage with photos, log in community intelligence database, and investigate for repeat patterns or gang presence.";
+    }
+    if (report.priority === "High" || report.priority === "Critical") {
+      if (severity === "Medium" || severity === "Low") severity = "High";
+    }
+    return {
+      confidenceScore,
+      severity,
+      summary,
+      detectedObjects,
+      evidentiaryValue,
+      recommendedAction
+    };
+  }
   app2.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
       const reason = String(req.body?.reason || "").trim();
@@ -4281,12 +4827,12 @@ async function registerRoutes(app2) {
       const assignments = await storage.listReportAssignments();
       const assignment = assignments.find((a) => a.id === id);
       if (assignment) {
-        let reportStatus = "Pending";
+        let reportStatus = "Assigned";
         if (status === "Resolved") reportStatus = "Resolved";
         else if (status === "Rejected" || status === "Failed")
           reportStatus = "Rejected";
-        else if (status === "Acknowledged") reportStatus = "Pending";
-        else if (status === "On Route") reportStatus = "Pending";
+        else if (status === "Acknowledged") reportStatus = "Assigned";
+        else if (status === "On Route") reportStatus = "Assigned";
         await storage.updateEvidenceReportStatus(
           assignment.reportId,
           reportStatus
@@ -4327,14 +4873,16 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch notes" });
     }
   });
-  app2.get("/admin", (req, res) => {
+  app2.get("/admin", async (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     const session = getSession(req);
     if (!session) {
       return res.status(200).send(adminLoginHtml());
     }
-    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}" };</script>`;
+    const user = await storage.getAdminUserByUsername(session.username);
+    const permissions = user ? user.permissions || [] : [];
+    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}", permissions: ${JSON.stringify(permissions)} };</script>`;
     const responseHtml = adminHtml.replace("<head>", `<head>
   ${roleScript}`);
     res.status(200).send(responseHtml);

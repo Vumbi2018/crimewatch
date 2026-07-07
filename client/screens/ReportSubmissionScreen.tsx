@@ -31,6 +31,7 @@ import {
   savePendingReportSubmission,
   generatePendingReportId,
   saveSubmittedReportReceipt,
+  saveEvidence,
 } from "@/lib/storage";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -39,6 +40,15 @@ type RouteType = RouteProp<RootStackParamList, "ReportSubmission">;
 const AGENCIES = ["NCD Command Centre"];
 
 const PRIORITY_LEVELS = ["Low", "Medium", "High"];
+
+const INCIDENT_TYPES = [
+  "Theft",
+  "Vandalism",
+  "Suspicious Activity",
+  "Traffic",
+  "Assault",
+  "Other",
+];
 
 type NearestStation = {
   id: string;
@@ -153,6 +163,11 @@ export default function ReportSubmissionScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [incidentType, setIncidentType] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [showIncidentPicker, setShowIncidentPicker] = useState(false);
+  const [incidentTypeError, setIncidentTypeError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
   const [nearestStation, setNearestStation] = useState<NearestStation | null>(
     null,
   );
@@ -182,6 +197,8 @@ export default function ReportSubmissionScreen() {
       if (list.length > 0) {
         const primary = list[0];
         setEvidence(primary);
+        setIncidentType(primary.incidentType);
+        setDescription(primary.description || "");
 
         if (primary.latitude && primary.longitude) {
           const url = new URL("/api/police-stations/nearest", getApiUrl());
@@ -279,12 +296,12 @@ export default function ReportSubmissionScreen() {
 
         reportPayload = {
           evidenceType: evidence.type,
-          incidentType: evidence.incidentType || null,
-          description: evidence.description || null,
+          incidentType,
+          description: description.trim(),
           latitude: evidence.latitude ? String(evidence.latitude) : null,
           longitude: evidence.longitude ? String(evidence.longitude) : null,
           address: evidence.address || null,
-          tags: evidence.tags || [],
+          tags: [],
           agency: selectedAgency || "NCD Command Centre",
           priority,
           isAnonymous: isAnonymous ? 1 : 0,
@@ -373,6 +390,46 @@ export default function ReportSubmissionScreen() {
     if (!selectedAgency) {
       Alert.alert("Required", "Please select an agency to submit to.");
       return;
+    }
+
+    const trimmedDescription = description.trim();
+    let hasDetailError = false;
+    if (!incidentType) {
+      setIncidentTypeError(true);
+      hasDetailError = true;
+    } else {
+      setIncidentTypeError(false);
+    }
+    if (!trimmedDescription) {
+      setDescriptionError(true);
+      hasDetailError = true;
+    } else {
+      setDescriptionError(false);
+    }
+    if (hasDetailError) {
+      Alert.alert(
+        "Required",
+        "Please add the incident type and description before submitting this report.",
+      );
+      return;
+    }
+
+    if (evidence) {
+      const updatedEvidence = {
+        ...evidence,
+        incidentType,
+        description: trimmedDescription,
+        tags: [],
+      };
+      await saveEvidence(updatedEvidence);
+      setEvidence(updatedEvidence);
+      setEvidenceList((items) =>
+        items.map((item, index) =>
+          index === 0
+            ? updatedEvidence
+            : { ...item, incidentType, description: trimmedDescription, tags: [] },
+        ),
+      );
     }
 
     if (allowContact && !contactPhone && !contactEmail) {
@@ -627,6 +684,109 @@ export default function ReportSubmissionScreen() {
         <View
           style={[styles.section, { backgroundColor: theme.cardBackground }]}
         >
+          <View style={styles.requiredLabelRow}>
+            <ThemedText type="small" style={styles.sectionLabelNoMargin}>
+              Incident Type
+            </ThemedText>
+            <ThemedText style={styles.requiredMark}> *</ThemedText>
+          </View>
+          <Pressable
+            style={[
+              styles.pickerButton,
+              { borderColor: incidentTypeError ? "#ef4444" : theme.border },
+            ]}
+            onPress={() => {
+              setShowIncidentPicker(!showIncidentPicker);
+              if (incidentTypeError) setIncidentTypeError(false);
+            }}
+          >
+            <ThemedText style={incidentType ? {} : { color: theme.textSecondary }}>
+              {incidentType || "Select incident type"}
+            </ThemedText>
+            <Feather
+              name={showIncidentPicker ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={theme.textSecondary}
+            />
+          </Pressable>
+          {incidentTypeError ? (
+            <ThemedText style={styles.fieldError}>Incident type is required.</ThemedText>
+          ) : null}
+          {showIncidentPicker ? (
+            <View style={styles.pickerOptions}>
+              {INCIDENT_TYPES.map((type) => (
+                <Pressable
+                  key={type}
+                  style={[
+                    styles.pickerOption,
+                    incidentType === type && { backgroundColor: theme.primary + "20" },
+                  ]}
+                  onPress={() => {
+                    setIncidentType(type);
+                    setIncidentTypeError(false);
+                    setShowIncidentPicker(false);
+                    Haptics.selectionAsync();
+                  }}
+                >
+                  <ThemedText
+                    style={
+                      incidentType === type
+                        ? { color: theme.primary, fontWeight: "600" }
+                        : {}
+                    }
+                  >
+                    {type}
+                  </ThemedText>
+                  {incidentType === type ? (
+                    <Feather name="check" size={18} color={theme.primary} />
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
+          <View style={styles.descriptionHeader}>
+            <View style={styles.requiredLabelRowCompact}>
+              <ThemedText type="small" style={styles.sectionLabelNoMargin}>
+                Description
+              </ThemedText>
+              <ThemedText style={styles.requiredMark}> *</ThemedText>
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+              {description.length}/500
+            </ThemedText>
+          </View>
+          <TextInput
+            style={[
+              styles.descriptionInput,
+              {
+                color: theme.text,
+                borderColor: descriptionError ? "#ef4444" : theme.border,
+              },
+            ]}
+            placeholder="Describe what happened..."
+            placeholderTextColor={theme.textSecondary}
+            value={description}
+            onChangeText={(text) => {
+              setDescription(text.slice(0, 500));
+              if (descriptionError && text.trim()) setDescriptionError(false);
+            }}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          {descriptionError ? (
+            <ThemedText style={styles.fieldError}>Description is required.</ThemedText>
+          ) : null}
+        </View>
+
+        <View
+          style={[styles.section, { backgroundColor: theme.cardBackground }]}
+        >
           <View style={styles.reviewHeader}>
             <Feather name="clipboard" size={18} color={theme.primary} />
             <ThemedText style={styles.reviewTitle}>
@@ -639,7 +799,7 @@ export default function ReportSubmissionScreen() {
                 Incident
               </ThemedText>
               <ThemedText style={styles.reviewValue}>
-                {evidence.incidentType || "Not specified"}
+                {incidentType || "Not specified"}
               </ThemedText>
             </View>
             <View style={styles.reviewItem}>
@@ -657,7 +817,7 @@ export default function ReportSubmissionScreen() {
                 Description
               </ThemedText>
               <ThemedText style={styles.reviewValue} numberOfLines={3}>
-                {evidence.description || "No description added"}
+                {description || "No description added"}
               </ThemedText>
             </View>
             <View style={styles.reviewItemWide}>

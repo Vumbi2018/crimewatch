@@ -50,8 +50,6 @@ export default function EvidenceDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [incidentType, setIncidentType] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [showIncidentPicker, setShowIncidentPicker] = useState(false);
 
   const [incidentTypeError, setIncidentTypeError] = useState(false);
@@ -69,7 +67,6 @@ export default function EvidenceDetailScreen() {
         setEvidence(data);
         setIncidentType(data.incidentType);
         setDescription(data.description || "");
-        setTags(data.tags);
       }
     } catch (error) {
       console.error("Error loading evidence:", error);
@@ -96,8 +93,8 @@ export default function EvidenceDetailScreen() {
     const updatedEvidence: Evidence = {
       ...evidence,
       incidentType,
-      description: description.trim() || null,
-      tags,
+      description: description.trim(),
+      tags: [],
     };
 
     await saveEvidence(updatedEvidence);
@@ -128,17 +125,6 @@ export default function EvidenceDetailScreen() {
     );
   };
 
-  const handleAddTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag]);
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
 
   const handleSubmit = async () => {
     if (!evidence) return;
@@ -171,8 +157,8 @@ export default function EvidenceDetailScreen() {
     const updatedEvidence: Evidence = {
       ...evidence,
       incidentType,
-      description: description.trim() || null,
-      tags,
+      description: description.trim(),
+      tags: [],
     };
 
     await saveEvidence(updatedEvidence);
@@ -403,53 +389,6 @@ export default function EvidenceDetailScreen() {
             ) : null}
           </View>
 
-          <View
-            style={[styles.section, { backgroundColor: theme.cardBackground }]}
-          >
-            <ThemedText type="small" style={styles.sectionLabel}>
-              Tags
-            </ThemedText>
-            <View style={styles.tagInputContainer}>
-              <TextInput
-                style={[
-                  styles.tagInput,
-                  { color: theme.text, borderColor: theme.border },
-                ]}
-                placeholder="Add a tag..."
-                placeholderTextColor={theme.textSecondary}
-                value={tagInput}
-                onChangeText={setTagInput}
-                onSubmitEditing={handleAddTag}
-                returnKeyType="done"
-              />
-              <Pressable
-                style={[
-                  styles.addTagButton,
-                  { backgroundColor: theme.primary },
-                ]}
-                onPress={handleAddTag}
-              >
-                <Feather name="plus" size={20} color="#FFF" />
-              </Pressable>
-            </View>
-            {tags.length > 0 ? (
-              <View style={styles.tagsContainer}>
-                {tags.map((tag) => (
-                  <Pressable
-                    key={tag}
-                    style={[
-                      styles.tag,
-                      { backgroundColor: theme.backgroundSecondary },
-                    ]}
-                    onPress={() => handleRemoveTag(tag)}
-                  >
-                    <ThemedText type="small">{tag}</ThemedText>
-                    <Feather name="x" size={14} color={theme.textSecondary} />
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
 
           <Pressable style={styles.saveButton} onPress={handleSave}>
             <Feather name="save" size={18} color={theme.primary} />
@@ -560,39 +499,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 100,
   },
-  tagInputContainer: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  tagInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.md,
-    height: 44,
-    fontSize: 16,
-  },
-  addTagButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  tag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-  },
+
+
   saveButton: {
     flexDirection: "row",
     alignItems: "center",
