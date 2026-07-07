@@ -25,6 +25,14 @@ import {
   type InsertOfficerProfile,
   type InsertReportAssignment,
   type InsertReportNote,
+  type ReporterProfile,
+  type InsertReporterProfile,
+  type RepresentedPerson,
+  type InsertRepresentedPerson,
+  type ReportAttachment,
+  type InsertReportAttachment,
+  type AuditLog,
+  type InsertAuditLog,
   evidenceReports,
   policeCommands,
   provinces,
@@ -37,6 +45,10 @@ import {
   officerProfiles,
   reportAssignments,
   reportNotes,
+  reporterProfiles,
+  representedPersons,
+  reportAttachments,
+  auditLogs,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -95,6 +107,22 @@ export interface IStorage {
   updateReportAssignmentStatus(id: string, status: string): Promise<void>;
   listReportNotes(reportId: string): Promise<ReportNote[]>;
   createReportNote(note: InsertReportNote): Promise<ReportNote>;
+
+  // Reporter Profiles
+  getReporterProfile(id: string): Promise<ReporterProfile | undefined>;
+  createReporterProfile(profile: InsertReporterProfile): Promise<ReporterProfile>;
+  upsertReporterProfile(profile: InsertReporterProfile): Promise<ReporterProfile>;
+  
+  // Represented Persons
+  getRepresentedPerson(id: string): Promise<RepresentedPerson | undefined>;
+  createRepresentedPerson(person: InsertRepresentedPerson): Promise<RepresentedPerson>;
+  
+  // Report Attachments
+  createReportAttachment(attachment: InsertReportAttachment): Promise<ReportAttachment>;
+  getReportAttachments(reportId: string): Promise<ReportAttachment[]>;
+  
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -433,6 +461,83 @@ export class DatabaseStorage implements IStorage {
 
   async createReportNote(note: InsertReportNote): Promise<ReportNote> {
     const [created] = await db.insert(reportNotes).values(note).returning();
+    return created;
+  }
+
+  // Reporter Profiles
+  async getReporterProfile(id: string): Promise<ReporterProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(reporterProfiles)
+      .where(eq(reporterProfiles.id, id));
+    return profile;
+  }
+
+  async createReporterProfile(profile: InsertReporterProfile): Promise<ReporterProfile> {
+    const [created] = await db
+      .insert(reporterProfiles)
+      .values(profile)
+      .returning();
+    return created;
+  }
+
+  async upsertReporterProfile(profile: InsertReporterProfile): Promise<ReporterProfile> {
+    const [created] = await db
+      .insert(reporterProfiles)
+      .values(profile)
+      .onConflictDoUpdate({
+        target: reporterProfiles.id,
+        set: {
+          displayName: profile.displayName,
+          badgeNumber: profile.badgeNumber,
+          avatarType: profile.avatarType,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return created;
+  }
+
+  // Represented Persons
+  async getRepresentedPerson(id: string): Promise<RepresentedPerson | undefined> {
+    const [person] = await db
+      .select()
+      .from(representedPersons)
+      .where(eq(representedPersons.id, id));
+    return person;
+  }
+
+  async createRepresentedPerson(person: InsertRepresentedPerson): Promise<RepresentedPerson> {
+    const [created] = await db
+      .insert(representedPersons)
+      .values(person)
+      .returning();
+    return created;
+  }
+
+  // Report Attachments
+  async createReportAttachment(attachment: InsertReportAttachment): Promise<ReportAttachment> {
+    const [created] = await db
+      .insert(reportAttachments)
+      .values(attachment)
+      .returning();
+    return created;
+  }
+
+  async getReportAttachments(reportId: string): Promise<ReportAttachment[]> {
+    return db
+      .select()
+      .from(reportAttachments)
+      .where(eq(reportAttachments.reportId, reportId))
+      .orderBy(asc(reportAttachments.uploadedAt));
+  }
+
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db
+      .insert(auditLogs)
+      .values(log)
+      .returning();
     return created;
   }
 }

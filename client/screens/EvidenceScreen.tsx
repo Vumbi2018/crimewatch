@@ -27,7 +27,7 @@ export default function EvidenceScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<NavigationProp>();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [filteredEvidence, setFilteredEvidence] = useState<Evidence[]>([]);
@@ -35,11 +35,16 @@ export default function EvidenceScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const loadEvidence = useCallback(async () => {
     try {
       const data = await getAllEvidence();
       setEvidence(data);
       setFilteredEvidence(data);
+      setSelectedIds([]);
+      setIsSelectMode(false);
     } catch (error) {
       console.error("Error loading evidence:", error);
     } finally {
@@ -107,6 +112,7 @@ export default function EvidenceScreen() {
   };
 
   const handleDelete = (id: string) => {
+    if (isSelectMode) return;
     Alert.alert(
       "Delete Evidence",
       "Are you sure you want to delete this evidence? This action cannot be undone.",
@@ -125,98 +131,155 @@ export default function EvidenceScreen() {
     );
   };
 
-  const renderEvidenceItem = ({ item }: { item: Evidence }) => (
-    <Pressable
-      style={[
-        styles.evidenceCard,
-        { backgroundColor: theme.cardBackground },
-        Shadows.small,
-      ]}
-      onPress={() =>
-        navigation.navigate("EvidenceDetail", { evidenceId: item.id })
+  const handleCardPress = (item: Evidence) => {
+    if (isSelectMode) {
+      if (item.submissionStatus !== "draft") {
+        Alert.alert(
+          "Invalid Selection",
+          "Only draft evidence can be selected for submission.",
+        );
+        return;
       }
-      onLongPress={() => handleDelete(item.id)}
-    >
-      <View style={styles.thumbnailContainer}>
-        {item.type === "audio" ? (
-          <View style={[styles.thumbnail, styles.audioThumbnail]}>
-            <Feather name="mic" size={32} color="rgba(255,255,255,0.6)" />
-            <View style={styles.audioWaveRow}>
-              {[0.4, 0.8, 0.5, 1, 0.6, 0.9, 0.45].map((h, i) => (
-                <View
-                  key={i}
-                  style={[styles.audioWaveBar, { height: 24 * h }]}
-                />
-              ))}
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (selectedIds.includes(item.id)) {
+        setSelectedIds(selectedIds.filter((id) => id !== item.id));
+      } else {
+        if (selectedIds.length >= 10) {
+          Alert.alert(
+            "Limit Reached",
+            "You can select a maximum of 10 evidence items.",
+          );
+          return;
+        }
+        setSelectedIds([...selectedIds, item.id]);
+      }
+    } else {
+      navigation.navigate("EvidenceDetail", { evidenceId: item.id });
+    }
+  };
+
+  const handleBulkSubmit = () => {
+    if (selectedIds.length === 0) return;
+    navigation.navigate("ReportSubmission", { evidenceIds: selectedIds });
+  };
+
+  const toggleSelectMode = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (isSelectMode) {
+      setIsSelectMode(false);
+      setSelectedIds([]);
+    } else {
+      setIsSelectMode(true);
+    }
+  };
+
+  const renderEvidenceItem = ({ item }: { item: Evidence }) => {
+    const isSelected = selectedIds.includes(item.id);
+    const isDraft = item.submissionStatus === "draft";
+    return (
+      <Pressable
+        style={[
+          styles.evidenceCard,
+          { backgroundColor: theme.cardBackground },
+          isSelected && { borderColor: theme.primary, borderWidth: 2 },
+          isSelectMode && !isDraft && { opacity: 0.5 },
+          Shadows.small,
+        ]}
+        onPress={() => handleCardPress(item)}
+        onLongPress={() => handleDelete(item.id)}
+      >
+        <View style={styles.thumbnailContainer}>
+          {item.type === "audio" ? (
+            <View style={[styles.thumbnail, styles.audioThumbnail]}>
+              <Feather name="mic" size={32} color="rgba(255,255,255,0.6)" />
+              <View style={styles.audioWaveRow}>
+                {[0.4, 0.8, 0.5, 1, 0.6, 0.9, 0.45].map((h, i) => (
+                  <View
+                    key={i}
+                    style={[styles.audioWaveBar, { height: 24 * h }]}
+                  />
+                ))}
+              </View>
             </View>
+          ) : (
+            <Image
+              source={{ uri: item.uri }}
+              style={styles.thumbnail}
+              contentFit="cover"
+            />
+          )}
+          <View style={styles.typeBadge}>
+            <Feather
+              name={
+                item.type === "photo"
+                  ? "image"
+                  : item.type === "video"
+                    ? "video"
+                    : "mic"
+              }
+              size={12}
+              color="#FFF"
+            />
           </View>
-        ) : (
-          <Image
-            source={{ uri: item.uri }}
-            style={styles.thumbnail}
-            contentFit="cover"
-          />
-        )}
-        <View style={styles.typeBadge}>
-          <Feather
-            name={
-              item.type === "photo"
-                ? "image"
-                : item.type === "video"
-                  ? "video"
-                  : "mic"
-            }
-            size={12}
-            color="#FFF"
-          />
+          {isSelectMode && isDraft && (
+            <View style={styles.selectCheckboxOverlay}>
+              <Feather
+                name={isSelected ? "check-circle" : "circle"}
+                size={22}
+                color={isSelected ? theme.primary : "#FFF"}
+              />
+            </View>
+          )}
         </View>
-      </View>
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <ThemedText type="small" style={styles.dateText}>
-            {formatDate(item.timestamp)}
-          </ThemedText>
-          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-            {formatTime(item.timestamp)}
-          </ThemedText>
-        </View>
-        {item.address ? (
-          <View style={styles.locationRow}>
-            <Feather name="map-pin" size={12} color={theme.textSecondary} />
-            <ThemedText
-              type="caption"
-              numberOfLines={1}
-              style={[styles.locationText, { color: theme.textSecondary }]}
-            >
-              {item.address}
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <ThemedText type="small" style={styles.dateText}>
+              {formatDate(item.timestamp)}
+            </ThemedText>
+            <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+              {formatTime(item.timestamp)}
             </ThemedText>
           </View>
-        ) : null}
-        <View style={styles.statusContainer}>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(item.submissionStatus) + "20" },
-            ]}
-          >
+          {item.address ? (
+            <View style={styles.locationRow}>
+              <Feather name="map-pin" size={12} color={theme.textSecondary} />
+              <ThemedText
+                type="caption"
+                numberOfLines={1}
+                style={[styles.locationText, { color: theme.textSecondary }]}
+              >
+                {item.address}
+              </ThemedText>
+            </View>
+          ) : null}
+          <View style={styles.statusContainer}>
             <View
               style={[
-                styles.statusDot,
-                { backgroundColor: getStatusColor(item.submissionStatus) },
+                styles.statusBadge,
+                {
+                  backgroundColor: getStatusColor(item.submissionStatus) + "20",
+                },
               ]}
-            />
-            <ThemedText
-              type="caption"
-              style={{ color: getStatusColor(item.submissionStatus) }}
             >
-              {item.submissionStatus.charAt(0).toUpperCase() +
-                item.submissionStatus.slice(1)}
-            </ThemedText>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: getStatusColor(item.submissionStatus) },
+                ]}
+              />
+              <ThemedText
+                type="caption"
+                style={{ color: getStatusColor(item.submissionStatus) }}
+              >
+                {item.submissionStatus.charAt(0).toUpperCase() +
+                  item.submissionStatus.slice(1)}
+              </ThemedText>
+            </View>
           </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
@@ -230,10 +293,30 @@ export default function EvidenceScreen() {
     </View>
   );
 
+  const showSelectButton = evidence.some((e) => e.submissionStatus === "draft");
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
-        <ThemedText type="h2">Evidence</ThemedText>
+        <View style={styles.headerTitleRow}>
+          <ThemedText type="h2">Evidence</ThemedText>
+          {showSelectButton && (
+            <Pressable
+              onPress={toggleSelectMode}
+              style={[styles.selectHeaderBtn, { borderColor: theme.border }]}
+            >
+              <ThemedText
+                style={
+                  isSelectMode
+                    ? { color: Colors.light.accent, fontWeight: "600" }
+                    : { color: theme.primary }
+                }
+              >
+                {isSelectMode ? "Cancel" : "Select"}
+              </ThemedText>
+            </Pressable>
+          )}
+        </View>
         <View
           style={[
             styles.searchContainer,
@@ -265,7 +348,7 @@ export default function EvidenceScreen() {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: tabBarHeight + Spacing.xl,
+            paddingBottom: tabBarHeight + Spacing.xl + (isSelectMode ? 80 : 0),
           },
         ]}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
@@ -274,6 +357,26 @@ export default function EvidenceScreen() {
         }
         ListEmptyComponent={!isLoading ? <EmptyState /> : null}
       />
+
+      {isSelectMode && selectedIds.length > 0 && (
+        <View
+          style={[
+            styles.floatingSubmitContainer,
+            { bottom: tabBarHeight + Spacing.md },
+          ]}
+        >
+          <Pressable
+            style={[styles.floatingSubmitBtn, Shadows.medium]}
+            onPress={handleBulkSubmit}
+          >
+            <Feather name="send" size={18} color="#FFF" />
+            <ThemedText style={styles.floatingSubmitText}>
+              Submit {selectedIds.length} Item
+              {selectedIds.length > 1 ? "s" : ""}
+            </ThemedText>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -398,5 +501,46 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: Spacing.sm,
     textAlign: "center",
+  },
+  headerTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  selectHeaderBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  selectCheckboxOverlay: {
+    position: "absolute",
+    top: Spacing.sm,
+    left: Spacing.sm,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 12,
+    padding: 2,
+  },
+  floatingSubmitContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 99,
+  },
+  floatingSubmitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.sm,
+  },
+  floatingSubmitText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

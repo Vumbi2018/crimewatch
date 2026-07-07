@@ -49,6 +49,11 @@ export const evidenceReports = pgTable("evidence_reports", {
   attachments: jsonb("attachments")
     .$type<{ fileUrl: string; fileType: string }[]>()
     .default([]),
+  reporterProfileId: varchar("reporter_profile_id"),
+  reportSourceType: text("report_source_type").notNull().default("LIVE_INCIDENT"),
+  representedPersonId: varchar("represented_person_id"),
+  confirmationAcknowledgedAt: timestamp("confirmation_acknowledged_at"),
+  confirmationTextVersion: text("confirmation_text_version"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
 });
 
@@ -278,6 +283,74 @@ export const insertReportNoteSchema = createInsertSchema(reportNotes).omit({
   createdAt: true,
 });
 
+// New tables
+export const reporterProfiles = pgTable("reporter_profiles", {
+  id: varchar("id").primaryKey(),
+  displayName: text("display_name").notNull(),
+  badgeNumber: text("badge_number"),
+  avatarType: text("avatar_type").notNull().default("shield"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const representedPersons = pgTable("represented_persons", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name"),
+  contact: text("contact"),
+  relationshipToReporter: text("relationship_to_reporter"),
+  consentGiven: boolean("consent_given").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const reportAttachments = pgTable("report_attachments", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  reportId: varchar("report_id").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name"),
+  fileType: text("file_type"),
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  evidenceSource: text("evidence_source").notNull().default("uploaded"),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  action: text("action").notNull(),
+  details: text("details"),
+  userId: varchar("user_id"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReporterProfileSchema = createInsertSchema(reporterProfiles).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRepresentedPersonSchema = createInsertSchema(representedPersons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReportAttachmentSchema = createInsertSchema(reportAttachments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type EvidenceReport = typeof evidenceReports.$inferSelect;
@@ -293,6 +366,14 @@ export type DeletedReportAudit = typeof deletedReportAudits.$inferSelect;
 export type OfficerProfile = typeof officerProfiles.$inferSelect;
 export type ReportAssignment = typeof reportAssignments.$inferSelect;
 export type ReportNote = typeof reportNotes.$inferSelect;
+export type ReporterProfile = typeof reporterProfiles.$inferSelect;
+export type InsertReporterProfile = z.infer<typeof insertReporterProfileSchema>;
+export type RepresentedPerson = typeof representedPersons.$inferSelect;
+export type InsertRepresentedPerson = z.infer<typeof insertRepresentedPersonSchema>;
+export type ReportAttachment = typeof reportAttachments.$inferSelect;
+export type InsertReportAttachment = z.infer<typeof insertReportAttachmentSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type InsertPoliceCommand = z.infer<typeof insertPoliceCommandSchema>;
 export type InsertProvince = z.infer<typeof insertProvinceSchema>;
 export type InsertDistrict = z.infer<typeof insertDistrictSchema>;

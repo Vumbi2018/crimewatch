@@ -1,35 +1,46 @@
+import React from "react";
 import {
   ScrollView,
   ScrollViewProps,
   KeyboardAvoidingView,
   Platform,
-  View,
 } from "react-native";
 
 type Props = ScrollViewProps & {
   children?: React.ReactNode;
 };
 
-export function KeyboardAwareScrollViewCompat({
-  children,
-  keyboardShouldPersistTaps = "handled",
-  style,
-  contentContainerStyle,
-  ...props
-}: Props) {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <ScrollView
-        keyboardShouldPersistTaps={keyboardShouldPersistTaps}
-        style={style}
-        contentContainerStyle={contentContainerStyle}
-        {...props}
+export const KeyboardAwareScrollViewCompat = React.forwardRef<
+  ScrollView,
+  Props
+>(
+  (
+    {
+      children,
+      keyboardShouldPersistTaps = "handled",
+      style,
+      contentContainerStyle,
+      ...props
+    },
+    ref,
+  ) => {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        {children}
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
+        <ScrollView
+          ref={ref}
+          keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+          style={style}
+          contentContainerStyle={contentContainerStyle}
+          {...props}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  },
+);
+
+KeyboardAwareScrollViewCompat.displayName = "KeyboardAwareScrollViewCompat";

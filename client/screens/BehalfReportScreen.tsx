@@ -22,6 +22,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
 import { apiUrl } from "@/lib/query-client";
+import { getUserProfile, saveUserProfile } from "@/lib/storage";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,11 +50,19 @@ export default function BehalfReportScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  // Attachment
-  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  // Attachments
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState("");
+
+  // Validation Errors
+  const [victimNameError, setVictimNameError] = useState(false);
+  const [consentError, setConsentError] = useState(false);
+  const [incidentTypeError, setIncidentTypeError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
+
+  const scrollViewRef = React.useRef<any>(null);
 
   const relationships = ["Family", "Friend", "Neighbor", "Colleague", "Other"];
 
@@ -118,6 +127,14 @@ export default function BehalfReportScreen() {
   };
 
   const handlePickMedia = async () => {
+    if (attachments.length >= 10) {
+      Alert.alert(
+        "Limit Reached",
+        "You can upload a maximum of 10 attachments.",
+      );
+      return;
+    }
+
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -133,22 +150,53 @@ export default function BehalfReportScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: false,
         quality: 0.8,
+        allowsMultipleSelection: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const fileSize = asset.fileSize || 0;
-        const name =
-          asset.fileName ||
-          `media_${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`;
-        const mimeType = asset.type === "video" ? "video/mp4" : "image/jpeg";
+        const remainingSlots = 10 - attachments.length;
+        const selectedAssets = result.assets.slice(0, remainingSlots);
 
-        setAttachment({
-          uri: asset.uri,
-          name,
-          type: mimeType,
-          size: fileSize,
-        });
+        if (result.assets.length > remainingSlots) {
+          Alert.alert(
+            "Limit Reached",
+            `Only the first ${remainingSlots} selected file(s) were added because the limit is 10.`,
+          );
+        }
+
+        const newAttachments: Attachment[] = [];
+        let tooLargeCount = 0;
+
+        for (const asset of selectedAssets) {
+          const fileSize = asset.fileSize || 0;
+          const name =
+            asset.fileName ||
+            `media_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${asset.type === "video" ? "mp4" : "jpg"}`;
+          const mimeType = asset.type === "video" ? "video/mp4" : "image/jpeg";
+
+          if (fileSize > 10 * 1024 * 1024) {
+            tooLargeCount++;
+            continue;
+          }
+
+          newAttachments.push({
+            uri: asset.uri,
+            name,
+            type: mimeType,
+            size: fileSize,
+          });
+        }
+
+        if (tooLargeCount > 0) {
+          Alert.alert(
+            "Files Too Large",
+            `${tooLargeCount} file(s) were skipped because they exceed the 10MB limit.`,
+          );
+        }
+
+        if (newAttachments.length > 0) {
+          setAttachments([...attachments, ...newAttachments]);
+        }
       }
     } catch (err) {
       console.error("Media selection failed:", err);
@@ -156,21 +204,61 @@ export default function BehalfReportScreen() {
   };
 
   const handlePickDocument = async () => {
+    if (attachments.length >= 10) {
+      Alert.alert(
+        "Limit Reached",
+        "You can upload a maximum of 10 attachments.",
+      );
+      return;
+    }
+
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "*/*",
         copyToCacheDirectory: true,
+        multiple: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const size = asset.size || 0;
-        setAttachment({
-          uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || "application/octet-stream",
-          size,
-        });
+        const remainingSlots = 10 - attachments.length;
+        const selectedAssets = result.assets.slice(0, remainingSlots);
+
+        if (result.assets.length > remainingSlots) {
+          Alert.alert(
+            "Limit Reached",
+            `Only the first ${remainingSlots} selected document(s) were added because the limit is 10.`,
+          );
+        }
+
+        const newAttachments: Attachment[] = [];
+        let tooLargeCount = 0;
+
+        for (const asset of selectedAssets) {
+          const size = asset.size || 0;
+
+          if (size > 10 * 1024 * 1024) {
+            tooLargeCount++;
+            continue;
+          }
+
+          newAttachments.push({
+            uri: asset.uri,
+            name: asset.name,
+            type: asset.mimeType || "application/octet-stream",
+            size,
+          });
+        }
+
+        if (tooLargeCount > 0) {
+          Alert.alert(
+            "Files Too Large",
+            `${tooLargeCount} document(s) were skipped because they exceed the 10MB limit.`,
+          );
+        }
+
+        if (newAttachments.length > 0) {
+          setAttachments([...attachments, ...newAttachments]);
+        }
       }
     } catch (err) {
       console.error("Document selection failed:", err);
@@ -183,12 +271,7 @@ export default function BehalfReportScreen() {
     return `${mb.toFixed(2)} MB`;
   };
 
-  const isFileSizeTooLarge = attachment
-    ? attachment.size > 10 * 1024 * 1024
-    : false;
-
   const uploadFile = async (file: Attachment): Promise<string | null> => {
-    setSubmitProgress("Uploading attachment evidence...");
     try {
       const formData = new FormData();
       formData.append("file", {
@@ -214,52 +297,43 @@ export default function BehalfReportScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!victimName.trim()) {
-      Alert.alert("Validation Error", "Please enter the victim's full name.");
-      return;
-    }
-    if (!consent) {
-      Alert.alert(
-        "Validation Error",
-        "You must confirm you have obtained consent to submit on their behalf.",
-      );
-      return;
-    }
-    if (!incidentType.trim()) {
-      Alert.alert(
-        "Validation Error",
-        "Please select or type an incident type.",
-      );
-      return;
-    }
-    if (!description.trim()) {
-      Alert.alert("Validation Error", "Please describe the incident.");
-      return;
-    }
-    if (isFileSizeTooLarge) {
-      Alert.alert(
-        "Validation Error",
-        "Selected file exceeds the 10MB limit. Please select a smaller file.",
-      );
-      return;
-    }
-
+  const executeSubmission = async () => {
     setIsSubmitting(true);
     setSubmitProgress("Preparing report details...");
 
     try {
-      let fileUrl = null;
-      if (attachment) {
-        fileUrl = await uploadFile(attachment);
+      const profile = await getUserProfile();
+      const uploadedUrls: string[] = [];
+      const attachmentsPayload: any[] = [];
+
+      for (let i = 0; i < attachments.length; i++) {
+        const att = attachments[i];
+        setSubmitProgress(
+          `Uploading attachment ${i + 1} of ${attachments.length}...`,
+        );
+        const fileUrl = await uploadFile(att);
         if (!fileUrl) {
           Alert.alert(
             "Submission Failed",
-            "Failed to upload evidence file. Please try again.",
+            `Failed to upload evidence file: ${att.name}. Please try again.`,
           );
           setIsSubmitting(false);
+          setSubmitProgress("");
           return;
         }
+        uploadedUrls.push(fileUrl);
+        attachmentsPayload.push({
+          fileUrl,
+          fileName: att.name,
+          fileType: att.type.startsWith("image/")
+            ? "photo"
+            : att.type.startsWith("video/")
+              ? "video"
+              : "document",
+          mimeType: att.type,
+          fileSize: att.size,
+          evidenceSource: "uploaded",
+        });
       }
 
       setSubmitProgress("Submitting report to police...");
@@ -271,14 +345,16 @@ export default function BehalfReportScreen() {
         behalfRelationship: relationship,
         behalfConsent: true,
         behalfSource: "citizen",
-        evidenceType: attachment
-          ? attachment.type.startsWith("image")
-            ? "photo"
-            : attachment.type.startsWith("video")
-              ? "video"
-              : "document"
-          : "witness_statement",
-        fileUrl,
+        evidenceType:
+          attachments.length > 0
+            ? attachments[0].type.startsWith("image")
+              ? "photo"
+              : attachments[0].type.startsWith("video")
+                ? "video"
+                : "document"
+            : "witness_statement",
+        fileUrl: uploadedUrls.length > 0 ? uploadedUrls[0] : null,
+        attachments: attachmentsPayload,
         incidentType,
         description,
         latitude: latitude ? String(latitude) : null,
@@ -286,6 +362,14 @@ export default function BehalfReportScreen() {
         address: locationText || null,
         priority: "Medium",
         isAnonymous: 0,
+        reporterProfileId: profile.id,
+        reporterDisplayName: profile.displayName,
+        reporterBadgeNumber: profile.badgeNumber,
+        reporterAvatarType: profile.avatarType,
+        reportSourceType: "ON_BEHALF_OF_SOMEONE",
+        confirmationTextVersion:
+          "Confirm Report Accuracy: Please confirm that the information you have provided is accurate to the best of your knowledge. False or misleading reports may affect response and investigation processes. Do you want to submit this report?",
+        confirmationAcknowledgedAt: new Date().toISOString(),
       };
 
       const res = await fetch(apiUrl("/api/reports"), {
@@ -310,6 +394,11 @@ export default function BehalfReportScreen() {
       const result = await res.json();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Increment submissions count
+      await saveUserProfile({
+        totalSubmissions: profile.totalSubmissions + 1,
+      });
+
       Alert.alert(
         "Report Submitted Successfully",
         `Incident report filed on behalf of ${victimName}.\n\nReference Code: ${result.referenceNumber || result.id.slice(0, 8).toUpperCase()}`,
@@ -327,8 +416,73 @@ export default function BehalfReportScreen() {
     }
   };
 
+  const handleSubmit = async () => {
+    let hasError = false;
+
+    if (!victimName.trim()) {
+      setVictimNameError(true);
+      hasError = true;
+    } else {
+      setVictimNameError(false);
+    }
+
+    if (!consent) {
+      setConsentError(true);
+      hasError = true;
+    } else {
+      setConsentError(false);
+    }
+
+    if (!incidentType.trim()) {
+      setIncidentTypeError(true);
+      hasError = true;
+    } else {
+      setIncidentTypeError(false);
+    }
+
+    if (!description.trim()) {
+      setDescriptionError(true);
+      hasError = true;
+    } else {
+      setDescriptionError(false);
+    }
+
+    if (hasError) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (scrollViewRef.current) {
+        if (scrollViewRef.current.scrollToPosition) {
+          scrollViewRef.current.scrollToPosition(0, 0, true);
+        } else if (scrollViewRef.current.scrollTo) {
+          scrollViewRef.current.scrollTo({ y: 0, animated: true });
+        }
+      }
+      Alert.alert(
+        "Required Fields",
+        "Please fill in all mandatory fields highlighted in red.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Confirm Report Accuracy",
+      "Please confirm that the information you have provided is accurate to the best of your knowledge. False or misleading reports may affect response and investigation processes. Do you want to submit this report?",
+      [
+        {
+          text: "Cancel / Review Again",
+          style: "cancel",
+        },
+        {
+          text: "Confirm and Submit",
+          style: "default",
+          onPress: executeSubmission,
+        },
+      ],
+    );
+  };
+
   return (
     <KeyboardAwareScrollViewCompat
+      ref={scrollViewRef}
       style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -355,21 +509,35 @@ export default function BehalfReportScreen() {
         </ThemedText>
 
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Full Name *</ThemedText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <ThemedText style={styles.label}>Full Name</ThemedText>
+            <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}>
+              {" "}
+              *
+            </ThemedText>
+          </View>
           <TextInput
             style={[
               styles.input,
               {
                 color: theme.text,
-                borderColor: theme.border,
+                borderColor: victimNameError ? "#ef4444" : theme.border,
                 backgroundColor: theme.backgroundSecondary,
               },
             ]}
             value={victimName}
-            onChangeText={setVictimName}
+            onChangeText={(text) => {
+              setVictimName(text);
+              if (victimNameError && text.trim()) setVictimNameError(false);
+            }}
             placeholder="Enter victim's full name"
             placeholderTextColor={theme.textSecondary}
           />
+          {victimNameError ? (
+            <ThemedText style={{ color: "#ef4444", fontSize: 12 }}>
+              {"Victim's name is required."}
+            </ThemedText>
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -425,21 +593,46 @@ export default function BehalfReportScreen() {
           </View>
         </View>
 
-        <View style={[styles.field, styles.switchField]}>
+        <View
+          style={[
+            styles.field,
+            styles.switchField,
+            consentError && {
+              borderWidth: 1,
+              borderColor: "#ef4444",
+              borderRadius: 8,
+              padding: 8,
+            },
+          ]}
+        >
           <View style={{ flex: 1, paddingRight: Spacing.sm }}>
-            <ThemedText style={styles.consentLabel}>
-              Consent Obtained *
-            </ThemedText>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <ThemedText style={styles.consentLabel}>
+                Consent Obtained
+              </ThemedText>
+              <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}>
+                {" "}
+                *
+              </ThemedText>
+            </View>
             <ThemedText style={styles.consentSub}>
               I confirm the victim gave permission to file this report.
             </ThemedText>
           </View>
           <Switch
             value={consent}
-            onValueChange={setConsent}
+            onValueChange={(val) => {
+              setConsent(val);
+              if (consentError && val) setConsentError(false);
+            }}
             trackColor={{ true: theme.primary }}
           />
         </View>
+        {consentError ? (
+          <ThemedText style={{ color: "#ef4444", fontSize: 12 }}>
+            You must confirm you have obtained consent.
+          </ThemedText>
+        ) : null}
       </View>
 
       {/* Incident Details Section */}
@@ -454,45 +647,73 @@ export default function BehalfReportScreen() {
         </ThemedText>
 
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Incident Type *</ThemedText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <ThemedText style={styles.label}>Incident Type</ThemedText>
+            <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}>
+              {" "}
+              *
+            </ThemedText>
+          </View>
           <TextInput
             style={[
               styles.input,
               {
                 color: theme.text,
-                borderColor: theme.border,
+                borderColor: incidentTypeError ? "#ef4444" : theme.border,
                 backgroundColor: theme.backgroundSecondary,
               },
             ]}
             value={incidentType}
-            onChangeText={setIncidentType}
+            onChangeText={(text) => {
+              setIncidentType(text);
+              if (incidentTypeError && text.trim()) setIncidentTypeError(false);
+            }}
             placeholder="e.g. Theft, Assault, Property Damage"
             placeholderTextColor={theme.textSecondary}
           />
+          {incidentTypeError ? (
+            <ThemedText style={{ color: "#ef4444", fontSize: 12 }}>
+              Incident type is required.
+            </ThemedText>
+          ) : null}
         </View>
 
         <View style={styles.field}>
-          <ThemedText style={styles.label}>
-            Description of Incident *
-          </ThemedText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <ThemedText style={styles.label}>
+              Description of Incident
+            </ThemedText>
+            <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}>
+              {" "}
+              *
+            </ThemedText>
+          </View>
           <TextInput
             style={[
               styles.input,
               styles.textArea,
               {
                 color: theme.text,
-                borderColor: theme.border,
+                borderColor: descriptionError ? "#ef4444" : theme.border,
                 backgroundColor: theme.backgroundSecondary,
               },
             ]}
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(text) => {
+              setDescription(text);
+              if (descriptionError && text.trim()) setDescriptionError(false);
+            }}
             placeholder="Describe what happened as detailed as possible..."
             placeholderTextColor={theme.textSecondary}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
           />
+          {descriptionError ? (
+            <ThemedText style={{ color: "#ef4444", fontSize: 12 }}>
+              Description of the incident is required.
+            </ThemedText>
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -551,8 +772,17 @@ export default function BehalfReportScreen() {
           3. Media Evidence (Optional)
         </ThemedText>
         <ThemedText style={styles.consentSub}>
-          Select existing pictures, videos, audio clips, or documents from your
-          phone (Max file size: 10MB).
+          Select up to 10 pictures, videos, audio clips, or documents from your
+          phone (Max file size: 10MB per file).
+        </ThemedText>
+
+        <ThemedText
+          style={[
+            styles.consentSub,
+            { marginTop: 8, fontWeight: "600", color: theme.primary },
+          ]}
+        >
+          Attachments: {attachments.length} of 10 added
         </ThemedText>
 
         <View style={styles.attachBtnContainer}>
@@ -587,8 +817,9 @@ export default function BehalfReportScreen() {
           </Pressable>
         </View>
 
-        {attachment && (
+        {attachments.map((att, index) => (
           <View
+            key={index}
             style={[
               styles.attachmentPreview,
               {
@@ -599,29 +830,22 @@ export default function BehalfReportScreen() {
           >
             <View style={{ flex: 1 }}>
               <ThemedText style={styles.attachmentName} numberOfLines={1}>
-                {attachment.name}
+                {att.name}
               </ThemedText>
-              <ThemedText
-                style={[
-                  styles.attachmentSize,
-                  isFileSizeTooLarge && {
-                    color: theme.accent,
-                    fontWeight: "bold",
-                  },
-                ]}
-              >
-                {formatFileSize(attachment.size)}{" "}
-                {isFileSizeTooLarge ? "(EXCEEDS 10MB LIMIT)" : ""}
+              <ThemedText style={styles.attachmentSize}>
+                {formatFileSize(att.size)}
               </ThemedText>
             </View>
             <Pressable
               style={styles.clearAttachment}
-              onPress={() => setAttachment(null)}
+              onPress={() =>
+                setAttachments(attachments.filter((_, i) => i !== index))
+              }
             >
               <Feather name="trash-2" size={18} color={theme.accent} />
             </Pressable>
           </View>
-        )}
+        ))}
       </View>
 
       {/* Submit Button */}
@@ -630,11 +854,7 @@ export default function BehalfReportScreen() {
           styles.submitBtn,
           {
             backgroundColor:
-              consent &&
-              victimName &&
-              incidentType &&
-              description &&
-              !isFileSizeTooLarge
+              consent && victimName && incidentType && description
                 ? theme.primary
                 : theme.border,
           },

@@ -40,6 +40,7 @@ export interface SubmittedReportReceipt {
 }
 
 export interface UserProfile {
+  id: string;
   displayName: string;
   badgeNumber: string;
   avatarType: "shield" | "star" | "checkmark" | "eye";
@@ -48,6 +49,7 @@ export interface UserProfile {
 }
 
 const defaultProfile: UserProfile = {
+  id: "",
   displayName: "Anonymous User",
   badgeNumber: "",
   avatarType: "shield",
@@ -132,10 +134,15 @@ export async function updateEvidenceSubmissionStatus(
 export async function getUserProfile(): Promise<UserProfile> {
   try {
     const data = await AsyncStorage.getItem(USER_PROFILE_KEY);
+    let profile = defaultProfile;
     if (data) {
-      return { ...defaultProfile, ...JSON.parse(data) };
+      profile = { ...defaultProfile, ...JSON.parse(data) };
     }
-    return defaultProfile;
+    if (!profile.id) {
+      profile.id = `rep_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+    }
+    return profile;
   } catch (error) {
     console.error("Error getting user profile:", error);
     return defaultProfile;

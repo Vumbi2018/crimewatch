@@ -54,6 +54,10 @@ export default function EvidenceDetailScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [showIncidentPicker, setShowIncidentPicker] = useState(false);
 
+  const [incidentTypeError, setIncidentTypeError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+
   useEffect(() => {
     loadEvidence();
   }, [route.params.evidenceId]);
@@ -139,10 +143,27 @@ export default function EvidenceDetailScreen() {
   const handleSubmit = async () => {
     if (!evidence) return;
 
+    let hasError = false;
     if (!incidentType) {
+      setIncidentTypeError(true);
+      hasError = true;
+    } else {
+      setIncidentTypeError(false);
+    }
+
+    if (!description.trim()) {
+      setDescriptionError(true);
+      hasError = true;
+    } else {
+      setDescriptionError(false);
+    }
+
+    if (hasError) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      scrollViewRef.current?.scrollTo({ y: 150, animated: true });
       Alert.alert(
-        "Required",
-        "Please select an incident type before submitting.",
+        "Required Fields",
+        "Please fill in all mandatory fields (Incident Type and Description).",
       );
       return;
     }
@@ -205,6 +226,7 @@ export default function EvidenceDetailScreen() {
         style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: insets.bottom + 80 },
@@ -276,12 +298,21 @@ export default function EvidenceDetailScreen() {
           <View
             style={[styles.section, { backgroundColor: theme.cardBackground }]}
           >
-            <ThemedText type="small" style={styles.sectionLabel}>
-              Incident Type
-            </ThemedText>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm }}>
+              <ThemedText type="small" style={{ fontWeight: "600" }}>
+                Incident Type
+              </ThemedText>
+              <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}> *</ThemedText>
+            </View>
             <Pressable
-              style={[styles.pickerButton, { borderColor: theme.border }]}
-              onPress={() => setShowIncidentPicker(!showIncidentPicker)}
+              style={[
+                styles.pickerButton,
+                { borderColor: incidentTypeError ? "#ef4444" : theme.border },
+              ]}
+              onPress={() => {
+                setShowIncidentPicker(!showIncidentPicker);
+                if (incidentTypeError) setIncidentTypeError(false);
+              }}
             >
               <ThemedText
                 style={incidentType ? {} : { color: theme.textSecondary }}
@@ -294,6 +325,11 @@ export default function EvidenceDetailScreen() {
                 color={theme.textSecondary}
               />
             </Pressable>
+            {incidentTypeError ? (
+              <ThemedText style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+                Incident type is required.
+              </ThemedText>
+            ) : null}
             {showIncidentPicker ? (
               <View style={styles.pickerOptions}>
                 {INCIDENT_TYPES.map((type) => (
@@ -307,6 +343,7 @@ export default function EvidenceDetailScreen() {
                     ]}
                     onPress={() => {
                       setIncidentType(type);
+                      setIncidentTypeError(false);
                       setShowIncidentPicker(false);
                       Haptics.selectionAsync();
                     }}
@@ -333,9 +370,12 @@ export default function EvidenceDetailScreen() {
             style={[styles.section, { backgroundColor: theme.cardBackground }]}
           >
             <View style={styles.sectionHeader}>
-              <ThemedText type="small" style={styles.sectionLabel}>
-                Description
-              </ThemedText>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <ThemedText type="small" style={{ fontWeight: "600" }}>
+                  Description
+                </ThemedText>
+                <ThemedText style={{ color: "#ef4444", fontWeight: "bold" }}> *</ThemedText>
+              </View>
               <ThemedText type="caption" style={{ color: theme.textSecondary }}>
                 {description.length}/500
               </ThemedText>
@@ -343,16 +383,24 @@ export default function EvidenceDetailScreen() {
             <TextInput
               style={[
                 styles.descriptionInput,
-                { color: theme.text, borderColor: theme.border },
+                { color: theme.text, borderColor: descriptionError ? "#ef4444" : theme.border },
               ]}
               placeholder="Describe the incident..."
               placeholderTextColor={theme.textSecondary}
               value={description}
-              onChangeText={(text) => setDescription(text.slice(0, 500))}
+              onChangeText={(text) => {
+                setDescription(text.slice(0, 500));
+                if (descriptionError && text.trim()) setDescriptionError(false);
+              }}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
             />
+            {descriptionError ? (
+              <ThemedText style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+                Description is required.
+              </ThemedText>
+            ) : null}
           </View>
 
           <View

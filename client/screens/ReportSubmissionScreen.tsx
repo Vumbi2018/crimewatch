@@ -7,6 +7,7 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -61,6 +62,14 @@ type ReportPayload = {
   contactEmail: string | null;
   reporterName: string | null;
   fileUrl: string | null;
+  attachments?: any[] | null;
+  reporterProfileId?: string | null;
+  reporterDisplayName?: string | null;
+  reporterBadgeNumber?: string | null;
+  reporterAvatarType?: string | null;
+  reportSourceType?: string | null;
+  confirmationTextVersion?: string | null;
+  confirmationAcknowledgedAt?: string | null;
 };
 
 const DEFAULT_EVIDENCE_EXTENSIONS: Record<Evidence["type"], string> = {
@@ -134,6 +143,7 @@ export default function ReportSubmissionScreen() {
   const { theme } = useTheme();
 
   const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState<string | null>(null);
@@ -149,21 +159,40 @@ export default function ReportSubmissionScreen() {
 
   useEffect(() => {
     loadEvidence();
-  }, [route.params.evidenceId]);
+  }, [route.params.evidenceId, route.params.evidenceIds]);
 
   const loadEvidence = async () => {
     try {
-      const data = await getEvidenceById(route.params.evidenceId);
-      setEvidence(data);
-      if (data?.latitude && data.longitude) {
-        const url = new URL("/api/police-stations/nearest", getApiUrl());
-        url.searchParams.set("latitude", String(data.latitude));
-        url.searchParams.set("longitude", String(data.longitude));
-        const response = await fetch(url.toString());
-        if (response.ok) {
-          const station = (await response.json()) as NearestStation | null;
-          setNearestStation(station);
-          if (station) setSelectedAgency("NCD Command Centre");
+      const ids: string[] = [];
+      if (route.params.evidenceIds && route.params.evidenceIds.length > 0) {
+        ids.push(...route.params.evidenceIds);
+      } else if (route.params.evidenceId) {
+        ids.push(route.params.evidenceId);
+      }
+
+      const list: Evidence[] = [];
+      for (const id of ids) {
+        const item = await getEvidenceById(id);
+        if (item) {
+          list.push(item);
+        }
+      }
+
+      setEvidenceList(list);
+      if (list.length > 0) {
+        const primary = list[0];
+        setEvidence(primary);
+
+        if (primary.latitude && primary.longitude) {
+          const url = new URL("/api/police-stations/nearest", getApiUrl());
+          url.searchParams.set("latitude", String(primary.latitude));
+          url.searchParams.set("longitude", String(primary.longitude));
+          const response = await fetch(url.toString());
+          if (response.ok) {
+            const station = (await response.json()) as NearestStation | null;
+            setNearestStation(station);
+            if (station) setSelectedAgency("NCD Command Centre");
+          }
         }
       }
     } catch (error) {
@@ -211,30 +240,41 @@ export default function ReportSubmissionScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!selectedAgency) {
-      Alert.alert("Required", "Please select an agency to submit to.");
-      return;
-    }
-
-    if (allowContact && !contactPhone && !contactEmail) {
-      Alert.alert(
-        "Required",
-        "Please provide contact information or disable contact preference.",
-      );
-      return;
-    }
-
+  const executeSubmission = async () => {
     setIsSubmitting(true);
 
-    let reportPayload: ReportPayload | null = null;
+    let reportPayload: any = null;
 
     try {
-      if (evidence) {
+      if (evidence && evidenceList.length > 0) {
         const profile = await getUserProfile();
-        const fileUrl = await uploadEvidenceFile(evidence);
+        const fileUrl = await uploadEvidenceFile(evidenceList[0]);
         if (!fileUrl) {
           throw new Error("Evidence file upload failed.");
+        }
+
+        const attachmentsPayload: any[] = [];
+        for (let i = 1; i < evidenceList.length; i++) {
+          const ev = evidenceList[i];
+          const url = await uploadEvidenceFile(ev);
+          if (!url) {
+            throw new Error(
+              `Failed to upload secondary evidence item: ${ev.id}`,
+            );
+          }
+          attachmentsPayload.push({
+            fileUrl: url,
+            fileName: `evidence_${ev.id}`,
+            fileType: ev.type,
+            mimeType:
+              ev.type === "photo"
+                ? "image/jpeg"
+                : ev.type === "video"
+                  ? "video/mp4"
+                  : "audio/mp4",
+            fileSize: 0,
+            evidenceSource: "captured",
+          });
         }
 
         reportPayload = {
@@ -245,13 +285,22 @@ export default function ReportSubmissionScreen() {
           longitude: evidence.longitude ? String(evidence.longitude) : null,
           address: evidence.address || null,
           tags: evidence.tags || [],
-          agency: selectedAgency,
+          agency: selectedAgency || "NCD Command Centre",
           priority,
           isAnonymous: isAnonymous ? 1 : 0,
           contactPhone: allowContact ? contactPhone || null : null,
           contactEmail: allowContact ? contactEmail || null : null,
           reporterName: isAnonymous ? null : profile.displayName,
           fileUrl: fileUrl || null,
+          attachments: attachmentsPayload,
+          reporterProfileId: profile.id,
+          reporterDisplayName: profile.displayName,
+          reporterBadgeNumber: profile.badgeNumber,
+          reporterAvatarType: profile.avatarType,
+          reportSourceType: "LIVE_INCIDENT",
+          confirmationTextVersion:
+            "Confirm Report Accuracy: Please confirm that the information you have provided is accurate to the best of your knowledge. False or misleading reports may affect response and investigation processes. Do you want to submit this report?",
+          confirmationAcknowledgedAt: new Date().toISOString(),
         };
 
         const response = await apiRequest(
@@ -263,16 +312,19 @@ export default function ReportSubmissionScreen() {
           referenceNumber?: string;
         } | null;
 
-        await updateEvidenceSubmissionStatus(evidence.id, "sent");
-        await saveSubmittedReportReceipt({
-          id: submittedReport?.referenceNumber || evidence.id,
-          evidenceId: evidence.id,
-          referenceNumber: submittedReport?.referenceNumber || null,
-          agency: selectedAgency,
-          priority,
-          status: "submitted",
-          submittedAt: Date.now(),
-        });
+        for (const ev of evidenceList) {
+          await updateEvidenceSubmissionStatus(ev.id, "sent");
+          await saveSubmittedReportReceipt({
+            id: submittedReport?.referenceNumber || ev.id,
+            evidenceId: ev.id,
+            referenceNumber: submittedReport?.referenceNumber || null,
+            agency: selectedAgency || "NCD Command Centre",
+            priority,
+            status: "submitted",
+            submittedAt: Date.now(),
+          });
+        }
+
         await saveUserProfile({
           totalSubmissions: profile.totalSubmissions + 1,
         });
@@ -317,6 +369,37 @@ export default function ReportSubmissionScreen() {
     }
   };
 
+  const handleSubmit = async () => {
+    if (!selectedAgency) {
+      Alert.alert("Required", "Please select an agency to submit to.");
+      return;
+    }
+
+    if (allowContact && !contactPhone && !contactEmail) {
+      Alert.alert(
+        "Required",
+        "Please provide contact information or disable contact preference.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Confirm Report Accuracy",
+      "Please confirm that the information you have provided is accurate to the best of your knowledge. False or misleading reports may affect response and investigation processes. Do you want to submit this report?",
+      [
+        {
+          text: "Cancel / Review Again",
+          style: "cancel",
+        },
+        {
+          text: "Confirm and Submit",
+          style: "default",
+          onPress: executeSubmission,
+        },
+      ],
+    );
+  };
+
   if (isLoading) {
     return (
       <View
@@ -355,59 +438,190 @@ export default function ReportSubmissionScreen() {
         <View
           style={[
             styles.evidenceCard,
-            { backgroundColor: theme.cardBackground },
+            {
+              backgroundColor: theme.cardBackground,
+              flexDirection: "column",
+              height: "auto",
+              minHeight: 120,
+            },
             Shadows.small,
           ]}
         >
-          {evidence.type === "audio" ? (
-            <View style={[styles.evidenceThumbnail, styles.audioThumbnail]}>
-              <Feather name="mic" size={36} color="rgba(255,255,255,0.5)" />
-            </View>
-          ) : (
-            <Image
-              source={{ uri: evidence.uri }}
-              style={styles.evidenceThumbnail}
-              contentFit="cover"
-            />
-          )}
-          <View style={styles.evidenceInfo}>
-            <View style={styles.typeBadge}>
-              <Feather
-                name={
-                  evidence.type === "photo"
-                    ? "image"
-                    : evidence.type === "video"
-                      ? "video"
-                      : "mic"
-                }
-                size={14}
-                color="#FFF"
-              />
-              <ThemedText style={styles.typeText}>
-                {evidence.type.charAt(0).toUpperCase() + evidence.type.slice(1)}
+          {evidenceList.length > 1 ? (
+            <View style={{ padding: Spacing.md, width: "100%" }}>
+              <ThemedText
+                type="small"
+                style={{
+                  marginBottom: Spacing.sm,
+                  color: theme.textSecondary,
+                  fontWeight: "600",
+                }}
+              >
+                Selected Evidence ({evidenceList.length} items)
               </ThemedText>
-            </View>
-            <ThemedText type="small" style={{ marginTop: Spacing.xs }}>
-              {formatDateTime(evidence.timestamp)}
-            </ThemedText>
-            {evidence.incidentType ? (
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                {evidence.incidentType}
-              </ThemedText>
-            ) : null}
-            {evidence.address ? (
-              <View style={styles.locationRow}>
-                <Feather name="map-pin" size={12} color={theme.textSecondary} />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: Spacing.sm,
+                  paddingBottom: Spacing.sm,
+                }}
+              >
+                {evidenceList.map((item) => (
+                  <View key={item.id} style={{ position: "relative" }}>
+                    {item.type === "audio" ? (
+                      <View
+                        style={[
+                          styles.evidenceThumbnail,
+                          styles.audioThumbnail,
+                          {
+                            width: 70,
+                            height: 70,
+                            borderRadius: BorderRadius.sm,
+                          },
+                        ]}
+                      >
+                        <Feather
+                          name="mic"
+                          size={24}
+                          color="rgba(255,255,255,0.6)"
+                        />
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: item.uri }}
+                        style={[
+                          styles.evidenceThumbnail,
+                          {
+                            width: 70,
+                            height: 70,
+                            borderRadius: BorderRadius.sm,
+                          },
+                        ]}
+                        contentFit="cover"
+                      />
+                    )}
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        backgroundColor: "rgba(0,0,0,0.6)",
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Feather
+                        name={
+                          item.type === "photo"
+                            ? "image"
+                            : item.type === "video"
+                              ? "video"
+                              : "mic"
+                        }
+                        size={10}
+                        color="#FFF"
+                      />
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+              <View style={{ marginTop: Spacing.xs }}>
                 <ThemedText
                   type="caption"
                   style={{ color: theme.textSecondary }}
-                  numberOfLines={1}
                 >
-                  {evidence.address}
+                  Primary Incident Time: {formatDateTime(evidence.timestamp)}
                 </ThemedText>
+                {evidence.address ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 4,
+                      gap: 4,
+                    }}
+                  >
+                    <Feather
+                      name="map-pin"
+                      size={12}
+                      color={theme.textSecondary}
+                    />
+                    <ThemedText
+                      type="caption"
+                      style={{ color: theme.textSecondary }}
+                      numberOfLines={1}
+                    >
+                      {evidence.address}
+                    </ThemedText>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", flex: 1 }}>
+              {evidence.type === "audio" ? (
+                <View style={[styles.evidenceThumbnail, styles.audioThumbnail]}>
+                  <Feather name="mic" size={36} color="rgba(255,255,255,0.5)" />
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: evidence.uri }}
+                  style={styles.evidenceThumbnail}
+                  contentFit="cover"
+                />
+              )}
+              <View style={styles.evidenceInfo}>
+                <View style={styles.typeBadge}>
+                  <Feather
+                    name={
+                      evidence.type === "photo"
+                        ? "image"
+                        : evidence.type === "video"
+                          ? "video"
+                          : "mic"
+                    }
+                    size={14}
+                    color="#FFF"
+                  />
+                  <ThemedText style={styles.typeText}>
+                    {evidence.type.charAt(0).toUpperCase() +
+                      evidence.type.slice(1)}
+                  </ThemedText>
+                </View>
+                <ThemedText type="small" style={{ marginTop: Spacing.xs }}>
+                  {formatDateTime(evidence.timestamp)}
+                </ThemedText>
+                {evidence.incidentType ? (
+                  <ThemedText
+                    type="small"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    {evidence.incidentType}
+                  </ThemedText>
+                ) : null}
+                {evidence.address ? (
+                  <View style={styles.locationRow}>
+                    <Feather
+                      name="map-pin"
+                      size={12}
+                      color={theme.textSecondary}
+                    />
+                    <ThemedText
+                      type="caption"
+                      style={{ color: theme.textSecondary }}
+                      numberOfLines={1}
+                    >
+                      {evidence.address}
+                    </ThemedText>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          )}
         </View>
 
         <View

@@ -25,7 +25,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   EvidenceDetail: { evidenceId: string };
   MapView: { latitude: number; longitude: number; address?: string };
-  ReportSubmission: { evidenceId: string };
+  ReportSubmission: { evidenceId?: string; evidenceIds?: string[] };
   Settings: undefined;
   ReportTypeSelection: undefined;
   BehalfReport: undefined;

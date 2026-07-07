@@ -12,6 +12,14 @@ import * as fs from "fs";
 import { storage } from "./storage";
 import { adminHtml } from "./admin-html";
 import { adminStore, distanceKm } from "./admin-store";
+import { db } from "./db";
+import { evidenceReports } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
+
+import { verifySession, signSession, SessionData } from "./cookie-auth";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 const PRODUCTION_DOMAIN =
   process.env.PRODUCTION_DOMAIN ||
@@ -208,6 +216,13 @@ function getExtByMime(mime: string): string {
   if (mime.startsWith("image/")) return ".jpg";
   if (mime.startsWith("video/")) return ".mp4";
   if (mime.startsWith("audio/")) return ".m4a";
+  if (mime === "application/pdf") return ".pdf";
+  if (mime === "application/msword") return ".doc";
+  if (
+    mime ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  )
+    return ".docx";
   return ".bin";
 }
 
@@ -306,12 +321,12 @@ async function fetchProductionReports() {
       throw new Error(`Production reports request failed: ${response.status}`);
     }
 
-    const reports = (await response.json()) as Array<{
+    const reports = (await response.json()) as {
       id: string;
       submittedAt?: string | null;
       fileUrl?: string | null;
       tags?: unknown;
-    }>;
+    }[];
 
     fs.mkdirSync(path.dirname(productionReportsCachePath), { recursive: true });
     fs.writeFileSync(
@@ -327,12 +342,12 @@ async function fetchProductionReports() {
       );
       return JSON.parse(
         fs.readFileSync(productionReportsCachePath, "utf-8"),
-      ) as Array<{
+      ) as {
         id: string;
         submittedAt?: string | null;
         fileUrl?: string | null;
         tags?: unknown;
-      }>;
+      }[];
     }
 
     throw error;
@@ -364,8 +379,6 @@ function getCookies(cookieHeader: string | undefined): Record<string, string> {
       .map(([key, value]) => [key, decodeURIComponent(value)]),
   );
 }
-
-import { verifySession, signSession, SessionData } from "./cookie-auth";
 
 export function getSession(req: Request): SessionData | null {
   const cookieVal = getCookies(req.headers.cookie)[ADMIN_COOKIE_NAME];
@@ -615,9 +628,21 @@ async function seedDefaultUsers() {
       role: "admin",
       permissionProfile: "super_admin",
       permissions: [
-        "reports.read", "reports.create", "reports.update_status", "reports.delete", "reports.assign",
-        "map.view", "map.export", "users.read", "users.manage", "stations.read", "stations.manage",
-        "locations.manage", "notifications.send", "audit.read", "settings.manage"
+        "reports.read",
+        "reports.create",
+        "reports.update_status",
+        "reports.delete",
+        "reports.assign",
+        "map.view",
+        "map.export",
+        "users.read",
+        "users.manage",
+        "stations.read",
+        "stations.manage",
+        "locations.manage",
+        "notifications.send",
+        "audit.read",
+        "settings.manage",
       ],
       isActive: true,
       stationId: "station_boroko",
@@ -665,6 +690,41 @@ async function seedDefaultUsers() {
     }
   } catch (err) {
     console.error("Failed to seed default users and data:", err);
+  }
+}
+
+async function enrichReport(report: any) {
+  const attachments = await storage.getReportAttachments(report.id);
+  const reporterProfile = report.reporterProfileId
+    ? await storage.getReporterProfile(report.reporterProfileId)
+    : null;
+  const representedPerson = report.representedPersonId
+    ? await storage.getRepresentedPerson(report.representedPersonId)
+    : null;
+
+  return {
+    ...withReferenceNumber(report),
+    attachments,
+    reporterProfile,
+    representedPerson,
+  };
+}
+
+async function logAuditEvent(action: string, details?: string, req?: Request) {
+  try {
+    const session = req ? getSession(req) : null;
+    const userId = session ? session.username : null;
+    const ipAddress = req
+      ? (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress
+      : null;
+    await storage.createAuditLog({
+      action,
+      details: details || null,
+      userId,
+      ipAddress,
+    });
+  } catch (err) {
+    console.error("Failed to log audit event:", err);
   }
 }
 
@@ -720,6 +780,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const filePath = path.resolve(uploadsDir, filename);
 
     if (fs.existsSync(filePath)) {
+      logAuditEvent(
+        "DOWNLOAD_FILE",
+        `Downloaded attachment file: Name=${filename}`,
+        req,
+      );
       return res.sendFile(filePath);
     }
 
@@ -763,6 +828,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reports", async (req, res) => {
     try {
+      if (!req.body?.incidentType) {
+        return res.status(400).json({ message: "Incident type is required." });
+      }
+      if (!req.body?.description || !String(req.body.description).trim()) {
+        return res
+          .status(400)
+          .json({ message: "Description of the incident is required." });
+      }
+
+      const isBehalfReport =
+        req.body?.isBehalfReport === true ||
+        req.body?.isBehalfReport === 1 ||
+        req.body?.isBehalfReport === "1" ||
+        String(req.body?.isBehalfReport).toLowerCase() === "true";
+
+      if (isBehalfReport) {
+        if (!req.body?.behalfName || !String(req.body.behalfName).trim()) {
+          return res.status(400).json({
+            message:
+              "Victim's full name is required for reports submitted on behalf of someone.",
+          });
+        }
+        if (
+          req.body?.behalfConsent !== true &&
+          req.body?.behalfConsent !== 1 &&
+          req.body?.behalfConsent !== "1" &&
+          String(req.body?.behalfConsent).toLowerCase() !== "true"
+        ) {
+          return res.status(400).json({
+            message: "Consent is required to report on behalf of someone.",
+          });
+        }
+      }
+
+      const attachmentsPayload = req.body?.attachments || [];
+      if (attachmentsPayload.length > 10) {
+        return res
+          .status(400)
+          .json({ message: "You can upload a maximum of 10 attachments." });
+      }
+
       const latitude =
         req.body?.latitude !== null && req.body?.latitude !== undefined
           ? Number(req.body.latitude)
@@ -775,26 +881,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Number.isFinite(latitude) && Number.isFinite(longitude)
           ? await findNearestDbPoliceStation(latitude, longitude)
           : null;
+
+      let reporterProfileId = req.body?.reporterProfileId || null;
+      if (reporterProfileId) {
+        await storage.upsertReporterProfile({
+          id: reporterProfileId,
+          displayName: req.body?.reporterDisplayName || "Anonymous User",
+          badgeNumber: req.body?.reporterBadgeNumber || "",
+          avatarType: req.body?.reporterAvatarType || "shield",
+        });
+        await logAuditEvent(
+          "LINK_PROFILE",
+          `Linked profile ${reporterProfileId} to report`,
+          req,
+        );
+      }
+
+      let representedPersonId = null;
+      if (isBehalfReport) {
+        const represented = await storage.createRepresentedPerson({
+          name: req.body?.behalfName || null,
+          contact: req.body?.behalfContact || null,
+          relationshipToReporter: req.body?.behalfRelationship || null,
+          consentGiven: true,
+        });
+        representedPersonId = represented.id;
+      }
+
       const reportData = {
         ...req.body,
-        isBehalfReport:
-          req.body?.isBehalfReport === true ||
-          req.body?.isBehalfReport === 1 ||
-          req.body?.isBehalfReport === "1" ||
-          String(req.body?.isBehalfReport).toLowerCase() === "true",
-        behalfConsent:
-          req.body?.behalfConsent === true ||
-          req.body?.behalfConsent === 1 ||
-          req.body?.behalfConsent === "1" ||
-          String(req.body?.behalfConsent).toLowerCase() === "true",
-        agency: nearestStation?.name || req.body.agency,
+        isBehalfReport,
+        behalfConsent: isBehalfReport,
+        agency: nearestStation?.name || req.body.agency || "NCD Command Centre",
+        reporterProfileId,
+        representedPersonId,
+        reportSourceType:
+          req.body?.reportSourceType ||
+          (isBehalfReport ? "ON_BEHALF_OF_SOMEONE" : "LIVE_INCIDENT"),
+        confirmationAcknowledgedAt: req.body?.confirmationAcknowledgedAt
+          ? new Date(req.body.confirmationAcknowledgedAt)
+          : null,
+        confirmationTextVersion: req.body?.confirmationTextVersion || null,
       };
+
+      delete reportData.reporterDisplayName;
+      delete reportData.reporterBadgeNumber;
+      delete reportData.reporterAvatarType;
+      delete reportData.attachments;
+
       const report = await storage.createEvidenceReport(reportData);
+      await logAuditEvent(
+        "SUBMIT_REPORT",
+        `Report submitted: Reference=${buildReferenceNumber(report)}, ID=${report.id}`,
+        req,
+      );
+
+      if (attachmentsPayload.length > 0) {
+        for (const att of attachmentsPayload) {
+          await storage.createReportAttachment({
+            reportId: report.id,
+            fileUrl: att.fileUrl,
+            fileName: att.fileName || att.name || "Attachment",
+            fileType:
+              att.fileType ||
+              (att.mimeType?.startsWith("image/")
+                ? "photo"
+                : att.mimeType?.startsWith("video/")
+                  ? "video"
+                  : "document"),
+            mimeType: att.mimeType || null,
+            fileSize: att.fileSize || att.size || null,
+            evidenceSource: att.evidenceSource || "uploaded",
+          });
+          await logAuditEvent(
+            "UPLOAD_FILE",
+            `Evidence file attached to report ${report.id}: URL=${att.fileUrl}`,
+            req,
+          );
+        }
+      } else if (report.fileUrl) {
+        const ext = report.fileUrl.split(".").pop();
+        const mimeType =
+          report.evidenceType === "photo"
+            ? "image/jpeg"
+            : report.evidenceType === "video"
+              ? "video/mp4"
+              : "audio/mp4";
+        await storage.createReportAttachment({
+          reportId: report.id,
+          fileUrl: report.fileUrl,
+          fileName: `evidence_${report.id}.${ext || "bin"}`,
+          fileType: report.evidenceType,
+          mimeType: mimeType,
+          fileSize: null,
+          evidenceSource: "live_capture",
+        });
+        await logAuditEvent(
+          "UPLOAD_FILE",
+          `Captured evidence file attached to report ${report.id}: URL=${report.fileUrl}`,
+          req,
+        );
+      }
+
       forwardToProduction(reportData);
 
       if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
         try {
           const officers = await storage.listOfficerProfiles();
+          let assigned = false;
           for (const officer of officers) {
             if (officer.isActive) {
               const dist = distanceKm(
@@ -812,11 +1006,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   matchedAreaName: officer.responsibilityAreaName,
                   status: "Sent to Officer",
                 });
+                assigned = true;
                 console.log(
                   `Automatically assigned report ${report.id} to officer ${officer.userId}`,
                 );
               }
             }
+          }
+          if (assigned) {
+            await storage.updateEvidenceReportStatus(report.id, "Assigned");
           }
         } catch (routingError) {
           console.error("Failed to automatically route report:", routingError);
@@ -1028,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(notification);
   });
 
-  app.get("/api/reports", requireAdmin, async (_req, res) => {
+  app.get("/api/reports", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
       const reports = await storage.getAllEvidenceReports();
@@ -1038,7 +1236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(productionReports.map(withReferenceNumber));
       }
 
-      res.json(reports.map(withReferenceNumber));
+      const enriched = await Promise.all(reports.map(enrichReport));
+      res.json(enriched);
     } catch (error) {
       console.error("Error fetching reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
@@ -1050,7 +1249,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const report = await storage.getEvidenceReportById(req.params.id);
       if (report) {
-        return res.json(withReferenceNumber(report));
+        await logAuditEvent(
+          "VIEW_REPORT",
+          `Viewed report details: ID=${report.id}`,
+          req,
+        );
+        const enriched = await enrichReport(report);
+        return res.json(enriched);
       }
 
       if (!isProductionServer()) {
@@ -1059,7 +1264,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (item) => item.id === req.params.id,
         );
         if (productionReport) {
-          return res.json(withReferenceNumber(productionReport));
+          await logAuditEvent(
+            "VIEW_REPORT",
+            `Viewed production report details: ID=${productionReport.id}`,
+            req,
+          );
+          const enriched = await enrichReport(productionReport);
+          return res.json(enriched);
         }
       }
 
@@ -1069,6 +1280,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch report" });
     }
   });
+
+  app.get(
+    "/api/reporter-profiles/:id/reports",
+    requireAdmin,
+    async (req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      try {
+        const reports = await db
+          .select()
+          .from(evidenceReports)
+          .where(eq(evidenceReports.reporterProfileId, req.params.id))
+          .orderBy(desc(evidenceReports.submittedAt));
+        const enriched = await Promise.all(reports.map(enrichReport));
+        res.json(enriched);
+      } catch (error) {
+        console.error("Error fetching reporter profile reports:", error);
+        res
+          .status(500)
+          .json({ message: "Failed to fetch reports for reporter profile" });
+      }
+    },
+  );
 
   app.get("/api/reports/:id/assignments", requireAdmin, async (req, res) => {
     try {
@@ -1105,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignmentReason: "Assigned manually by dispatcher.",
           status: "Sent to Officer",
         });
-        await storage.updateEvidenceReportStatus(id, "Pending");
+        await storage.updateEvidenceReportStatus(id, "Assigned");
         res.status(201).json(assignment);
       } catch (error) {
         console.error("Error manual assigning:", error);
@@ -1124,82 +1357,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Report not found." });
         }
 
-        let confidenceScore = 0.78 + Math.random() * 0.17;
-        let severity: "Critical" | "High" | "Medium" | "Low" = "Medium";
-        let summary = "AI model has parsed the description, metadata, and visual features of the report.";
-        let detectedObjects: string[] = ["Visual artifacts", "Location coordinates verified"];
-        let evidentiaryValue = "Moderate evidentiary value. Corroborates timestamp and location details.";
-        let recommendedAction = "Review witness statements and cross-reference with dispatch logs.";
-
-        const incType = String(report.incidentType || "").toLowerCase();
-        const descText = String(report.description || "").toLowerCase();
-
-        if (
-          incType.includes("theft") ||
-          incType.includes("robbery") ||
-          descText.includes("stole") ||
-          descText.includes("thief") ||
-          descText.includes("break")
-        ) {
-          severity = "High";
-          summary = "AI evidence analysis of reported theft. Visual and description scanning matches indicators for forced property access or suspicious physical actions. Target location shows elevated activity indicators.";
-          detectedObjects = ["Unidentified person profile", "Evidentiary target item", "Low-light shadow outlines", "Proximity markers match"];
-          evidentiaryValue = "High. Corroborates physical suspect profiles matching visual patterns in witness reports.";
-          recommendedAction = "Coordinate with Boroko local patrol to scan recent CCTV footage within 100m of the area.";
-        } else if (
-          incType.includes("vandalism") ||
-          descText.includes("paint") ||
-          descText.includes("spray") ||
-          descText.includes("damage")
-        ) {
-          severity = "Medium";
-          summary = "Surface signature scanning indicates intentional property damage via spray paint application. Style structure matches typical localized tagging patterns associated with gang presence.";
-          detectedObjects = ["Aerosol paint marks", "Localized tagging signatures", "Public infrastructure surface damage"];
-          evidentiaryValue = "Moderate. Strong value for gang intelligence database, low utility for direct arrest unless caught on active video feed.";
-          recommendedAction = "Log tagging patterns in National Database for gang tracking and request municipal removal.";
-        } else if (
-          incType.includes("assault") ||
-          descText.includes("fight") ||
-          descText.includes("hit") ||
-          descText.includes("beat")
-        ) {
-          severity = "Critical";
-          summary = "Critical threat assessment. Event log describes active physical conflict in public space. Acoustic and semantic scanning indicates high-distress verbal exchanges.";
-          detectedObjects = ["Physical struggle indicators", "High-stress semantic markers", "Densely populated coordinates"];
-          evidentiaryValue = "Critical. Essential evidence confirming physical safety breach. High priority for criminal prosecution.";
-          recommendedAction = "Alert immediate active-dispatch unit to perform localized search and gather community testimonies.";
-        } else if (
-          incType.includes("accident") ||
-          descText.includes("crash") ||
-          descText.includes("collision") ||
-          descText.includes("car")
-        ) {
-          severity = "High";
-          summary = "Analysis of vehicular incident. Target visual features match collision outcomes and metal structural deformation.";
-          detectedObjects = ["Vehicle structural deformation", "Fluid spill boundaries", "Road block/obstruction markers"];
-          evidentiaryValue = "High. Provides clear reference for insurance validation, police reporting, and municipal traffic routing.";
-          recommendedAction = "Dispatch Traffic Management Unit to coordinate roadway clearance and statement logging.";
-        } else {
-          if (report.evidenceType === "photo") {
-            summary = "Static frame visual evidence analysis. Metadata checks verify high correlation between upload timestamp and device-reported date.";
-            detectedObjects = ["Visual frame markers", "Ambient brightness levels", "Pixel boundary verification"];
-          } else if (report.evidenceType === "video") {
-            summary = "Motion vector analysis. Multi-frame parsing indicates movement patterns consistent with reported incident context.";
-            detectedObjects = ["Dynamic motion vectors", "Object path tracking", "Temporal video markers"];
-          } else if (report.evidenceType === "audio") {
-            summary = "Spectral sound analysis. Audio frequency levels verify high-decibel signals correlating with vocal distress or ambient traffic noises.";
-            detectedObjects = ["High-decibel vocal distress", "Alarm sound patterns", "Ambient acoustics verified"];
-          }
-        }
-
-        const analysisNote = {
-          confidenceScore,
-          severity,
-          summary,
-          detectedObjects,
-          evidentiaryValue,
-          recommendedAction,
+        let analysisNote: {
+          confidenceScore: number;
+          severity: "Critical" | "High" | "Medium" | "Low";
+          summary: string;
+          detectedObjects: string[];
+          evidentiaryValue: string;
+          recommendedAction: string;
         };
+
+        if (GEMINI_API_KEY) {
+          // --- Real Gemini AI analysis ---
+          const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+          const submittedAt = report.submittedAt
+            ? new Date(report.submittedAt).toLocaleString("en-AU", {
+                timeZone: "Pacific/Port_Moresby",
+              })
+            : "Unknown time";
+
+          const attachments = await storage.listReportAttachments(report.id);
+          const attachmentSummary =
+            attachments.length > 0
+              ? attachments
+                  .map(
+                    (a, i) =>
+                      `Attachment ${i + 1}: ${a.fileName || "Unnamed"} (${a.fileType || "unknown type"}, ${a.mimeType || ""})${a.fileSize ? `, ${Math.round(a.fileSize / 1024)}KB` : ""}`,
+                  )
+                  .join("\n")
+              : "No media attachments uploaded.";
+
+          const prompt = `You are an AI forensic analysis assistant for the Papua New Guinea Police Force crime reporting system (Crime Reporting PNG).
+
+Your task is to analyze the following citizen-submitted crime report and produce a structured, accurate forensic assessment. Be concise but precise. Focus on what is known from the report data.
+
+REPORT DETAILS:
+- Incident Type: ${report.incidentType || "Not specified"}
+- Description: ${report.description || "Not provided"}
+- Location: ${report.address || (report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : "Unknown location")}
+- GPS Coordinates: ${report.latitude && report.longitude ? `${report.latitude}, ${report.longitude}` : "Not captured"}
+- Agency: ${report.agency || "Unknown"}
+- Evidence Type: ${report.evidenceType || "Not specified"}
+- Submitted At: ${submittedAt}
+- Is Anonymous: ${report.isAnonymous ? "Yes" : "No"}
+- Reporter: ${report.isAnonymous ? "Anonymous" : report.reporterName || "Unknown"}
+- Tags: ${((report.tags as string[]) || []).join(", ") || "None"}
+- Priority (self-reported): ${report.priority || "Not set"}
+- On Behalf of Someone: ${report.isBehalfReport ? `Yes — Victim: ${report.behalfName || "Unknown"}` : "No"}
+- Source Type: ${report.reportSourceType || "Unknown"}
+- Media/Attachments:
+${attachmentSummary}
+
+ANALYSIS INSTRUCTIONS:
+1. Assess the SEVERITY of the incident as one of: Critical, High, Medium, Low — based on the incident type, description content, and any indicated urgency.
+2. Write a SUMMARY (2-3 sentences) of what the AI infers from the report data — be factual and grounded in what is stated. Do not fabricate events.
+3. List 3-5 DETECTED OBJECTS or INDICATORS that can reasonably be inferred from the report's description, location, and media type.
+4. Assess the EVIDENTIARY VALUE (1-2 sentences) — how useful is this report as evidence for law enforcement?
+5. Give a RECOMMENDED ACTION (1-2 sentences) for the police officer assigned to this case.
+6. Give a CONFIDENCE SCORE between 0.50 and 0.98 based on how much verifiable detail is present in the report.
+
+Return ONLY valid JSON in this exact format:
+{
+  "confidenceScore": 0.85,
+  "severity": "High",
+  "summary": "...",
+  "detectedObjects": ["...", "...", "..."],
+  "evidentiaryValue": "...",
+  "recommendedAction": "..."
+}`;
+
+          let geminiResult: typeof analysisNote | null = null;
+          try {
+            const result = await model.generateContent({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+              },
+            });
+            const raw = result.response.text();
+            const parsed = JSON.parse(raw);
+            if (
+              parsed &&
+              parsed.confidenceScore &&
+              parsed.severity &&
+              parsed.summary
+            ) {
+              geminiResult = {
+                confidenceScore: Math.min(
+                  Math.max(Number(parsed.confidenceScore), 0.5),
+                  0.98,
+                ),
+                severity: ["Critical", "High", "Medium", "Low"].includes(
+                  parsed.severity,
+                )
+                  ? (parsed.severity as "Critical" | "High" | "Medium" | "Low")
+                  : "Medium",
+                summary: String(parsed.summary || ""),
+                detectedObjects: Array.isArray(parsed.detectedObjects)
+                  ? parsed.detectedObjects.map(String)
+                  : [],
+                evidentiaryValue: String(parsed.evidentiaryValue || ""),
+                recommendedAction: String(parsed.recommendedAction || ""),
+              };
+            }
+          } catch (geminiErr) {
+            console.error(
+              "Gemini API call failed, falling back to heuristic analysis:",
+              geminiErr,
+            );
+          }
+
+          if (geminiResult) {
+            analysisNote = geminiResult;
+          } else {
+            // Fallback if Gemini fails
+            analysisNote = buildHeuristicAnalysis(report);
+          }
+        } else {
+          // No API key configured — use heuristic analysis
+          console.warn("GEMINI_API_KEY not set. Using heuristic analysis.");
+          analysisNote = buildHeuristicAnalysis(report);
+        }
 
         const createdNote = await storage.createReportNote({
           reportId: id,
@@ -1215,6 +1496,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  function buildHeuristicAnalysis(report: {
+    incidentType?: string | null;
+    description?: string | null;
+    evidenceType?: string | null;
+    isAnonymous?: boolean | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    priority?: string | null;
+  }): {
+    confidenceScore: number;
+    severity: "Critical" | "High" | "Medium" | "Low";
+    summary: string;
+    detectedObjects: string[];
+    evidentiaryValue: string;
+    recommendedAction: string;
+  } {
+    const incType = String(report.incidentType || "").toLowerCase();
+    const descText = String(report.description || "").toLowerCase();
+    const hasLocation = !!(report.latitude && report.longitude);
+    const hasDescription = (report.description || "").length > 20;
+
+    let confidenceScore = 0.55;
+    if (hasLocation) confidenceScore += 0.12;
+    if (hasDescription) confidenceScore += 0.1;
+    if (!report.isAnonymous) confidenceScore += 0.06;
+    confidenceScore = Math.min(confidenceScore + Math.random() * 0.05, 0.9);
+
+    let severity: "Critical" | "High" | "Medium" | "Low" = "Medium";
+    let summary = `Report filed regarding ${report.incidentType || "an unspecified incident"} in Papua New Guinea. Evidence type is ${report.evidenceType || "not specified"}.`;
+    let detectedObjects: string[] = [
+      "Report timestamp verified",
+      "Submission metadata captured",
+    ];
+    let evidentiaryValue =
+      "Moderate evidentiary value. Corroborates timestamp and metadata for incident documentation.";
+    let recommendedAction =
+      "Review full witness statement and cross-reference with nearby dispatch logs and known incident patterns.";
+
+    if (hasLocation) detectedObjects.push("GPS coordinates recorded");
+    if (!report.isAnonymous)
+      detectedObjects.push("Reporter identity confirmed");
+
+    const isCritical =
+      incType.includes("murder") ||
+      incType.includes("homicide") ||
+      incType.includes("rape") ||
+      incType.includes("kidnap") ||
+      descText.includes("dead") ||
+      descText.includes("killed") ||
+      descText.includes("stabbed") ||
+      descText.includes("shot");
+    const isHighPriority =
+      incType.includes("assault") ||
+      incType.includes("robbery") ||
+      incType.includes("arson") ||
+      descText.includes("weapon") ||
+      descText.includes("gun") ||
+      descText.includes("knife") ||
+      descText.includes("fight");
+    const isTheft =
+      incType.includes("theft") ||
+      incType.includes("steal") ||
+      descText.includes("stole") ||
+      descText.includes("stolen") ||
+      descText.includes("thief");
+    const isAccident =
+      incType.includes("accident") ||
+      incType.includes("crash") ||
+      descText.includes("collision") ||
+      descText.includes("vehicle");
+    const isVandalism =
+      incType.includes("vandalism") ||
+      incType.includes("damage") ||
+      descText.includes("spray") ||
+      descText.includes("graffiti");
+    const isDrug =
+      incType.includes("drug") ||
+      descText.includes("narcotics") ||
+      descText.includes("marijuana") ||
+      descText.includes("substance");
+    const isDomestic =
+      incType.includes("domestic") ||
+      descText.includes("wife") ||
+      descText.includes("husband") ||
+      descText.includes("family violence");
+
+    if (isCritical) {
+      severity = "Critical";
+      summary = `Critical incident reported: ${report.incidentType || "serious criminal activity"}. The witness account indicates a potentially life-threatening situation requiring immediate law enforcement response.`;
+      detectedObjects.push(
+        "High-risk incident indicators",
+        "Potential threat to life",
+        "Urgent dispatch required",
+      );
+      evidentiaryValue =
+        "Critical evidentiary value. Report directly implicates a serious crime requiring immediate corroboration and response.";
+      recommendedAction =
+        "Dispatch nearest rapid response unit immediately. Secure scene, collect physical evidence, and notify CID for investigation.";
+    } else if (isHighPriority) {
+      severity = "High";
+      summary = `High-priority incident reported: ${report.incidentType || "violent or dangerous activity"}. The description suggests active physical threat or dangerous behaviour in the area.`;
+      detectedObjects.push(
+        "Physical threat indicators",
+        "Potential weapons involvement",
+        "Public safety risk",
+      );
+      evidentiaryValue =
+        "High evidentiary value. Report provides first-hand account of a serious incident requiring police action.";
+      recommendedAction =
+        "Dispatch patrol unit to the reported location, obtain full witness statement, and document physical evidence.";
+    } else if (isDomestic) {
+      severity = "High";
+      summary = `Domestic violence incident reported. Family or household situation described involving harm or threat of harm to a family member.`;
+      detectedObjects.push(
+        "Domestic conflict indicators",
+        "Potential victim in household",
+        "Ongoing safety risk",
+      );
+      evidentiaryValue =
+        "High evidentiary value. Domestic violence cases require careful documentation for legal proceedings and protection orders.";
+      recommendedAction =
+        "Dispatch unit trained in domestic violence response. Contact Family Support Centre and document all injuries and statements.";
+    } else if (isTheft) {
+      severity = "High";
+      summary = `Theft or robbery incident reported. The account indicates forced or opportunistic removal of property from the victim or premises.`;
+      detectedObjects.push(
+        "Property crime indicators",
+        "Possible suspect movement path",
+        "Victim impact documented",
+      );
+      evidentiaryValue =
+        "High evidentiary value. Theft reports support prosecution when combined with CCTV and witness statements.";
+      recommendedAction =
+        "Attend scene, document stolen property list, review nearby CCTV, and check for repeat offender patterns in the area.";
+    } else if (isDrug) {
+      severity = "High";
+      summary = `Drug-related activity reported. The description indicates possible narcotics possession, sale, or distribution in the area.`;
+      detectedObjects.push(
+        "Drug activity indicators",
+        "Location flagged for narcotics",
+        "Community safety risk",
+      );
+      evidentiaryValue =
+        "High evidentiary value if corroborated. Drug reports support intelligence operations and warrant applications.";
+      recommendedAction =
+        "Log report in narcotics intelligence database. Arrange surveillance or covert patrol of indicated location.";
+    } else if (isAccident) {
+      severity = "High";
+      summary = `Traffic or vehicle accident reported at the stated location. Possible injuries, road obstruction, or property damage involved.`;
+      detectedObjects.push(
+        "Vehicle incident markers",
+        "Road hazard indicators",
+        "Possible injury to persons",
+      );
+      evidentiaryValue =
+        "High evidentiary value for traffic management, insurance, and injury claims.";
+      recommendedAction =
+        "Dispatch Traffic Management Unit. Secure accident scene, document damage and injuries, clear road obstruction.";
+    } else if (isVandalism) {
+      severity = "Medium";
+      summary = `Vandalism or property damage reported. The description indicates intentional damage to public or private property.`;
+      detectedObjects.push(
+        "Property damage evidence",
+        "Intentional destruction indicators",
+        "Community impact",
+      );
+      evidentiaryValue =
+        "Moderate evidentiary value. Useful for insurance claims and identifying patterns of anti-social behaviour.";
+      recommendedAction =
+        "Document damage with photos, log in community intelligence database, and investigate for repeat patterns or gang presence.";
+    }
+
+    if (report.priority === "High" || report.priority === "Critical") {
+      if (severity === "Medium" || severity === "Low") severity = "High";
+    }
+
+    return {
+      confidenceScore,
+      severity,
+      summary,
+      detectedObjects,
+      evidentiaryValue,
+      recommendedAction,
+    };
+  }
 
   app.delete("/api/reports/:id", requireAdminWrite, async (req, res) => {
     try {
@@ -1335,12 +1802,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignments = await storage.listReportAssignments();
       const assignment = assignments.find((a) => a.id === id);
       if (assignment) {
-        let reportStatus = "Pending";
+        let reportStatus = "Assigned";
         if (status === "Resolved") reportStatus = "Resolved";
         else if (status === "Rejected" || status === "Failed")
           reportStatus = "Rejected";
-        else if (status === "Acknowledged") reportStatus = "Pending";
-        else if (status === "On Route") reportStatus = "Pending";
+        else if (status === "Acknowledged") reportStatus = "Assigned";
+        else if (status === "On Route") reportStatus = "Assigned";
 
         await storage.updateEvidenceReportStatus(
           assignment.reportId,
@@ -1385,14 +1852,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/admin", (req, res) => {
+  app.get("/admin", async (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     const session = getSession(req);
     if (!session) {
       return res.status(200).send(adminLoginHtml());
     }
-    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}" };</script>`;
+    const user = await storage.getAdminUserByUsername(session.username);
+    const permissions = user ? (user.permissions as string[]) || [] : [];
+    const roleScript = `<script>window.currentUser = { username: "${session.username}", role: "${session.role}", permissions: ${JSON.stringify(permissions)} };</script>`;
     const responseHtml = adminHtml.replace("<head>", `<head>\n  ${roleScript}`);
     res.status(200).send(responseHtml);
   });

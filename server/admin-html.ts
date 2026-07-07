@@ -15,6 +15,7 @@ export const adminHtml = `<!DOCTYPE html>
       --bg-sidebar: #0b1220;
       --bg-card: #1a2744;
       --bg-card-strong: #0f1724;
+      --bg-secondary: #111c31;
       --border: #2d3a4f;
       --border-soft: #1e293b;
       --text: #e2e8f0;
@@ -47,6 +48,7 @@ export const adminHtml = `<!DOCTYPE html>
       --bg-sidebar: #ffffff;
       --bg-card: #ffffff;
       --bg-card-strong: #f8fafc;
+      --bg-secondary: #f1f5f9;
       --border: #c4d0df;
       --border-soft: #d7e0ec;
       --text: #172033;
@@ -171,6 +173,7 @@ export const adminHtml = `<!DOCTYPE html>
     body.light-theme .badge-pending { background:#fef3c7; color:#92400e; }
     body.light-theme .badge-reviewed { background:#dbeafe; color:#1d4ed8; }
     body.light-theme .badge-resolved { background:#dcfce7; color:#166534; }
+    body.light-theme .badge-assigned { background:#e0f2fe; color:#0369a1; }
     body.light-theme .badge-high { background:#fee2e2; color:#b91c1c; }
     body.light-theme .badge-medium { background:#fef3c7; color:#92400e; }
     body.light-theme .badge-low { background:#dcfce7; color:#166534; }
@@ -367,6 +370,7 @@ export const adminHtml = `<!DOCTYPE html>
     }
     .stat-card.new .number { color: #ef4444; }
     .stat-card.pending .number { color: #f59e0b; }
+    .stat-card.assigned .number { color: #38bdf8; }
     .stat-card.reviewed .number { color: #3b82f6; }
     .stat-card.resolved .number { color: #22c55e; }
     .content {
@@ -446,7 +450,7 @@ export const adminHtml = `<!DOCTYPE html>
 
     .theme-toggle { display:flex; align-items:center; gap:8px; }
     .theme-select { background: var(--bg-card-strong); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-weight:700; }
-    .report-control-grid { display:grid; grid-template-columns: 1.2fr repeat(4, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
+    .report-control-grid { display:grid; grid-template-columns: 1.2fr repeat(6, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
     .report-filter-input, .report-filter-select { min-width:0; background: var(--bg-card-strong); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:11px 12px; font-size:14px; font-weight:500; }
     .incident-metrics { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px; }
     .incident-metric { background: var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:12px; }
@@ -749,6 +753,7 @@ export const adminHtml = `<!DOCTYPE html>
     }
     .crime-marker.new { background: #ef4444; }
     .crime-marker.pending { background: #7f1d1d; }
+    .crime-marker.assigned { background: #38bdf8; }
     .crime-marker.reviewed { background: #3b82f6; }
     .crime-marker.resolved { background: #22c55e; }
     .crime-marker.searched { width: 30px; height: 30px; border-color: var(--text-strong); box-shadow: 0 0 0 6px rgba(59,130,246,0.35), 0 8px 18px rgba(0,0,0,0.55); }
@@ -898,6 +903,7 @@ export const adminHtml = `<!DOCTYPE html>
     .badge-reviewed { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
     .badge-referred { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
     .badge-resolved { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .badge-assigned { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
     .badge-rejected { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
     .badge-high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
     .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
@@ -1058,6 +1064,7 @@ export const adminHtml = `<!DOCTYPE html>
       .management-panel { grid-template-columns: 1fr; }
       #crimeMap { height: 420px; min-height: 420px; }
       .map-summary { max-height: none; }
+      .report-control-grid { grid-template-columns: 1fr; }
       .enterprise-grid { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; gap:18px; align-items:start; }
     .enterprise-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 16px 36px rgba(0,0,0,.12); }
     .enterprise-card h3 { margin:0 0 6px; font-size:18px; color:var(--text-strong); }
@@ -1151,6 +1158,7 @@ export const adminHtml = `<!DOCTYPE html>
           <div class="stat-card" onclick="clickStatCard('all')"><div class="number" id="totalCount">0</div><div class="label">Total Reports</div></div>
           <div class="stat-card new" onclick="clickStatCard('new')"><div class="number" id="newCount">0</div><div class="label">New</div></div>
           <div class="stat-card pending" onclick="clickStatCard('pending')"><div class="number" id="pendingCount">0</div><div class="label">Pending</div></div>
+          <div class="stat-card assigned" onclick="clickStatCard('assigned')"><div class="number" id="assignedCount">0</div><div class="label">Assigned</div></div>
           <div class="stat-card reviewed" onclick="clickStatCard('reviewed')"><div class="number" id="reviewedCount">0</div><div class="label">Reviewed</div></div>
           <div class="stat-card resolved" onclick="clickStatCard('resolved')"><div class="number" id="resolvedCount">0</div><div class="label">Resolved</div></div>
         </div>
@@ -1166,6 +1174,7 @@ export const adminHtml = `<!DOCTYPE html>
             <button class="filter-btn active" onclick="filterReports('all', this)">All</button>
             <button class="filter-btn" onclick="filterReports('new', this)">New</button>
             <button class="filter-btn" onclick="filterReports('pending', this)">Pending</button>
+            <button class="filter-btn" onclick="filterReports('assigned', this)">Assigned</button>
             <button class="filter-btn" onclick="filterReports('reviewed', this)">Reviewed</button>
             <button class="filter-btn" onclick="filterReports('resolved', this)">Resolved</button>
           </div>
@@ -1175,6 +1184,16 @@ export const adminHtml = `<!DOCTYPE html>
             <select id="priorityFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();"><option value="">All priorities</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select>
             <input id="dateFromFilter" class="report-filter-input" type="date" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
             <input id="dateToFilter" class="report-filter-input" type="date" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+            <select id="sourceFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+              <option value="">All sources</option>
+              <option value="LIVE_INCIDENT">Live Incident</option>
+              <option value="ON_BEHALF_OF_SOMEONE">On Behalf of Someone</option>
+            </select>
+            <select id="attachmentsFilter" class="report-filter-select" onchange="renderReports(); renderCrimeMap(); updateIncidentMetrics();">
+              <option value="">All attachments</option>
+              <option value="has">Has attachments</option>
+              <option value="none">No attachments</option>
+            </select>
           </div>
           <div id="incidentMetrics" class="incident-metrics"></div>
           <div class="map-panel">
@@ -1205,6 +1224,7 @@ export const adminHtml = `<!DOCTYPE html>
                   <div class="map-toggle-group">
                     <label class="map-toggle"><input type="checkbox" data-map-status="new" checked onchange="updateMapToggles()">New</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="pending" checked onchange="updateMapToggles()">Pending</label>
+                    <label class="map-toggle"><input type="checkbox" data-map-status="assigned" checked onchange="updateMapToggles()">Assigned</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="reviewed" checked onchange="updateMapToggles()">Reviewed</label>
                     <label class="map-toggle"><input type="checkbox" data-map-status="resolved" checked onchange="updateMapToggles()">Resolved</label>
                   </div>
@@ -1235,6 +1255,7 @@ export const adminHtml = `<!DOCTYPE html>
               <div class="map-legend">
                 <span><i class="legend-dot" style="background:#ef4444"></i>New</span>
                 <span><i class="legend-dot" style="background:#7f1d1d"></i>Pending</span>
+                <span><i class="legend-dot" style="background:#38bdf8"></i>Assigned</span>
                 <span><i class="legend-dot" style="background:#3b82f6"></i>Reviewed</span>
                 <span><i class="legend-dot" style="background:#22c55e"></i>Resolved</span>
               </div>
@@ -1463,15 +1484,26 @@ export const adminHtml = `<!DOCTYPE html>
       const priority = controlValue('priorityFilter').toLowerCase();
       const fromDate = controlValue('dateFromFilter');
       const toDate = controlValue('dateToFilter');
+      const reportSource = controlValue('sourceFilter');
+      const attachmentsFilterVal = controlValue('attachmentsFilter');
       return source.filter(function(report) {
         const status = normalizeStatus(report);
         const incidentName = report.incidentType || 'Unspecified';
         const reportPriority = String(report.priority || '').toLowerCase();
+        const matchesSource = !reportSource || 
+          (reportSource === 'LIVE_INCIDENT' && report.reportSourceType !== 'ON_BEHALF_OF_SOMEONE') ||
+          (reportSource === 'ON_BEHALF_OF_SOMEONE' && report.reportSourceType === 'ON_BEHALF_OF_SOMEONE');
+        const attachmentsCount = (report.attachments || []).length || (report.fileUrl ? 1 : 0);
+        const matchesAttachments = !attachmentsFilterVal ||
+          (attachmentsFilterVal === 'has' && attachmentsCount > 0) ||
+          (attachmentsFilterVal === 'none' && attachmentsCount === 0);
         return (currentFilter === 'all' || status === currentFilter)
           && (!search || getReportSearchText(report).includes(search))
           && (!incident || incidentName === incident)
           && (!priority || reportPriority === priority)
-          && reportMatchesDate(report, fromDate, toDate);
+          && reportMatchesDate(report, fromDate, toDate)
+          && matchesSource
+          && matchesAttachments;
       });
     }
 
@@ -1571,7 +1603,7 @@ export const adminHtml = `<!DOCTYPE html>
     }
 
     function getMapControlFilteredReports(reports) {
-      const statuses = selectedToggleValues('input[data-map-status]', ['pending', 'reviewed', 'resolved']);
+      const statuses = selectedToggleValues('input[data-map-status]', ['new', 'pending', 'assigned', 'reviewed', 'resolved']);
       const priorities = selectedToggleValues('input[data-map-priority]', ['high', 'medium', 'low']);
       return reports.filter(function(report) {
         return statuses.includes(String(report.status || '').toLowerCase())
@@ -1851,6 +1883,7 @@ export const adminHtml = `<!DOCTYPE html>
       document.getElementById('totalCount').textContent = allReports.length;
       document.getElementById('newCount').textContent = allReports.filter(r => normalizeStatus(r) === 'new').length;
       document.getElementById('pendingCount').textContent = allReports.filter(r => normalizeStatus(r) === 'pending').length;
+      document.getElementById('assignedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'assigned').length;
       document.getElementById('reviewedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'reviewed').length;
       document.getElementById('resolvedCount').textContent = allReports.filter(r => normalizeStatus(r) === 'resolved').length;
     }
@@ -1908,6 +1941,7 @@ export const adminHtml = `<!DOCTYPE html>
     function markerClass(report) {
       const status = normalizeStatus(report);
       if (status === 'new') return 'crime-marker new';
+      if (status === 'assigned') return 'crime-marker assigned';
       if (status === 'reviewed') return 'crime-marker reviewed';
       if (status === 'resolved') return 'crime-marker resolved';
       return 'crime-marker pending';
@@ -2130,11 +2164,14 @@ export const adminHtml = `<!DOCTYPE html>
           : (r.address || '-');
         const reporter = r.isAnonymous ? '<span style="color:var(--text-muted);font-style:italic">Anonymous</span>' : (r.reporterName || '-');
 
-        const hasFile = r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '';
+        const hasFile = (Array.isArray(r.attachments) && r.attachments.length > 0) ? '<span class="file-dot" title="' + r.attachments.length + ' attachment(s)">&#9679;</span>' : (r.fileUrl ? '<span class="file-dot" title="Evidence file attached">&#9679;</span>' : '');
         const reference = r.referenceNumber || r.id.slice(0, 8).toUpperCase();
         const statusClass = normalizeStatus(r);
+        const sourceBadge = r.reportSourceType === 'ON_BEHALF_OF_SOMEONE'
+          ? '<span class="badge" style="background:rgba(59,130,246,0.12);color:#60a5fa;font-size:10px;padding:2px 6px">Behalf</span>'
+          : '<span class="badge" style="background:rgba(34,197,94,0.12);color:#4ade80;font-size:10px;padding:2px 6px">Live</span>';
         return '<tr data-report-id="' + r.id + '" onclick="showDetail(this.dataset.reportId)" style="cursor:pointer">'
-          + '<td class="reference-cell">' + reference + '</td>'
+          + '<td class="reference-cell">' + reference + ' ' + sourceBadge + '</td>'
           + '<td style="white-space:nowrap">' + date + '</td>'
           + '<td>' + typeBadge + hasFile + '</td>'
           + '<td>' + (r.incidentType || '-') + '</td>'
@@ -2148,6 +2185,7 @@ export const adminHtml = `<!DOCTYPE html>
           + '<select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
           + '<option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
           + '<option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+          + '<option value="Assigned"' + (statusClass==='assigned'?' selected':'') + '>Assigned</option>'
           + '<option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
           + '<option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
           + '<option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
@@ -2208,7 +2246,35 @@ export const adminHtml = `<!DOCTYPE html>
       return window.location.origin + fileUrl;
     }
 
+    function buildSingleAttachmentHtml(att, index) {
+      if (!att || !att.fileUrl) return '';
+      const url = evidenceFileUrl(att.fileUrl);
+      const type = att.fileType || (att.mimeType && att.mimeType.startsWith('image/') ? 'photo' : att.mimeType && att.mimeType.startsWith('video/') ? 'video' : att.mimeType && att.mimeType.startsWith('audio/') ? 'audio' : 'document');
+      const label = att.fileName || ('Attachment ' + (index + 1));
+      let mediaHtml = '';
+      if (type === 'photo') {
+        mediaHtml = '<img src="' + url + '" style="max-width:100%;max-height:320px;object-fit:contain;display:block;margin:0 auto;border-radius:6px" />';
+      } else if (type === 'video') {
+        mediaHtml = '<video controls style="width:100%;max-height:320px;display:block;border-radius:6px"><source src="' + url + '"></video>';
+      } else if (type === 'audio') {
+        mediaHtml = '<div style="display:flex;justify-content:center;margin-bottom:8px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div><audio controls style="width:100%"><source src="' + url + '"></audio>';
+      } else {
+        mediaHtml = '<div style="display:flex;align-items:center;gap:8px;padding:12px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span style="font-size:13px;color:var(--text)">' + label + '</span></div>';
+      }
+      return '<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#0a0f1a;padding:12px">'
+        + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">📎 ' + label + '</div>'
+        + mediaHtml
+        + '<div style="padding:8px 0 0;display:flex;justify-content:flex-end"><a href="' + url + '" download target="_blank" style="color:#3b82f6;font-size:13px;text-decoration:none">Download</a></div>'
+        + '</div>';
+    }
+
     function buildMediaViewer(r) {
+      // Support multiple attachments array (new format)
+      const attachments = Array.isArray(r.attachments) && r.attachments.length > 0 ? r.attachments : null;
+      if (attachments) {
+        return attachments.map(function(att, i) { return buildSingleAttachmentHtml(att, i); }).join('');
+      }
+      // Fallback: single fileUrl (legacy / live incident format)
       if (!r.fileUrl) return '';
       const url = evidenceFileUrl(r.fileUrl);
       if (r.evidenceType === 'photo') {
@@ -2315,17 +2381,23 @@ export const adminHtml = `<!DOCTYPE html>
         + '  <div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
         + '  <div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Reporter Profile</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + (r.reporterProfileId || '-') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Source</div><div class="detail-value">' + (r.reportSourceType === 'ON_BEHALF_OF_SOMEONE' ? '<span class="badge" style="background:rgba(59,130,246,0.15);color:#60a5fa">On Behalf</span>' : '<span class="badge" style="background:rgba(34,197,94,0.15);color:#4ade80">Live Incident</span>') + '</div></div>'
+        + '  <div class="detail-row"><div class="detail-label">Attachments</div><div class="detail-value">' + ((Array.isArray(r.attachments) && r.attachments.length > 0) ? r.attachments.length + ' file(s)' : (r.fileUrl ? '1 file (legacy)' : 'None')) + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Contact Phone</div><div class="detail-value">' + (r.contactPhone || '-') + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-value">' + (r.contactEmail || '-') + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">'
-          + '  <select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)">'
+        + '    <select class="status-select" data-report-id="' + r.id + '" onchange="updateStatus(this.dataset.reportId, this.value)"' + (hasPermission('reports.update_status') ? '' : ' disabled') + '>'
         + '      <option value="New"' + (statusClass==='new'?' selected':'') + '>New</option>'
         + '      <option value="Pending"' + (statusClass==='pending'?' selected':'') + '>Pending</option>'
+        + '      <option value="Assigned"' + (statusClass==='assigned'?' selected':'') + '>Assigned</option>'
         + '      <option value="Reviewed"' + (statusClass==='reviewed'?' selected':'') + '>Reviewed</option>'
         + '      <option value="Referred"' + (statusClass==='referred'?' selected':'') + '>Referred</option>'
         + '      <option value="Resolved"' + (statusClass==='resolved'?' selected':'') + '>Resolved</option>'
         + '      <option value="Rejected"' + (statusClass==='rejected'?' selected':'') + '>Rejected</option>'
-        + '    </select> <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button></div></div>'
+        + '    </select>'
+        + (hasPermission('reports.delete') ? ' <button class="delete-report-btn" data-report-id="' + r.id + '" onclick="deleteReport(this.dataset.reportId)">Delete Report</button>' : '')
+        + '</div></div>'
         + behalfHtml
         + '</div>'
         + '<div id="detailTab-assignments" class="detail-tab-panel" style="display:none">'
@@ -2378,12 +2450,18 @@ export const adminHtml = `<!DOCTYPE html>
                 + '</div>';
             }
           } else {
-            html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
-              + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
-              + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\\'' + r.id + '\\\')">'
-              + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
-              + 'Analyze Evidence</button>'
-              + '</div>';
+            if (hasPermission('reports.update_status') || hasPermission('reports.assign')) {
+              html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
+                + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\\'' + r.id + '\\\')">'
+                + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+                + 'Analyze Evidence</button>'
+                + '</div>';
+            } else {
+              html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center">'
+                + '<p style="color:var(--text-secondary);font-size:13px;margin:0">No AI analysis available for this report.</p>'
+                + '</div>';
+            }
           }
           document.getElementById('detailAiAnalysis').innerHTML = html;
         });
@@ -2407,25 +2485,29 @@ export const adminHtml = `<!DOCTYPE html>
         });
 
       // Fetch active officer list for manual assignment dropdown
-      fetch('/api/admin/users')
-        .then(function(res) { return res.json(); })
-        .then(function(users) {
-          const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
-          if (officers.length === 0) {
-            document.getElementById('detailAssignForm').innerHTML = '';
-            return;
-          }
-          let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
-            '<div style="display:flex;gap:8px;margin-top:8px">' +
-            '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
-          officers.forEach(function(o) {
-            html += '<option value="' + o.id + '">' + o.name + '</option>';
+      if (hasPermission('reports.assign')) {
+        fetch('/api/admin/users')
+          .then(function(res) { return res.json(); })
+          .then(function(users) {
+            const officers = users.filter(function(u) { return u.role === 'officer' && u.isActive; });
+            if (officers.length === 0) {
+              document.getElementById('detailAssignForm').innerHTML = '';
+              return;
+            }
+            let html = '<h4 style="margin-bottom:8px">Assign Officer Manually</h4>' +
+              '<div style="display:flex;gap:8px;margin-top:8px">' +
+              '<select id="assignOfficerSelect" class="status-select" style="flex:1">';
+            officers.forEach(function(o) {
+              html += '<option value="' + o.id + '">' + o.name + '</option>';
+            });
+            html += '</select>' +
+              '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
+              '</div>';
+            document.getElementById('detailAssignForm').innerHTML = html;
           });
-          html += '</select>' +
-            '<button class="admin-action-btn" style="margin:0;padding:6px 12px;font-size:13px" data-report-id="' + r.id + '" onclick="assignOfficer(this.dataset.reportId)">Assign</button>' +
-            '</div>';
-          document.getElementById('detailAssignForm').innerHTML = html;
-        });
+      } else {
+        document.getElementById('detailAssignForm').innerHTML = '';
+      }
     }
 
     function closeDetail() {
@@ -2482,8 +2564,14 @@ export const adminHtml = `<!DOCTYPE html>
       if (e.target === this) closeDetail();
     });
 
+    function hasPermission(perm) {
+      const user = window.currentUser || { username: 'admin', role: 'admin', permissions: [] };
+      if (user.role === 'admin') return true;
+      return user.permissions && user.permissions.includes(perm);
+    }
+
     function initRoleRestrictions() {
-      const user = window.currentUser || { username: 'admin', role: 'admin' };
+      const user = window.currentUser || { username: 'admin', role: 'admin', permissions: [] };
       
       const usernameEl = document.getElementById('profileUsername');
       const roleEl = document.getElementById('profileRole');
@@ -2494,14 +2582,37 @@ export const adminHtml = `<!DOCTYPE html>
         avatarEl.textContent = user.username.charAt(0).toUpperCase();
       }
 
-      if (user.role === 'viewer') {
-        document.body.classList.add('role-viewer');
-        document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
-          const target = btn.dataset.moduleTarget;
-          if (target && !['dashboard'].includes(target)) {
+      // Sidebar buttons check based on permissions
+      document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+        const target = btn.dataset.moduleTarget;
+        let allowed = false;
+        if (target === 'dashboard') allowed = hasPermission('reports.read');
+        else if (target === 'locations') allowed = hasPermission('locations.manage');
+        else if (target === 'users') allowed = hasPermission('users.read');
+        else if (target === 'stations') allowed = hasPermission('stations.read');
+        else if (target === 'notifications') allowed = hasPermission('notifications.send');
+        
+        if (!allowed) {
+          btn.style.display = 'none';
+        }
+      });
+
+      // Map export control check
+      document.querySelectorAll('.map-control-btn').forEach(function(btn) {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('exportMap')) {
+          if (!hasPermission('map.export')) {
             btn.style.display = 'none';
           }
-        });
+        }
+      });
+
+      // If the current active module is hidden, switch to the first allowed one
+      const activeBtn = document.querySelector('.sidebar-btn.active');
+      if (activeBtn && activeBtn.style.display === 'none') {
+        const firstVisibleBtn = document.querySelector('.sidebar-btn:not([style*="display: none"])');
+        if (firstVisibleBtn) {
+          firstVisibleBtn.click();
+        }
       }
     }
     initTheme();
