@@ -2449,11 +2449,18 @@ export const adminHtml = `<!DOCTYPE html>
                 + '<div style="font-size:11px;color:var(--text-muted);text-align:right">Analyzed on ' + new Date(aiNote.createdAt).toLocaleString() + '</div>'
                 + '</div>';
             }
+            if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
+              html += '<div style="text-align:center;margin-top:10px">'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:6px 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;opacity:0.85" onclick="runAiAnalysis(\'' + r.id + '\')">'
+                + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+                + 'Re-run AI Analysis</button>'
+                + '</div>';
+            }
           } else {
-            if (hasPermission('reports.update_status') || hasPermission('reports.assign')) {
+            if (hasPermission('reports.update_status') || hasPermission('reports.assign') || hasPermission('reports.read')) {
               html += '<div style="background:var(--bg-secondary);border:1px solid var(--border-soft);border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center">'
                 + '<p style="color:var(--text-secondary);font-size:13px;margin:0">Analyze report description, metadata, and uploaded media using Gemini AI.</p>'
-                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\\\'' + r.id + '\\\')">'
+                + '<button class="ai-btn" id="runAiBtn" style="margin:0;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px" onclick="runAiAnalysis(\'' + r.id + '\')">'
                 + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
                 + 'Analyze Evidence</button>'
                 + '</div>';
