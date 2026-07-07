@@ -152,6 +152,16 @@ function getSubmitErrorMessage(error: unknown): string {
     return "The reporting server rejected this request. Please check the app configuration and try again.";
   }
 
+  const serverMessage = message.match(/\{"message":"([^"]+)"\}/)?.[1];
+  if (serverMessage) {
+    return `The server rejected the report: ${serverMessage}`;
+  }
+
+  const statusMatch = message.match(/^(\d{3}):/);
+  if (statusMatch) {
+    return `The reporting server returned error ${statusMatch[1]}. The report has been saved on this device so it can be retried later.`;
+  }
+
   return "The report could not be submitted right now. It has been saved on this device so it can be retried later.";
 }
 
