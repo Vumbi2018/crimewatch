@@ -1272,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      let reports = await storage.getAllEvidenceReports();
+      let reports: any[] = await storage.getAllEvidenceReports();
       if (reports.length === 0 && !isProductionServer()) {
         reports = await fetchProductionReports();
       }

@@ -18,7 +18,8 @@
     "test": "jest",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "data:import-reports": "node scripts/import-evidence-reports.mjs"
+    "data:import-reports": "node scripts/import-evidence-reports.mjs",
+    "check": "npm run check:types && npm run lint && npm run server:build"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
