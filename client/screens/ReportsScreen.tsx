@@ -9,11 +9,13 @@ import {
   View,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
+import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Colors, Shadows, Spacing } from "@/constants/theme";
 import { apiRequest } from "@/lib/query-client";
@@ -27,6 +29,8 @@ import {
   saveSubmittedReportReceipt,
   updateEvidenceSubmissionStatus,
 } from "@/lib/storage";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type ReportListItem =
   | { kind: "pending"; item: PendingReportSubmission }
@@ -61,6 +65,7 @@ export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
+  const navigation = useNavigation<NavigationProp>();
 
   const [pending, setPending] = useState<PendingReportSubmission[]>([]);
   const [receipts, setReceipts] = useState<SubmittedReportReceipt[]>([]);
@@ -284,10 +289,21 @@ export default function ReportsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
-        <ThemedText type="h2">Reports</ThemedText>
-        <ThemedText style={{ color: theme.textSecondary }}>
-          Track submitted references and retry saved reports.
-        </ThemedText>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitleWrap}>
+            <ThemedText type="h2">Reports</ThemedText>
+            <ThemedText style={{ color: theme.textSecondary }}>
+              Track submitted references and retry saved reports.
+            </ThemedText>
+          </View>
+          <Pressable
+            style={[styles.statusLookupButton, { borderColor: theme.border }]}
+            onPress={() => navigation.navigate("CaseStatus")}
+          >
+            <Feather name="search" size={16} color={Colors.light.primary} />
+            <ThemedText style={styles.statusLookupText}>Status</ThemedText>
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -331,6 +347,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
     gap: Spacing.xs,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  headerTitleWrap: {
+    flex: 1,
+  },
+  statusLookupButton: {
+    minHeight: 42,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  statusLookupText: {
+    color: Colors.light.primary,
+    fontWeight: "800",
   },
   listContent: {
     padding: Spacing.lg,

@@ -84,6 +84,15 @@ export default function HomeScreen() {
             >
               <ThemedText style={styles.getStartedText}>Get Started</ThemedText>
             </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.statusButton,
+                pressed && styles.getStartedButtonPressed,
+              ]}
+              onPress={() => navigation.navigate("CaseStatus")}
+            >
+              <ThemedText style={styles.statusButtonText}>Check Case Status</ThemedText>
+            </Pressable>
           </Animated.View>
         </View>
       </ImageBackground>
@@ -172,6 +181,24 @@ const styles = StyleSheet.create({
   },
   getStartedText: {
     fontSize: 18,
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  statusButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.45)",
+    paddingVertical: Spacing.md + 2,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    width: "100%",
+    maxWidth: 320,
+    marginTop: Spacing.md,
+  },
+  statusButtonText: {
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFF",
   },

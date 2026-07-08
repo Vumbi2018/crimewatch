@@ -3619,6 +3619,37 @@ function buildReferenceNumber(report) {
   const shortId = report.id.replace(/-/g, "").slice(0, 8).toUpperCase();
   return `CPNG-${year}-${shortId}`;
 }
+function normalizeReferenceNumber(value) {
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+function toPublicReportStatus(report) {
+  const reportWithReference = withReferenceNumber(report);
+  return {
+    referenceNumber: reportWithReference.referenceNumber,
+    status: reportWithReference.status || "New",
+    submittedAt: reportWithReference.submittedAt,
+    updatedAt: reportWithReference.updatedAt || reportWithReference.submittedAt,
+    agency: reportWithReference.agency || "NCD Command Centre",
+    priority: reportWithReference.priority || "Medium",
+    incidentType: reportWithReference.incidentType || "Not specified",
+    evidenceType: reportWithReference.evidenceType || "report",
+    location: reportWithReference.address || "Location withheld",
+    nextStep: publicStatusNextStep(reportWithReference.status || "New")
+  };
+}
+function publicStatusNextStep(status) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("resolved") || normalized.includes("closed")) {
+    return "This case has been marked resolved. Keep your reference number for any follow-up.";
+  }
+  if (normalized.includes("review") || normalized.includes("assigned")) {
+    return "The report is being reviewed or routed to the relevant command.";
+  }
+  if (normalized.includes("pending") || normalized.includes("new")) {
+    return "The report has been received and is awaiting command review.";
+  }
+  return "The report is in progress. Check again later for updates.";
+}
 function withReferenceNumber(report) {
   const fileUrl = report.fileUrl?.startsWith("/uploads/") ? `https://${PRODUCTION_DOMAIN}${report.fileUrl}` : report.fileUrl;
   const tags = Array.isArray(report.tags) ? report.tags : typeof report.tags === "string" && report.tags.length > 0 ? [report.tags] : [];
@@ -4403,6 +4434,125 @@ async function registerRoutes(app2) {
       status: "sent"
     });
     res.status(201).json(notification);
+  });
+  app2.get("/api/public/report-status/:reference", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const requestedReference = normalizeReferenceNumber(req.params.reference || "");
+    if (!requestedReference) {
+      return res.status(400).json({ message: "Reference number is required" });
+    }
+    try {
+      let reports = await storage.getAllEvidenceReports();
+      if (reports.length === 0 && !isProductionServer()) {
+        reports = await fetchProductionReports();
+      }
+      const report = reports.find((item) => {
+        return normalizeReferenceNumber(buildReferenceNumber(item)) === requestedReference || normalizeReferenceNumber(item.id) === requestedReference;
+      });
+      if (!report) {
+        return res.status(404).json({ message: "No report was found for this reference number." });
+      }
+      return res.json(toPublicReportStatus(report));
+    } catch (error) {
+      console.error("Error looking up public report status:", error);
+      return res.status(500).json({ message: "Failed to check report status" });
+    }
+  });
+  app2.get("/status", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crime Reporting PNG - Case Status</title>
+<style>
+:root { color-scheme: light dark; --bg:#eef4fb; --card:#ffffff; --ink:#102033; --muted:#64748b; --blue:#1d4ed8; --border:#cbd5e1; --ok:#047857; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; font-family: Ubuntu, system-ui, -apple-system, Segoe UI, sans-serif; background:linear-gradient(145deg,#dbeafe,#f8fafc); color:var(--ink); display:flex; align-items:center; justify-content:center; padding:24px; }
+.shell { width:min(760px,100%); }
+.hero { margin-bottom:18px; }
+h1 { margin:0 0 8px; font-size:clamp(30px,5vw,48px); letter-spacing:0; }
+p { color:var(--muted); line-height:1.55; }
+.card { background:rgba(255,255,255,.94); border:1px solid var(--border); border-radius:18px; padding:22px; box-shadow:0 20px 60px rgba(15,23,42,.14); }
+.form { display:grid; grid-template-columns:1fr auto; gap:10px; margin:14px 0 18px; }
+input { width:100%; min-height:50px; border:1px solid var(--border); border-radius:12px; padding:0 14px; font-size:16px; }
+button { min-height:50px; border:0; border-radius:12px; background:var(--blue); color:white; font-weight:800; padding:0 18px; cursor:pointer; }
+.result { display:none; border-top:1px solid var(--border); padding-top:18px; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.metric { border:1px solid var(--border); border-radius:14px; padding:12px; background:#f8fafc; }
+.label { color:var(--muted); font-size:12px; text-transform:uppercase; font-weight:800; }
+.value { margin-top:5px; font-size:18px; font-weight:800; }
+.status { color:var(--ok); }
+.error { color:#b91c1c; font-weight:700; }
+@media (max-width:640px){ .form{grid-template-columns:1fr} .grid{grid-template-columns:1fr} body{align-items:flex-start} }
+</style>
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <h1>Check Case Status</h1>
+    <p>Enter the reference number you received after submitting a report. Only basic status information is shown here.</p>
+  </section>
+  <section class="card">
+    <form class="form" id="lookupForm">
+      <input id="referenceInput" placeholder="Example: CPNG-2026-ABC12345" autocomplete="off" required>
+      <button id="lookupButton" type="submit">Check Status</button>
+    </form>
+    <p id="message"></p>
+    <div class="result" id="result">
+      <div class="grid">
+        <div class="metric"><div class="label">Reference</div><div class="value" id="refValue"></div></div>
+        <div class="metric"><div class="label">Status</div><div class="value status" id="statusValue"></div></div>
+        <div class="metric"><div class="label">Submitted</div><div class="value" id="dateValue"></div></div>
+        <div class="metric"><div class="label">Agency</div><div class="value" id="agencyValue"></div></div>
+        <div class="metric"><div class="label">Incident</div><div class="value" id="incidentValue"></div></div>
+        <div class="metric"><div class="label">Priority</div><div class="value" id="priorityValue"></div></div>
+      </div>
+      <p id="nextStepValue"></p>
+    </div>
+  </section>
+</main>
+<script>
+const form = document.getElementById('lookupForm');
+const input = document.getElementById('referenceInput');
+const button = document.getElementById('lookupButton');
+const message = document.getElementById('message');
+const result = document.getElementById('result');
+function setText(id, value) { document.getElementById(id).textContent = value || '-'; }
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const reference = input.value.trim();
+  if (!reference) return;
+  button.disabled = true;
+  button.textContent = 'Checking...';
+  message.textContent = '';
+  message.className = '';
+  result.style.display = 'none';
+  try {
+    const res = await fetch('/api/public/report-status/' + encodeURIComponent(reference), { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Unable to find this reference.');
+    setText('refValue', data.referenceNumber);
+    setText('statusValue', data.status);
+    setText('dateValue', data.submittedAt ? new Date(data.submittedAt).toLocaleString() : '-');
+    setText('agencyValue', data.agency);
+    setText('incidentValue', data.incidentType);
+    setText('priorityValue', data.priority);
+    setText('nextStepValue', data.nextStep);
+    result.style.display = 'block';
+  } catch (error) {
+    message.textContent = error.message || 'Unable to check this reference right now.';
+    message.className = 'error';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Check Status';
+  }
+});
+</script>
+</body>
+</html>`);
   });
   app2.get("/api/reports", requireAdmin, async (req, res) => {
     res.setHeader("Cache-Control", "no-store");

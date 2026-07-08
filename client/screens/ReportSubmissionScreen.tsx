@@ -1149,6 +1149,41 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: Spacing.sm,
   },
+  sectionLabelNoMargin: {
+    fontWeight: "600",
+  },
+  requiredLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  requiredLabelRowCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  requiredMark: {
+    color: Colors.light.accent,
+    fontWeight: "800",
+  },
+  fieldError: {
+    color: Colors.light.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: Spacing.xs,
+  },
+  descriptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.sm,
+  },
+  descriptionInput: {
+    minHeight: 112,
+    borderWidth: 1,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    fontSize: 15,
+  },
   reviewHeader: {
     flexDirection: "row",
     alignItems: "center",

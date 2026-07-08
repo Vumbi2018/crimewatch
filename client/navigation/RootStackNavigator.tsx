@@ -9,6 +9,7 @@ import ReportSubmissionScreen from "@/screens/ReportSubmissionScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 import ReportTypeSelectionScreen from "@/screens/ReportTypeSelectionScreen";
 import BehalfReportScreen from "@/screens/BehalfReportScreen";
+import CaseStatusScreen from "@/screens/CaseStatusScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 // Officer Screens
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   Settings: undefined;
   ReportTypeSelection: undefined;
   BehalfReport: undefined;
+  CaseStatus: undefined;
 
   // Officer screens
   OfficerLogin: undefined;
@@ -172,6 +174,14 @@ export default function RootStackNavigator() {
         component={BehalfReportScreen}
         options={{
           headerTitle: "Report on Behalf",
+          headerTransparent: false,
+        }}
+      />
+      <Stack.Screen
+        name="CaseStatus"
+        component={CaseStatusScreen}
+        options={{
+          headerTitle: "Check Case Status",
           headerTransparent: false,
         }}
       />
