@@ -417,7 +417,7 @@ export default function ReportSubmissionScreen() {
     } else {
       setIncidentTypeError(false);
     }
-    if (!trimmedDescription) {
+    if (!trimmedDescription || trimmedDescription.length < 10) {
       setDescriptionError(true);
       hasDetailError = true;
     } else {
@@ -425,8 +425,8 @@ export default function ReportSubmissionScreen() {
     }
     if (hasDetailError) {
       Alert.alert(
-        "Required",
-        "Please add the incident type and description before submitting this report.",
+        "Required Fields",
+        "Please select an incident type and provide a description of at least 10 characters before submitting.",
       );
       return;
     }
@@ -797,7 +797,7 @@ export default function ReportSubmissionScreen() {
             textAlignVertical="top"
           />
           {descriptionError ? (
-            <ThemedText style={styles.fieldError}>Description is required.</ThemedText>
+            <ThemedText style={styles.fieldError}>Description is required (min. 10 characters).</ThemedText>
           ) : null}
         </View>
 

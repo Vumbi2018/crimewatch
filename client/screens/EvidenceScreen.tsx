@@ -77,7 +77,6 @@ export default function EvidenceScreen() {
         item.address?.toLowerCase().includes(lowerQuery) ||
         item.incidentType?.toLowerCase().includes(lowerQuery) ||
         item.description?.toLowerCase().includes(lowerQuery) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
         new Date(item.timestamp).toLocaleDateString().includes(query),
     );
     setFilteredEvidence(filtered);
@@ -326,7 +325,7 @@ export default function EvidenceScreen() {
           <Feather name="search" size={18} color={theme.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Search by tag, location, date..."
+            placeholder="Search by incident type, location, date..."
             placeholderTextColor={theme.textSecondary}
             value={searchQuery}
             onChangeText={handleSearch}
