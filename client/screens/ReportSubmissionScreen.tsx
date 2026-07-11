@@ -444,7 +444,12 @@ export default function ReportSubmissionScreen() {
         items.map((item, index) =>
           index === 0
             ? updatedEvidence
-            : { ...item, incidentType, description: trimmedDescription, tags: [] },
+            : {
+                ...item,
+                incidentType,
+                description: trimmedDescription,
+                tags: [],
+              },
         ),
       );
     }
@@ -717,7 +722,9 @@ export default function ReportSubmissionScreen() {
               if (incidentTypeError) setIncidentTypeError(false);
             }}
           >
-            <ThemedText style={incidentType ? {} : { color: theme.textSecondary }}>
+            <ThemedText
+              style={incidentType ? {} : { color: theme.textSecondary }}
+            >
               {incidentType || "Select incident type"}
             </ThemedText>
             <Feather
@@ -727,7 +734,9 @@ export default function ReportSubmissionScreen() {
             />
           </Pressable>
           {incidentTypeError ? (
-            <ThemedText style={styles.fieldError}>Incident type is required.</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              Incident type is required.
+            </ThemedText>
           ) : null}
           {showIncidentPicker ? (
             <View style={styles.pickerOptions}>
@@ -736,7 +745,9 @@ export default function ReportSubmissionScreen() {
                   key={type}
                   style={[
                     styles.pickerOption,
-                    incidentType === type && { backgroundColor: theme.primary + "20" },
+                    incidentType === type && {
+                      backgroundColor: theme.primary + "20",
+                    },
                   ]}
                   onPress={() => {
                     setIncidentType(type);
@@ -797,7 +808,9 @@ export default function ReportSubmissionScreen() {
             textAlignVertical="top"
           />
           {descriptionError ? (
-            <ThemedText style={styles.fieldError}>Description is required (min. 10 characters).</ThemedText>
+            <ThemedText style={styles.fieldError}>
+              Description is required (min. 10 characters).
+            </ThemedText>
           ) : null}
         </View>
 
