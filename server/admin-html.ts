@@ -2322,7 +2322,6 @@ export const adminHtml = `<!DOCTYPE html>
       const r = allReports.find(function(report) { return report.id === id; });
       if (!r) return;
       const date = new Date(r.submittedAt).toLocaleString();
-      const tags = (r.tags || []).map(function(t) { return '<span class="tag">' + t + '</span>'; }).join(' ') || '-';
       const location = r.latitude && r.longitude
         ? '<a class="location-link" href="https://www.google.com/maps?q=' + r.latitude + ',' + r.longitude + '" target="_blank">' + (r.address || r.latitude + ', ' + r.longitude) + '</a>'
         : (r.address || 'Not available');
@@ -2378,7 +2377,6 @@ export const adminHtml = `<!DOCTYPE html>
         + '  <div class="detail-row"><div class="detail-label">Submitted</div><div class="detail-value">' + date + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Location</div><div class="detail-value">' + location + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">GPS Coordinates</div><div class="detail-value">' + coordinates + '</div></div>'
-        + '  <div class="detail-row"><div class="detail-label">Tags</div><div class="detail-value"><div class="tags-cell">' + tags + '</div></div></div>'
         + '  <div class="detail-row"><div class="detail-label">Agency</div><div class="detail-value">' + r.agency + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Reporter</div><div class="detail-value">' + (r.isAnonymous ? 'Anonymous' : (r.reporterName || '-')) + '</div></div>'
         + '  <div class="detail-row"><div class="detail-label">Reporter Profile</div><div class="detail-value" style="font-size:12px;word-break:break-all">' + (r.reporterProfileId || '-') + '</div></div>'
