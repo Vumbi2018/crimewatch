@@ -1541,12 +1541,12 @@ form.addEventListener('submit', async (event) => {
               })
             : "Unknown time";
 
-          const attachments = await storage.listReportAttachments(report.id);
+          const attachments = await storage.getReportAttachments(report.id);
           const attachmentSummary =
             attachments.length > 0
               ? attachments
                   .map(
-                    (a, i) =>
+                    (a: any, i: number) =>
                       `Attachment ${i + 1}: ${a.fileName || "Unnamed"} (${a.fileType || "unknown type"}, ${a.mimeType || ""})${a.fileSize ? `, ${Math.round(a.fileSize / 1024)}KB` : ""}`,
                   )
                   .join("\n")
@@ -1638,12 +1638,12 @@ Return ONLY valid JSON in this exact format:
             analysisNote = geminiResult;
           } else {
             // Fallback if Gemini fails
-            analysisNote = buildHeuristicAnalysis(report);
+            analysisNote = buildHeuristicAnalysis(report as any);
           }
         } else {
           // No API key configured — use heuristic analysis
           console.warn("GEMINI_API_KEY not set. Using heuristic analysis.");
-          analysisNote = buildHeuristicAnalysis(report);
+          analysisNote = buildHeuristicAnalysis(report as any);
         }
 
         const createdNote = await storage.createReportNote({
@@ -1834,7 +1834,7 @@ Return ONLY valid JSON in this exact format:
     }
 
     if (report.priority === "High" || report.priority === "Critical") {
-      if (severity === "Medium" || severity === "Low") severity = "High";
+      if (severity === "Medium" || (severity as string) === "Low") severity = "High";
     }
 
     return {
