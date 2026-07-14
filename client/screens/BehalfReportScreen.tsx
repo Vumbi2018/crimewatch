@@ -7,8 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
-  Modal,
-  Platform,
 } from "react-native";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useNavigation } from "@react-navigation/native";
@@ -17,7 +15,6 @@ import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Location from "expo-location";
-import MapView, { Marker } from "react-native-maps";
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -66,12 +63,6 @@ export default function BehalfReportScreen() {
   const [descriptionError, setDescriptionError] = useState(false);
   const [locationError, setLocationError] = useState(false);
 
-  // Map Picker Modal States
-  const [showMapModal, setShowMapModal] = useState(false);
-  const [mapMarkerCoords, setMapMarkerCoords] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
 
   const scrollViewRef = React.useRef<any>(null);
 
@@ -137,38 +128,15 @@ export default function BehalfReportScreen() {
     }
   };
 
-  const handleConfirmLocation = async () => {
-    if (!mapMarkerCoords) return;
-
-    const lat = mapMarkerCoords.latitude;
-    const lon = mapMarkerCoords.longitude;
-
-    setLatitude(lat);
-    setLongitude(lon);
-    setShowMapModal(false);
-    setIsLocating(true);
-    setLocationError(false);
-
-    try {
-      const [geocode] = await Location.reverseGeocodeAsync({
-        latitude: lat,
-        longitude: lon,
-      });
-
-      if (geocode) {
-        const address = [geocode.street, geocode.city, geocode.region]
-          .filter(Boolean)
-          .join(", ");
-        setLocationText(address || `${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-      } else {
-        setLocationText(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-      }
-    } catch (err) {
-      console.error("Location lookup failed:", err);
-      setLocationText(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-    } finally {
-      setIsLocating(false);
-    }
+  const openLocationPicker = () => {
+    Alert.alert(
+      "Set Incident Location",
+      "Use the phone GPS for the incident location, or type the address/landmark directly in the location field.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Use Current GPS", onPress: fetchLocation },
+      ],
+    );
   };
 
   const handlePickMedia = async () => {
@@ -823,15 +791,7 @@ export default function BehalfReportScreen() {
                   borderColor: locationError ? "#ef4444" : theme.border,
                 },
               ]}
-              onPress={() => {
-                const initialLat = latitude || -9.4438;
-                const initialLon = longitude || 147.1803;
-                setMapMarkerCoords({
-                  latitude: initialLat,
-                  longitude: initialLon,
-                });
-                setShowMapModal(true);
-              }}
+              onPress={openLocationPicker}
             >
               <Feather name="map-pin" size={18} color={theme.primary} />
             </Pressable>
@@ -965,159 +925,6 @@ export default function BehalfReportScreen() {
         )}
       </Pressable>
 
-      <Modal
-        visible={showMapModal}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowMapModal(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: theme.background }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingHorizontal: Spacing.md,
-              paddingTop: Platform.OS === "ios" ? 50 : 20,
-              paddingBottom: Spacing.md,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.border,
-              backgroundColor: theme.cardBackground,
-            }}
-          >
-            <Pressable
-              onPress={() => setShowMapModal(false)}
-              style={{ padding: 8 }}
-            >
-              <Feather name="x" size={24} color={theme.text} />
-            </Pressable>
-            <ThemedText style={{ fontSize: 16, fontWeight: "700" }}>
-              Select Incident Location
-            </ThemedText>
-            <View style={{ width: 40 }} />
-          </View>
-
-          {mapMarkerCoords ? (
-            <MapView
-              style={{ flex: 1 }}
-              initialRegion={{
-                latitude: mapMarkerCoords.latitude,
-                longitude: mapMarkerCoords.longitude,
-                latitudeDelta: 0.00922,
-                longitudeDelta: 0.00421,
-              }}
-              onPress={(e) => {
-                setMapMarkerCoords(e.nativeEvent.coordinate);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
-              <Marker
-                coordinate={mapMarkerCoords}
-                draggable
-                onDragEnd={(e) => {
-                  setMapMarkerCoords(e.nativeEvent.coordinate);
-                }}
-              />
-            </MapView>
-          ) : (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <ActivityIndicator size="large" color={theme.primary} />
-            </View>
-          )}
-
-          <View
-            style={{
-              padding: Spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: theme.border,
-              backgroundColor: theme.cardBackground,
-              gap: Spacing.md,
-            }}
-          >
-            <ThemedText
-              type="caption"
-              style={{ color: theme.textSecondary, textAlign: "center" }}
-            >
-              Tap on map or drag the pin to set the exact incident location.
-            </ThemedText>
-
-            <View style={{ flexDirection: "row", gap: Spacing.md }}>
-              <Pressable
-                style={[
-                  styles.submitBtn,
-                  {
-                    flex: 1,
-                    backgroundColor: theme.backgroundSecondary,
-                    borderColor: theme.border,
-                    borderWidth: 1,
-                    marginTop: 0,
-                  },
-                ]}
-                onPress={async () => {
-                  setIsLocating(true);
-                  try {
-                    const { status } =
-                      await Location.requestForegroundPermissionsAsync();
-                    if (status === "granted") {
-                      const loc = await Location.getCurrentPositionAsync({
-                        accuracy: Location.Accuracy.Balanced,
-                      });
-                      let lat = loc.coords.latitude;
-                      let lon = loc.coords.longitude;
-                      if (
-                        __DEV__ &&
-                        Math.abs(lat - 37.422) < 0.01 &&
-                        Math.abs(lon - -122.0841) < 0.01
-                      ) {
-                        lat = -9.4438;
-                        lon = 147.1803;
-                      }
-                      setMapMarkerCoords({ latitude: lat, longitude: lon });
-                    }
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setIsLocating(false);
-                  }
-                }}
-              >
-                <Feather name="crosshair" size={18} color={theme.text} />
-                <ThemedText
-                  style={{
-                    color: theme.text,
-                    marginLeft: 6,
-                    fontWeight: "600",
-                  }}
-                >
-                  My Location
-                </ThemedText>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.submitBtn,
-                  {
-                    flex: 1,
-                    backgroundColor: theme.primary,
-                    marginTop: 0,
-                  },
-                ]}
-                onPress={handleConfirmLocation}
-              >
-                <ThemedText style={styles.submitBtnText}>
-                  Confirm Location
-                </ThemedText>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </KeyboardAwareScrollViewCompat>
   );
 }
